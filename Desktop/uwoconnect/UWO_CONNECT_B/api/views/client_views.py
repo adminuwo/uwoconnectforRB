@@ -260,7 +260,8 @@ class ClientMessagesView(APIView):
             try:
                 from ..services.meta_webhook_service import MetaWebhookService
                 if channel == 'WHATSAPP':
-                    MetaWebhookService.send_whatsapp_message(client, raw_to, body)
+                    phone_id = client.whatsapp_phone_number_id or '100000000000000'
+                    MetaWebhookService.send_whatsapp_message(client, raw_to, body, phone_id)
                 elif channel in ['FACEBOOK', 'INSTAGRAM']:
                     MetaWebhookService.send_fb_ig_message(client, channel, raw_to, body)
             except Exception as e:

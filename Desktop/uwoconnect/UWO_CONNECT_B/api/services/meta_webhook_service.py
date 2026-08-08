@@ -485,8 +485,10 @@ class MetaWebhookService:
             MetaWebhookService.send_fb_ig_message(client, platform, sender_id, greeting_text, client.greeting_buttons or None)
 
     @staticmethod
-    def send_whatsapp_message(client, to_number, text_body, phone_number_id, buttons=None, media_url=None, media_type=None):
+    def send_whatsapp_message(client, to_number, text_body, phone_number_id=None, buttons=None, media_url=None, media_type=None):
         import re
+        if not phone_number_id:
+            phone_number_id = getattr(client, 'whatsapp_phone_number_id', None) or '100000000000000'
         raw_to = str(to_number or '').strip()
         clean_num = re.sub(r'\D', '', raw_to)
         if len(clean_num) == 10:
