@@ -245,27 +245,29 @@ class ClientMessagesView(APIView):
             return Response({"detail": "to_number and body are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         raw_to = str(to_number).strip()
-
-        new_msg = MessageRepository.create_message(
-            client=client,
-            channel=channel,
-            from_address=request.user.username or 'SYSTEM',
-            to_address=raw_to,
-            body=body,
-            message_type=message_type,
-            status='SENT'
-        )
+        new_msg = None
 
         if message_type == 'OUTGOING':
             try:
                 from ..services.meta_webhook_service import MetaWebhookService
                 if channel == 'WHATSAPP':
                     phone_id = client.whatsapp_phone_number_id or '100000000000000'
-                    MetaWebhookService.send_whatsapp_message(client, raw_to, body, phone_id)
+                    new_msg = MetaWebhookService.send_whatsapp_message(client, raw_to, body, phone_id)
                 elif channel in ['FACEBOOK', 'INSTAGRAM']:
-                    MetaWebhookService.send_fb_ig_message(client, channel, raw_to, body)
+                    new_msg = MetaWebhookService.send_fb_ig_message(client, channel, raw_to, body)
             except Exception as e:
                 print("Error dispatching external message:", e)
+
+        if not new_msg:
+            new_msg = MessageRepository.create_message(
+                client=client,
+                channel=channel,
+                from_address=request.user.username or 'SYSTEM',
+                to_address=raw_to,
+                body=body,
+                message_type=message_type,
+                status='SENT'
+            )
 
         return Response({
             "id": str(new_msg.id),

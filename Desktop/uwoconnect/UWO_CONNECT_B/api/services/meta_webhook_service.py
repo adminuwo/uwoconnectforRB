@@ -555,7 +555,7 @@ class MetaWebhookService:
             res_data = response.json()
             print(f"WhatsApp API Response: {res_data}")
 
-            MessageRepository.create_message(
+            return MessageRepository.create_message(
                 client=client,
                 channel='WHATSAPP',
                 from_address=phone_number_id or 'WHATSAPP_SYSTEM',
@@ -569,7 +569,7 @@ class MetaWebhookService:
         except Exception as e:
             print(f"Failed to send WhatsApp message: {str(e)}")
             try:
-                MessageRepository.create_message(
+                return MessageRepository.create_message(
                     client=client,
                     channel='WHATSAPP',
                     from_address=phone_number_id or 'WHATSAPP_SYSTEM',
@@ -581,6 +581,7 @@ class MetaWebhookService:
                 )
             except Exception:
                 pass
+            return None
 
     @staticmethod
     def send_fb_ig_message(client, platform, recipient_id, text_body, buttons=None, media_url=None, media_type=None):
