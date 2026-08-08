@@ -231,6 +231,53 @@ class ClientMessagesView(APIView):
             })
         return Response(data)
 
+    def post(self, request):
+        client = get_tenant_client(request)
+        if not client:
+            return Response({"detail": "Client not found"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        to_number = request.data.get('to_number')
+        body = request.data.get('body')
+        channel = (request.data.get('channel') or 'WHATSAPP').upper()
+        message_type = (request.data.get('message_type') or 'OUTGOING').upper()
+        
+        if not to_number or not body:
+            return Response({"detail": "to_number and body are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_to = str(to_number).strip()
+
+        new_msg = MessageRepository.create_message(
+            client=client,
+            channel=channel,
+            from_address=request.user.username or 'SYSTEM',
+            to_address=raw_to,
+            body=body,
+            message_type=message_type,
+            status='SENT'
+        )
+
+        if message_type == 'OUTGOING':
+            try:
+                from ..services.meta_webhook_service import MetaWebhookService
+                if channel == 'WHATSAPP':
+                    MetaWebhookService.send_whatsapp_message(client, raw_to, body)
+                elif channel in ['FACEBOOK', 'INSTAGRAM']:
+                    MetaWebhookService.send_fb_ig_message(client, channel, raw_to, body)
+            except Exception as e:
+                print("Error dispatching external message:", e)
+
+        return Response({
+            "id": str(new_msg.id),
+            "from_address": new_msg.from_address,
+            "to_address": new_msg.to_address,
+            "body": new_msg.body,
+            "channel": new_msg.channel,
+            "message_type": new_msg.message_type,
+            "status": new_msg.status,
+            "metadata": new_msg.metadata or {},
+            "created_at": new_msg.created_at
+        }, status=status.HTTP_201_CREATED)
+
 class MediaProxyView(APIView):
     """Proxy endpoint to stream WhatsApp/Meta media files to the frontend with correct Content-Type."""
     permission_classes = []
