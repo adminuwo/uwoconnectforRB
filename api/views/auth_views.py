@@ -184,22 +184,33 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not request.user.client:
-            return Response({"message": "No client associated"}, status=404)
-        serializer = ClientSerializer(request.user.client)
         user_serializer = UserSerializer(request.user)
         user_data = user_serializer.data
 
-        client_data = dict(serializer.data)
-        try:
-            from api.utils.channel_permissions import get_user_effective_connectors
-            effective_map = get_user_effective_connectors(request.user, client=request.user.client)
-            global_map = {k: v['global_active'] for k, v in effective_map.items()}
-            client_data['global_connectors'] = global_map
-            client_data['effective_connectors'] = effective_map
-        except Exception as e:
-            global_map = {}
-            effective_map = {}
+        client_data = {}
+        global_map = {}
+        effective_map = {}
+
+        if getattr(request.user, 'client', None):
+            serializer = ClientSerializer(request.user.client)
+            client_data = dict(serializer.data)
+            try:
+                from api.utils.channel_permissions import get_user_effective_connectors
+                effective_map = get_user_effective_connectors(request.user, client=request.user.client)
+                global_map = {k: v['global_active'] for k, v in effective_map.items()}
+                client_data['global_connectors'] = global_map
+                client_data['effective_connectors'] = effective_map
+            except Exception as e:
+                global_map = {}
+                effective_map = {}
+        else:
+            # Super Admin or staff user without a direct client tenant
+            client_data = {
+                "business_name": "Unified Web Options Super Admin",
+                "email": request.user.email,
+                "plan_name": "Super Admin",
+                "status": "ACTIVE"
+            }
 
         return Response({
             **user_data,
@@ -213,9 +224,6 @@ class ProfileView(APIView):
         return self.patch(request)
 
     def patch(self, request):
-        if not request.user.client:
-            return Response({"message": "No client associated"}, status=404)
-        
         # Update User fields if provided
         user = request.user
         if 'name' in request.data:
@@ -227,6 +235,14 @@ class ProfileView(APIView):
         if 'phone_number' in request.data:
             user.phone_number = request.data['phone_number']
             user.save()
+
+        if not getattr(request.user, 'client', None):
+            user_serializer = UserSerializer(user)
+            return Response({
+                "message": "User profile updated successfully",
+                "user": user_serializer.data,
+                **user_serializer.data
+            })
 
         # Validate channel permissions if channel configurations are being updated
         if any(k in request.data for k in ['whatsapp_access_token', 'whatsapp_phone_number_id', 'whatsapp_waba_id', 'whatsapp_config']):

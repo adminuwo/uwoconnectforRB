@@ -220,11 +220,11 @@ def _get_youtube_access_token(client_obj):
             from dotenv import load_dotenv
             load_dotenv(override=True)
             res = http_requests.post("https://oauth2.googleapis.com/token", data={
-                "client_id": os.environ.get("GMAIL_CLIENT_ID", "", timeout=10),
+                "client_id": os.environ.get("GMAIL_CLIENT_ID", ""),
                 "client_secret": os.environ.get("GMAIL_CLIENT_SECRET", ""),
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token",
-            })
+            }, timeout=10)
             data = res.json()
             if "access_token" in data:
                 client_obj.youtube_config = {**config, "access_token": data["access_token"]}
