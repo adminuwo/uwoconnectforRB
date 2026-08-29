@@ -45,7 +45,8 @@ class PlanSerializer(serializers.ModelSerializer):
                 'cta_text', 'cta_action', 'badge_text', 'accent_color', 'is_recommended',
                 'agent_role_type', 'limits', 'channels', 'allowed_channels', 'max_channels',
                 'allowed_connectors', 'allowed_features', 'feature_keys', 'feature_groups',
-                'message_costs', 'additional_benefits', 'channel_details'
+                'message_costs', 'additional_benefits', 'channel_details',
+                'monthlyConfig', 'yearlyConfig', 'monthly_config', 'yearly_config'
             ]:
                 if key in meta and key not in ret:
                     ret[key] = meta[key]
@@ -59,7 +60,8 @@ class PlanSerializer(serializers.ModelSerializer):
             'feature_keys', 'monthly_price', 'quarterly_price', 'yearly_price', 'yearly_discount_percent', 'tax_info',
             'cta_text', 'cta_action', 'badge_text', 'accent_color', 'is_recommended',
             'agent_role_type', 'limits', 'channels', 'allowed_channels', 'max_channels',
-            'allowed_connectors', 'allowed_features', 'feature_groups', 'message_costs', 'additional_benefits', 'channel_details'
+            'allowed_connectors', 'allowed_features', 'feature_groups', 'message_costs', 'additional_benefits', 'channel_details',
+            'monthlyConfig', 'yearlyConfig', 'monthly_config', 'yearly_config'
         ]:
             if key in initial and initial[key] is not None:
                 metadata[key] = initial[key]
@@ -73,7 +75,8 @@ class PlanSerializer(serializers.ModelSerializer):
             'feature_keys', 'monthly_price', 'quarterly_price', 'yearly_price', 'yearly_discount_percent', 'tax_info',
             'cta_text', 'cta_action', 'badge_text', 'accent_color', 'is_recommended',
             'agent_role_type', 'limits', 'channels', 'allowed_channels', 'max_channels',
-            'allowed_connectors', 'allowed_features', 'feature_groups', 'message_costs', 'additional_benefits', 'channel_details'
+            'allowed_connectors', 'allowed_features', 'feature_groups', 'message_costs', 'additional_benefits', 'channel_details',
+            'monthlyConfig', 'yearlyConfig', 'monthly_config', 'yearly_config'
         ]:
             if key in initial and initial[key] is not None:
                 metadata[key] = initial[key]

@@ -37,6 +37,47 @@ class PlanViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(plans, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['put', 'patch'], url_path='monthly')
+    def update_monthly(self, request, pk=None):
+        """Updates independent monthly configuration for a specific plan."""
+        plan = self.get_object()
+        monthly_config = request.data.get('monthlyConfig') or request.data.get('monthly_config') or request.data
+        metadata = plan.metadata or {}
+        metadata['monthlyConfig'] = monthly_config
+        if isinstance(monthly_config, dict):
+            if 'price' in monthly_config and monthly_config['price'] != '':
+                try:
+                    plan.price = float(monthly_config['price'])
+                except (ValueError, TypeError):
+                    pass
+                metadata['monthly_price'] = monthly_config['price']
+            if 'selected_feature_keys' in monthly_config:
+                metadata['monthly_feature_keys'] = monthly_config['selected_feature_keys']
+        plan.metadata = metadata
+        plan.save()
+        serializer = self.get_serializer(plan)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['put', 'patch'], url_path='yearly')
+    def update_yearly(self, request, pk=None):
+        """Updates independent yearly configuration for a specific plan."""
+        plan = self.get_object()
+        yearly_config = request.data.get('yearlyConfig') or request.data.get('yearly_config') or request.data
+        metadata = plan.metadata or {}
+        metadata['yearlyConfig'] = yearly_config
+        if isinstance(yearly_config, dict):
+            if 'price' in yearly_config and yearly_config['price'] != '':
+                try:
+                    metadata['yearly_price'] = yearly_config['price']
+                except (ValueError, TypeError):
+                    pass
+            if 'selected_feature_keys' in yearly_config:
+                metadata['yearly_feature_keys'] = yearly_config['selected_feature_keys']
+        plan.metadata = metadata
+        plan.save()
+        serializer = self.get_serializer(plan)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class PlanFeatureViewSet(viewsets.ModelViewSet):
     """CRUD operations for PlanFeature model linking Features to Plans."""
@@ -70,9 +111,11 @@ class ClientEntitlementsView(APIView):
                 return Client.objects.get(id=client_id)
             except Exception:
                 pass
-        if hasattr(user, 'client') and user.client:
-            return user.client
-        return Client.objects.first()
+        if user and user.is_authenticated:
+            if hasattr(user, 'client') and user.client:
+                return user.client
+            return Client.objects.filter(owner=user).first() or Client.objects.first()
+        return None
 
     def get(self, request):
         """Get evaluated entitlements, selected channels, and limits for the logged-in client."""

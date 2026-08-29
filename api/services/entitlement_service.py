@@ -18,7 +18,7 @@ DEFAULT_PLANS_CONFIG = {
         'slug': 'starter',
         'description': 'Perfect for small teams starting automation on 1 chosen channel',
         'monthly_price': 499,
-        'yearly_price': 999,
+        'yearly_price': 4999,
         'yearly_discount_percent': 83.0,
         'currency': '₹',
         'tax_info': '(+taxes)',
@@ -122,7 +122,7 @@ DEFAULT_PLANS_CONFIG = {
         'slug': 'growth',
         'description': 'Designed for growing businesses using 2 simultaneous channels',
         'monthly_price': 1599,
-        'yearly_price': 2799,
+        'yearly_price': 15999,
         'yearly_discount_percent': 85.0,
         'currency': '₹',
         'tax_info': '(+taxes)',
@@ -234,7 +234,7 @@ DEFAULT_PLANS_CONFIG = {
         'slug': 'advanced',
         'description': 'Full power automation, custom integrations, AI agents & all 3 channels',
         'monthly_price': 2499,
-        'yearly_price': 25489,
+        'yearly_price': 24999,
         'yearly_discount_percent': 15.0,
         'currency': '₹',
         'tax_info': '(+taxes)',
@@ -395,11 +395,11 @@ class EntitlementService:
             meta = plan.metadata or {}
             slug = plan.slug.lower() if plan.slug else plan.name.lower()
             
-            if slug in DEFAULT_PLANS_CONFIG:
-                return DEFAULT_PLANS_CONFIG[slug]
+            monthly_cfg = meta.get('monthlyConfig') or meta.get('monthly_config') or {}
+            yearly_cfg = meta.get('yearlyConfig') or meta.get('yearly_config') or {}
 
-            monthly_price = meta.get('monthly_price', float(plan.price))
-            yearly_price = meta.get('yearly_price', round(monthly_price * 12 * 0.8, 2))
+            monthly_price = monthly_cfg.get('price') or meta.get('monthly_price', float(plan.price))
+            yearly_price = yearly_cfg.get('price') or meta.get('yearly_price', round(float(monthly_price) * 12 * 0.8, 2))
 
             return {
                 'id': str(plan.id),
@@ -407,6 +407,8 @@ class EntitlementService:
                 'slug': slug,
                 'monthly_price': monthly_price,
                 'yearly_price': yearly_price,
+                'monthlyConfig': monthly_cfg,
+                'yearlyConfig': yearly_cfg,
                 'yearly_discount_percent': meta.get('yearly_discount_percent', 20.0),
                 'max_channels': meta.get('max_channels', 3 if 'advanced' in slug else 2 if 'growth' in slug else 1),
                 'allowed_channels': meta.get('allowed_channels', ['whatsapp', 'facebook', 'instagram']),
@@ -426,15 +428,21 @@ class EntitlementService:
         Evaluates item access state:
         Returns COMING_SOON | AVAILABLE | UPGRADE_REQUIRED
         """
-        # 1. Check if item is marked COMING SOON in DB
+        # 1. Check if item is marked COMING SOON or INACTIVE by Admin in DB
         if item_type == 'connector':
             gc = GlobalConnector.objects.filter(connector_key=item_key).first()
-            if gc and getattr(gc, 'is_coming_soon', False):
-                return 'COMING_SOON'
+            if gc:
+                if getattr(gc, 'is_coming_soon', False):
+                    return 'COMING_SOON'
+                if not getattr(gc, 'is_active', True):
+                    return 'DISABLED'
         elif item_type == 'feature':
             feat = Feature.objects.filter(key=item_key).first()
-            if feat and getattr(feat, 'is_coming_soon', False):
-                return 'COMING_SOON'
+            if feat:
+                if getattr(feat, 'is_coming_soon', False):
+                    return 'COMING_SOON'
+                if not getattr(feat, 'is_active', True):
+                    return 'DISABLED'
 
         # 2. Check if item is override-added or override-removed by Admin for this client
         if client:
