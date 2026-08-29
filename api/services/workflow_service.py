@@ -147,8 +147,10 @@ class WorkflowEngine:
                     session.save()
                     return None
             else:
-                # Reprompt options
-                return [WorkflowEngine._format_node_response(current_node)]
+                # Text did not match button options: end stuck session & allow new workflow triggers
+                session.is_active = False
+                session.save()
+                return None
 
         # 2. Sequential node traversal loop
         while True:
