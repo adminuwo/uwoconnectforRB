@@ -409,7 +409,44 @@ class ClientMessagesView(APIView):
 
         if contact_id:
             from django.db.models import Q
-            messages = messages.filter(Q(from_address=contact_id) | Q(to_address=contact_id))
+            from ..models import Contact
+            
+            search_terms = set([contact_id, str(contact_id).strip()])
+            clean_digits = ''.join(filter(str.isdigit, str(contact_id)))
+            if clean_digits:
+                search_terms.add(clean_digits)
+                if len(clean_digits) == 10:
+                    search_terms.add(f"91{clean_digits}")
+                    search_terms.add(f"+91{clean_digits}")
+                elif clean_digits.startswith("91") and len(clean_digits) == 12:
+                    search_terms.add(clean_digits[2:])
+                    search_terms.add(f"+{clean_digits}")
+
+            # Lookup matching Contact in database
+            contact_obj = Contact.objects.filter(
+                Q(client=client) & (
+                    Q(id=contact_id) | Q(platform_id=contact_id) | Q(phone_number=contact_id) | Q(email=contact_id)
+                )
+            ).first()
+
+            if contact_obj:
+                if contact_obj.platform_id:
+                    search_terms.add(str(contact_obj.platform_id))
+                if contact_obj.phone_number:
+                    search_terms.add(str(contact_obj.phone_number))
+                    p_digits = ''.join(filter(str.isdigit, str(contact_obj.phone_number)))
+                    if p_digits:
+                        search_terms.add(p_digits)
+                if contact_obj.email:
+                    search_terms.add(str(contact_obj.email))
+                search_terms.add(str(contact_obj.id))
+
+            q_filter = Q()
+            for term in search_terms:
+                if term:
+                    q_filter |= Q(from_address=term) | Q(to_address=term)
+
+            messages = messages.filter(q_filter)
 
         # Sort descending by indexed ID to get latest messages fast without MongoDB memory overflow
         messages = messages.order_by('-id')[offset:offset+limit]
