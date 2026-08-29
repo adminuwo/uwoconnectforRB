@@ -29,23 +29,26 @@ class MessageRepository:
         if client and platform_id:
             Contact.objects.filter(client=client, platform_id=platform_id).update(updated_at=timezone.now())
             
-            # Create or update Conversation
-            convo, created = Conversation.objects.get_or_create(
-                client=client,
-                contact_platform_id=platform_id,
-                channel=msg.channel or 'WHATSAPP',
-                defaults={
-                    'contact': Contact.objects.filter(client=client, platform_id=platform_id).first(),
-                    'last_message_summary': msg.body,
-                    'last_message_at': msg.created_at or timezone.now()
-                }
-            )
-            if not created:
-                convo.last_message_summary = msg.body
-                convo.last_message_at = msg.created_at or timezone.now()
-                if not convo.contact:
-                    convo.contact = Contact.objects.filter(client=client, platform_id=platform_id).first()
-                convo.save()
+            # Create or update Conversation safely without MultipleObjectsReturned exception
+            try:
+                convo = Conversation.objects.filter(client=client, contact_platform_id=platform_id).first()
+                if not convo:
+                    convo = Conversation.objects.create(
+                        client=client,
+                        contact_platform_id=platform_id,
+                        channel=msg.channel or 'WHATSAPP',
+                        contact=Contact.objects.filter(client=client, platform_id=platform_id).first(),
+                        last_message_summary=msg.body,
+                        last_message_at=msg.created_at or timezone.now()
+                    )
+                else:
+                    convo.last_message_summary = msg.body
+                    convo.last_message_at = msg.created_at or timezone.now()
+                    if not convo.contact:
+                        convo.contact = Contact.objects.filter(client=client, platform_id=platform_id).first()
+                    convo.save()
+            except Exception as _convo_err:
+                pass
 
             # Real-time WebSocket event broadcast to inbox group
             try:
