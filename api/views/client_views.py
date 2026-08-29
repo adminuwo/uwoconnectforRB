@@ -505,20 +505,39 @@ class ClientMessagesView(APIView):
 
             # Trigger Workflow Engine
             from ..services.workflow_service import WorkflowEngine
+            from ..services.meta_webhook_service import MetaWebhookService
             wf_msgs = WorkflowEngine.process_workflow(client, to_number, body, channel or 'WHATSAPP')
             generated_responses = []
             if wf_msgs:
+                phone_number_id = client.whatsapp_phone_number_id or 'WHATSAPP_SYSTEM'
                 for w_item in wf_msgs:
-                    auto_reply = MessageRepository.create_message(
-                        client=client,
-                        channel=channel or 'WHATSAPP',
-                        from_address='WORKFLOW_BOT',
-                        to_address=to_number,
-                        body=w_item.get('body', ''),
-                        message_type='OUTGOING',
-                        status='SENT',
-                        metadata={'buttons': w_item.get('buttons', []) or []}
-                    )
+                    auto_reply = None
+                    if (channel or 'WHATSAPP').upper() == 'WHATSAPP':
+                        try:
+                            auto_reply = MetaWebhookService.send_whatsapp_message(
+                                client=client,
+                                to_number=to_number,
+                                text_body=w_item.get('body', ''),
+                                phone_number_id=phone_number_id,
+                                buttons=w_item.get('buttons'),
+                                media_url=w_item.get('media_url'),
+                                media_type=w_item.get('type')
+                            )
+                        except Exception as _m_err:
+                            print(f"Meta WhatsApp delivery exception: {_m_err}")
+
+                    if not auto_reply:
+                        auto_reply = MessageRepository.create_message(
+                            client=client,
+                            channel=channel or 'WHATSAPP',
+                            from_address='WORKFLOW_BOT',
+                            to_address=to_number,
+                            body=w_item.get('body', ''),
+                            message_type='OUTGOING',
+                            status='SENT',
+                            metadata={'buttons': w_item.get('buttons', []) or []}
+                        )
+
                     generated_responses.append({
                         "id": str(auto_reply.id),
                         "from_address": auto_reply.from_address,
