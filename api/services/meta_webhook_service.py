@@ -128,15 +128,46 @@ class MetaWebhookService:
                             elif not body:
                                 body = f"📎 [{msg_type.capitalize()}]"
                             
-                            contact, _ = ContactRepository.get_contact_or_create(
-                                client=client,
-                                platform_id=from_number,
-                                defaults={
-                                    'phone_number': from_number,
-                                    'name': contact_name,
-                                    'stage': 'NEW'
-                                }
-                            )
+                            try:
+                                from django.utils import timezone
+                                from ..models import Conversation
+                                contact, _ = ContactRepository.get_contact_or_create(
+                                    client=client,
+                                    platform_id=from_number,
+                                    defaults={
+                                        'phone_number': from_number,
+                                        'name': contact_name,
+                                        'stage': 'NEW'
+                                    }
+                                )
+                                if contact:
+                                    contact.updated_at = timezone.now()
+                                    if contact_name and contact_name != 'Unknown' and (not contact.name or contact.name == 'Unknown'):
+                                        contact.name = contact_name
+                                    contact.save()
+
+                                # Ensure Conversation record is kept fresh
+                                try:
+                                    convo = Conversation.objects.filter(client=client, contact_platform_id=from_number).first()
+                                    if not convo:
+                                        Conversation.objects.create(
+                                            client=client,
+                                            contact=contact,
+                                            contact_platform_id=from_number,
+                                            channel='WHATSAPP',
+                                            last_message_summary=body or 'Incoming Message',
+                                            last_message_at=timezone.now()
+                                        )
+                                    else:
+                                        convo.last_message_summary = body or 'Incoming Message'
+                                        convo.last_message_at = timezone.now()
+                                        if not convo.contact:
+                                            convo.contact = contact
+                                        convo.save()
+                                except Exception as _c_err:
+                                    logger.warning("Error saving conversation: %s", _c_err)
+                            except Exception as _ct_err:
+                                logger.warning("Error creating contact: %s", _ct_err)
 
                             # Always store the message — dashboard must show all messages
                             MessageRepository.create_message(

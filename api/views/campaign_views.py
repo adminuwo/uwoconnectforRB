@@ -63,7 +63,7 @@ class TemplateViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def sync_from_meta(self, request):
-        client = request.user.client
+        client = get_tenant_client(request) or request.user.client
         token = client.whatsapp_access_token
         if not client.whatsapp_waba_id or not token:
             return Response({"message": "WhatsApp WABA ID or Access Token is missing in client settings."}, status=400)
@@ -76,20 +76,25 @@ class TemplateViewSet(viewsets.ModelViewSet):
             res = requests.get(url, headers=headers)
             data = res.json()
             if 'data' in data:
-                synced_count = 0
+                unique_keys = set()
                 for tmpl in data['data']:
+                    name = tmpl.get('name')
+                    lang = tmpl.get('language')
+                    if not name:
+                        continue
                     Template.objects.update_or_create(
                         client=client,
-                        name=tmpl.get('name'),
-                        language=tmpl.get('language'),
+                        name=name,
+                        language=lang,
                         defaults={
                             'category': tmpl.get('category'),
                             'status': tmpl.get('status'),
                             'components': tmpl.get('components', [])
                         }
                     )
-                    synced_count += 1
-                return Response({"message": f"Successfully synced {synced_count} templates."})
+                    unique_keys.add((name, lang))
+                synced_count = len(unique_keys)
+                return Response({"message": f"Successfully synced {synced_count} unique approved templates from Meta."})
             return Response({"message": "Failed to fetch templates from Meta.", "details": data}, status=400)
         except Exception as e:
             return Response({"message": str(e)}, status=500)
