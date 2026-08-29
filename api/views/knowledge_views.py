@@ -53,10 +53,30 @@ class KnowledgeBaseView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, pk=None):
         client = get_tenant_client(request)
         if not client:
             return Response([], status=200)
+        
+        if pk:
+            doc = KnowledgeRepository.filter_documents(client=client).filter(id=pk).first()
+            if not doc:
+                return Response({"error": "Document not found"}, status=404)
+            chunk_count = doc.chunks.count()
+            embedded_count = doc.chunks.exclude(embedding=[]).count()
+            return Response({
+                "id": str(doc.id),
+                "title": doc.title,
+                "file_type": doc.file_type,
+                "file_size": doc.file_size,
+                "has_text": bool(doc.extracted_text),
+                "text_preview": doc.extracted_text[:200] + "..." if len(doc.extracted_text) > 200 else doc.extracted_text,
+                "chunks": chunk_count,
+                "embedded": embedded_count,
+                "fully_embedded": chunk_count > 0 and chunk_count == embedded_count,
+                "created_at": doc.created_at,
+            })
+
         docs = KnowledgeRepository.filter_documents(client=client).order_by('-created_at')
         data = []
         for doc in docs:

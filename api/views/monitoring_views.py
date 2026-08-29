@@ -53,7 +53,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(contact_platform_id__icontains=search) | queryset.filter(last_message_summary__icontains=search)
             
-        return queryset
+        return queryset.order_by('-last_message_at', '-updated_at')
 
     def perform_create(self, serializer):
         serializer.save(client=self.request.user.client)
