@@ -481,32 +481,66 @@ class ClientMessagesView(APIView):
         body = request.data.get('body')
         channel = request.data.get('channel')
         
-        if not to_number or not body:
-            return Response({"error": "to_number and body are required"}, status=400)
-            
         message_type = request.data.get('message_type', 'OUTGOING')
         
-        if message_type == 'INTERNAL':
-            new_msg = MessageRepository.create_message(
+        if message_type == 'INCOMING':
+            incoming_msg = MessageRepository.create_message(
                 client=client,
                 channel=channel or 'WHATSAPP',
-                from_address=client.business_name,
-                to_address=to_number,
+                from_address=to_number,
+                to_address=client.business_name,
                 body=body,
-                message_type='INTERNAL',
-                status='SENT'
+                message_type='INCOMING',
+                status='RECEIVED'
             )
+            # Unpause bot for testing
+            try:
+                from ..models import Contact
+                contact = Contact.objects.filter(Q(client=client) & (Q(platform_id=to_number) | Q(phone_number=to_number))).first()
+                if contact:
+                    contact.bot_paused = False
+                    contact.save()
+            except Exception:
+                pass
+
+            # Trigger Workflow Engine
+            from ..services.workflow_service import WorkflowEngine
+            wf_msgs = WorkflowEngine.process_workflow(client, to_number, body, channel or 'WHATSAPP')
+            generated_responses = []
+            if wf_msgs:
+                for w_item in wf_msgs:
+                    auto_reply = MessageRepository.create_message(
+                        client=client,
+                        channel=channel or 'WHATSAPP',
+                        from_address='WORKFLOW_BOT',
+                        to_address=to_number,
+                        body=w_item.get('body', ''),
+                        message_type='OUTGOING',
+                        status='SENT',
+                        metadata={'buttons': w_item.get('buttons', []) or []}
+                    )
+                    generated_responses.append({
+                        "id": str(auto_reply.id),
+                        "from_address": auto_reply.from_address,
+                        "to_address": auto_reply.to_address,
+                        "body": auto_reply.body,
+                        "channel": auto_reply.channel,
+                        "message_type": auto_reply.message_type,
+                        "status": auto_reply.status,
+                        "buttons": getattr(auto_reply, 'buttons', []) or [],
+                        "created_at": auto_reply.created_at
+                    })
+
             return Response({
-                "id": str(new_msg.id),
-                "from_address": new_msg.from_address,
-                "to_address": new_msg.to_address,
-                "body": new_msg.body,
-                "channel": new_msg.channel,
-                "message_type": new_msg.message_type,
-                "status": new_msg.status,
-                "buttons": getattr(new_msg, 'buttons', []) or [],
-                "metadata": new_msg.metadata or {},
-                "created_at": new_msg.created_at
+                "id": str(incoming_msg.id),
+                "from_address": incoming_msg.from_address,
+                "to_address": incoming_msg.to_address,
+                "body": incoming_msg.body,
+                "channel": incoming_msg.channel,
+                "message_type": incoming_msg.message_type,
+                "workflow_triggered": bool(wf_msgs),
+                "auto_replies": generated_responses,
+                "created_at": incoming_msg.created_at
             })
             
         # Detect channel if not provided
