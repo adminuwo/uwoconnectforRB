@@ -37,6 +37,10 @@ class Client(models.Model):
     google_news_enabled = models.BooleanField(default=False)
     outlook_enabled = models.BooleanField(default=False)
     
+    # Plan & Entitlements State
+    selected_channels = models.JSONField(default=list, blank=True)
+    billing_period = models.CharField(max_length=20, default='MONTHLY')
+    
     # Admin Controlled Channel Access Permissions (e.g. {"whatsapp": True, "facebook": True, "instagram": False})
     channel_access = models.JSONField(default=dict, blank=True)
     
@@ -1607,6 +1611,7 @@ class GlobalConnector(models.Model):
     short_name = models.CharField(max_length=50, blank=True, default='')
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='MESSAGING')
     is_active = models.BooleanField(default=True, db_index=True)
+    is_coming_soon = models.BooleanField(default=False, db_index=True)
     is_core = models.BooleanField(default=False)
     icon_key = models.CharField(max_length=50, blank=True, default='')
     description = models.TextField(blank=True, default='')
@@ -1725,6 +1730,7 @@ class Feature(models.Model):
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='COMMUNICATION', db_index=True)
     feature_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default='BOOLEAN')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE', db_index=True)
+    is_coming_soon = models.BooleanField(default=False, db_index=True)
     icon = models.CharField(max_length=50, default='Box')
     default_enabled = models.BooleanField(default=True)
     metadata = models.JSONField(default=dict, blank=True)
@@ -1787,6 +1793,62 @@ class Plan(models.Model):
             from django.utils.text import slugify
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
+    @property
+    def monthly_price(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'monthly_price' in self.metadata:
+            return float(self.metadata['monthly_price'])
+        return float(self.price)
+
+    @property
+    def yearly_price(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'yearly_price' in self.metadata:
+            return float(self.metadata['yearly_price'])
+        # Default: 20% discount from monthly * 12
+        return round(self.monthly_price * 12 * 0.8, 2)
+
+    @property
+    def yearly_discount_percent(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'yearly_discount_percent' in self.metadata:
+            return float(self.metadata['yearly_discount_percent'])
+        return 20.0
+
+    @property
+    def max_channels(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'max_channels' in self.metadata:
+            return int(self.metadata['max_channels'])
+        name_lower = self.name.lower()
+        if 'starter' in name_lower:
+            return 1
+        elif 'growth' in name_lower:
+            return 2
+        elif 'advanced' in name_lower:
+            return 3
+        return 1
+
+    @property
+    def allowed_channels(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'allowed_channels' in self.metadata:
+            return self.metadata['allowed_channels']
+        if self.metadata and isinstance(self.metadata, dict) and 'channels' in self.metadata:
+            return self.metadata['channels']
+        return ['whatsapp', 'facebook', 'instagram']
+
+    @property
+    def allowed_connectors(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'allowed_connectors' in self.metadata:
+            return self.metadata['allowed_connectors']
+        if self.metadata and isinstance(self.metadata, dict) and 'connectors' in self.metadata:
+            return self.metadata['connectors']
+        return []
+
+    @property
+    def allowed_features(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'allowed_features' in self.metadata:
+            return self.metadata['allowed_features']
+        if self.metadata and isinstance(self.metadata, dict) and 'feature_keys' in self.metadata:
+            return self.metadata['feature_keys']
+        return []
 
 
 class PlanFeature(models.Model):

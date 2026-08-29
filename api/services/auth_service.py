@@ -331,15 +331,21 @@ class AuthService:
 
     @staticmethod
     def _serialize_user(user, override_name=None):
-
+        client_plan = user.client.plan if (user and hasattr(user, 'client') and user.client and user.client.plan) else 'ADVANCED'
         return {
             "id": str(user.id),
             "_id": str(user.id),
             "name": override_name or f"{user.first_name} {user.last_name}".strip() or user.username,
             "email": user.email,
             "role": user.role,
-            "client": str(user.client.id) if user.client else None,
-            "clientId": str(user.client.id) if user.client else None
+            "plan": client_plan,
+            "client_plan": client_plan,
+            "client": {
+                "id": str(user.client.id),
+                "business_name": user.client.business_name,
+                "plan": client_plan
+            } if (user and hasattr(user, 'client') and user.client) else None,
+            "clientId": str(user.client.id) if (user and hasattr(user, 'client') and user.client) else None
         }
 
     @staticmethod

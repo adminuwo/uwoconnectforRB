@@ -1211,6 +1211,14 @@ class ClientIntelligenceActionView(APIView):
             new_plan = request.data.get('plan', 'Growth')
             old_plan = client.plan
             client.plan = new_plan
+
+            try:
+                from api.models import Plan
+                p_obj = Plan.objects.filter(name__iexact=new_plan).first() or Plan.objects.filter(slug__iexact=new_plan).first()
+                client.assigned_plan = p_obj
+            except Exception:
+                pass
+
             client.save()
 
             log_admin_intelligence_action(
@@ -1229,7 +1237,14 @@ class ClientIntelligenceActionView(APIView):
             client.address = request.data.get('address', client.address)
             client.company_logo_url = request.data.get('company_logo_url', client.company_logo_url)
             if 'plan' in request.data:
-                client.plan = request.data.get('plan')
+                new_p = request.data.get('plan')
+                client.plan = new_p
+                try:
+                    from api.models import Plan
+                    p_obj = Plan.objects.filter(name__iexact=new_p).first() or Plan.objects.filter(slug__iexact=new_p).first()
+                    client.assigned_plan = p_obj
+                except Exception:
+                    pass
             if 'status' in request.data:
                 new_status = request.data.get('status', '').upper()
                 old_status = client.status
@@ -1252,6 +1267,70 @@ class ClientIntelligenceActionView(APIView):
                 f"{client.business_name} | {client.plan} | {client.status}"
             )
             return Response({'message': f'Profile and plan for {client.business_name} updated successfully.', 'plan': client.plan})
+
+        elif action in ['CUSTOMIZE_FEATURES', 'UPDATE_FEATURE_OVERRIDES']:
+            custom_added = request.data.get('custom_added', [])
+            custom_removed = request.data.get('custom_removed', [])
+
+            try:
+                from api.models import ClientFeatureOverride, Feature
+                ClientFeatureOverride.objects.filter(client=client).delete()
+
+                for key in custom_added:
+                    if not key:
+                        continue
+                    feat, _ = Feature.objects.get_or_create(
+                        key=key,
+                        defaults={
+                            'name': key.replace('feature_', '').replace('connector_', '').replace('channel_', '').replace('_', ' ').title(),
+                            'category': 'Features',
+                            'feature_type': 'Module',
+                            'description': f'Custom feature {key}'
+                        }
+                    )
+                    ClientFeatureOverride.objects.create(
+                        client=client,
+                        feature=feat,
+                        override_type='ADD',
+                        assigned_by=request.user if (request.user and request.user.is_authenticated) else None
+                    )
+
+                for key in custom_removed:
+                    if not key:
+                        continue
+                    feat, _ = Feature.objects.get_or_create(
+                        key=key,
+                        defaults={
+                            'name': key.replace('feature_', '').replace('connector_', '').replace('channel_', '').replace('_', ' ').title(),
+                            'category': 'Features',
+                            'feature_type': 'Module',
+                            'description': f'Custom feature {key}'
+                        }
+                    )
+                    ClientFeatureOverride.objects.create(
+                        client=client,
+                        feature=feat,
+                        override_type='REMOVE',
+                        assigned_by=request.user if (request.user and request.user.is_authenticated) else None
+                    )
+            except Exception as e:
+                logger.error(f"Error saving ClientFeatureOverride records: {str(e)}", exc_info=True)
+                return Response({'error': f'Failed to save feature overrides: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            log_admin_intelligence_action(
+                request,
+                client.business_name,
+                'FEATURE_OVERRIDES',
+                'CUSTOMIZE_FEATURES',
+                '',
+                f"Added: {custom_added}, Removed: {custom_removed}"
+            )
+            return Response({
+                'message': f'Feature overrides saved successfully for {client.business_name}.',
+                'custom_added': custom_added,
+                'custom_removed': custom_removed
+            })
+
         elif action == 'CHANGE_PASSWORD':
             new_password = request.data.get('new_password')
             if not new_password:

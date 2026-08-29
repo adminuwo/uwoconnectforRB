@@ -48,7 +48,7 @@ from .views import (
     AdminBulkChannelAccessView, AdminChannelAuditLogsView, AdminChannelAuditLogView,
     EffectiveConnectorsView, GlobalConnectorsStatusView
 )
-from .views.plan_management_views import FeatureViewSet, PlanViewSet, PlanFeatureViewSet, ClientFeatureOverrideViewSet, PlanAuditLogViewSet
+from .views.plan_management_views import FeatureViewSet, PlanViewSet, PlanFeatureViewSet, ClientFeatureOverrideViewSet, PlanAuditLogViewSet, ClientEntitlementsView
 from api.views.zoho_views import ZohoConnectView, ZohoCallbackView, ZohoDisconnectView, ZohoTestLeadView
 
 from .views.sales_document_views import (
@@ -92,6 +92,14 @@ router.register(r'client-feature-overrides', ClientFeatureOverrideViewSet, basen
 router.register(r'plan-audit-logs', PlanAuditLogViewSet, basename='plan-audit-log')
 
 urlpatterns = [
+    path('plans/public/', PlanViewSet.as_view({'get': 'public_plans'}), name='public-plans'),
+    path('plans/public', PlanViewSet.as_view({'get': 'public_plans'})),
+    path('client/entitlements/', ClientEntitlementsView.as_view(), name='client-entitlements'),
+    path('client/entitlements', ClientEntitlementsView.as_view()),
+    path('client/select-channel/', ClientEntitlementsView.as_view(), name='client-select-channel'),
+    path('client/select-channel', ClientEntitlementsView.as_view()),
+    path('client/subscribe/', ClientEntitlementsView.as_view(), name='client-subscribe'),
+    path('client/subscribe', ClientEntitlementsView.as_view()),
     path('', include(router.urls)),
     path('health', HealthCheckView.as_view(), name='health-check'),
     path('health/', HealthCheckView.as_view(), name='health-check-slash'),
@@ -138,6 +146,8 @@ urlpatterns = [
     path('messages/', ClientMessagesView.as_view(), name='client-messages'),
     path('messages/suggest_draft/', SuggestDraftView.as_view(), name='suggest-draft'),
     path('client/stats', ClientStatsView.as_view(), name='client-stats'),
+    path('client/entitlements', ClientEntitlementsView.as_view(), name='client-entitlements'),
+    path('client/entitlements/', ClientEntitlementsView.as_view()),
     path('admin/stats', AdminStatsView.as_view(), name='admin-stats'),
     path('admin/clients/overview', ClientIntelligenceListView.as_view(), name='admin-clients-overview'),
     path('admin/clients/overview/', ClientIntelligenceListView.as_view()),
@@ -228,9 +238,13 @@ urlpatterns = [
     path('admin/impersonate/', AdminImpersonateView.as_view()),
     # Razorpay / Cashfree Payments
     path('payments/create-order', CreatePaymentOrderView.as_view(), name='payment-create-order'),
+    path('payments/create-order/', CreatePaymentOrderView.as_view()),
     path('payments/verify-order', VerifyPaymentView.as_view(), name='payment-verify-order'),
+    path('payments/verify-order/', VerifyPaymentView.as_view()),
     path('payments/history', PaymentHistoryView.as_view(), name='payment-history'),
+    path('payments/history/', PaymentHistoryView.as_view()),
     path('payments/webhook', RazorpayWebhookView.as_view(), name='payment-webhook'),
+    path('payments/webhook/', RazorpayWebhookView.as_view()),
     # OneDrive Integration
     path('onedrive/connect', OneDriveConnectView.as_view(), name='onedrive-connect'),
     path('onedrive/connect/', OneDriveConnectView.as_view()),

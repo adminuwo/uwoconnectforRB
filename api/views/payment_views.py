@@ -72,7 +72,7 @@ class CreatePaymentOrderView(APIView):
             amount_in_inr=amount,
             receipt_id=receipt_id,
             notes={
-                'client_id': user.client.id,
+                'client_id': str(user.client.id),
                 'user_email': user.email or '',
                 'plan': plan_name,
                 'billing_cycle': billing_cycle

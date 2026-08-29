@@ -294,6 +294,7 @@ class AdminImpersonateView(APIView):
             except Exception:
                 pass
 
+            client_plan = client.plan or 'ADVANCED'
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
@@ -301,16 +302,23 @@ class AdminImpersonateView(APIView):
                     "username": user.username,
                     "email": user.email,
                     "role": user.role,
+                    "plan": client_plan,
+                    "client_plan": client_plan,
                     "client_id": str(client.id),
-                    "business_name": client.business_name
+                    "business_name": client.business_name,
+                    "client": {
+                        "id": str(client.id),
+                        "business_name": client.business_name,
+                        "plan": client_plan
+                    }
                 },
                 "impersonating": {
-                    "client_id": str(client.id),
-                    "client_name": client.business_name,
-                    "impersonator_id": str(request.user.id),
-                    "impersonator_name": request.user.username
+                    "impersonator_name": request.user.username,
+                    "target_client_id": str(client.id),
+                    "target_client_name": client.business_name,
+                    "target_client_plan": client_plan
                 }
-            })
+            }, status=status.HTTP_200_OK)
         except Client.DoesNotExist:
             return Response({"error": "Client node not found."}, status=status.HTTP_404_NOT_FOUND)
 
