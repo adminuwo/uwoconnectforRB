@@ -410,6 +410,7 @@ class ClientMessagesView(APIView):
         if contact_id:
             from django.db.models import Q
             from ..models import Contact
+            from bson import ObjectId
             
             search_terms = set([contact_id, str(contact_id).strip()])
             clean_digits = ''.join(filter(str.isdigit, str(contact_id)))
@@ -422,12 +423,15 @@ class ClientMessagesView(APIView):
                     search_terms.add(clean_digits[2:])
                     search_terms.add(f"+{clean_digits}")
 
-            # Lookup matching Contact in database
-            contact_obj = Contact.objects.filter(
-                Q(client=client) & (
-                    Q(id=contact_id) | Q(platform_id=contact_id) | Q(phone_number=contact_id) | Q(email=contact_id)
-                )
-            ).first()
+            # Safely lookup matching Contact without ValidationError on non-ObjectId strings
+            contact_obj = None
+            try:
+                contact_q = Q(platform_id=contact_id) | Q(phone_number=contact_id) | Q(email=contact_id)
+                if ObjectId.is_valid(str(contact_id)):
+                    contact_q |= Q(id=contact_id)
+                contact_obj = Contact.objects.filter(Q(client=client) & contact_q).first()
+            except Exception as lookup_err:
+                pass
 
             if contact_obj:
                 if contact_obj.platform_id:
