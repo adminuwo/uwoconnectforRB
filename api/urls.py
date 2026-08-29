@@ -228,7 +228,13 @@ urlpatterns = [
     path('platform-assistant/', PlatformAssistantView.as_view(), name='platform-assistant'),
     path('admin/settings/global', GlobalSettingsView.as_view(), name='global-settings'),
     path('webhook/whatsapp', WhatsAppWebhookView.as_view(), name='whatsapp-webhook'),
+    path('webhook/whatsapp/', WhatsAppWebhookView.as_view()),
+    path('webhooks/whatsapp', WhatsAppWebhookView.as_view()),
+    path('webhooks/whatsapp/', WhatsAppWebhookView.as_view()),
     path('webhook/facebook-instagram', FacebookInstagramWebhookView.as_view(), name='facebook-instagram-webhook'),
+    path('webhook/facebook-instagram/', FacebookInstagramWebhookView.as_view()),
+    path('webhooks/facebook-instagram', FacebookInstagramWebhookView.as_view()),
+    path('webhooks/facebook-instagram/', FacebookInstagramWebhookView.as_view()),
     # RAG Knowledge Base
     path('knowledge/', KnowledgeBaseView.as_view(), name='knowledge-base'),
     path('knowledge', KnowledgeBaseView.as_view()),

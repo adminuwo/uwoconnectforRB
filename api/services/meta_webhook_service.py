@@ -48,7 +48,9 @@ class MetaWebhookService:
                         metadata = value.get('metadata') or {}
                         phone_number_id = metadata.get('phone_number_id')
                         
-                        client = ClientRepository.filter_clients(whatsapp_phone_number_id=phone_number_id).first()
+                        client = ClientRepository.filter_clients(whatsapp_phone_number_id=str(phone_number_id)).first() if phone_number_id else None
+                        if not client:
+                            client = Client.objects.filter(whatsapp_phone_number_id__isnull=False).exclude(whatsapp_phone_number_id='').first() or Client.objects.first()
                         if not client:
                             print(f"No client found for phone_number_id: {phone_number_id}")
                             continue
