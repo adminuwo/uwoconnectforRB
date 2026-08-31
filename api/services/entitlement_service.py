@@ -13,6 +13,21 @@ from api.models import Client, Plan, GlobalConnector, Feature
 
 # Default Master Plan configurations for fallback
 DEFAULT_PLANS_CONFIG = {
+    'free': {
+        'name': 'No Active Plan',
+        'slug': 'free',
+        'description': 'No active subscription plan found. Please select a plan to unlock workspace features.',
+        'monthly_price': 0,
+        'yearly_price': 0,
+        'yearly_discount_percent': 0.0,
+        'currency': '₹',
+        'tax_info': '',
+        'max_channels': 0,
+        'allowed_channels': [],
+        'allowed_connectors': [],
+        'allowed_features': [],
+        'channel_details': {}
+    },
     'starter': {
         'name': 'Starter',
         'slug': 'starter',
@@ -131,7 +146,8 @@ DEFAULT_PLANS_CONFIG = {
         'allowed_connectors': [
             'whatsapp', 'facebook', 'instagram', 'gmail', 'outlook',
             'google_sheets', 'onedrive', 'google_calendar', 'google_docs',
-            'connector_outlook', 'connector_gmail', 'channel_youtube'
+            'connector_outlook', 'connector_gmail', 'channel_youtube',
+            'google_news', 'connector_google_news', 'conn_gnews'
         ],
         'allowed_features': [
             'auto_replies', 'shared_inbox', 'basic_automation', 'crm',
@@ -140,7 +156,11 @@ DEFAULT_PLANS_CONFIG = {
             'native_payments', 'public_apis', 'feature_workflow',
             'feature_proposal', 'feature_invoice', 'feature_broadcast',
             'feature_catalog', 'feature_payment', 'feature_order',
-            'feature_autoreply', 'feature_crm', 'feature_quotation'
+            'feature_autoreply', 'feature_crm', 'feature_quotation',
+            'feature_voice_video_call', 'voice_video_call', 'conn_gmeet', 'calls',
+            'feature_knowledge_base', 'knowledge_base', 'f-kb',
+            'feature_team_dashboard', 'team_dashboard', 'team_management', 'f-team',
+            'feature_reports', 'team_work_reports', 'reports', 'f-reports'
         ],
         'channel_details': {
             'whatsapp': {
@@ -373,7 +393,7 @@ class EntitlementService:
     def get_client_plan_config(client: Client) -> Dict[str, Any]:
         """Resolves plan metadata for a client (using client.plan string or assigned_plan)."""
         if not client:
-            return DEFAULT_PLANS_CONFIG['starter']
+            return DEFAULT_PLANS_CONFIG['free']
 
         plan_str = (client.plan or '').strip().lower()
         
@@ -381,13 +401,15 @@ class EntitlementService:
         if plan_str in DEFAULT_PLANS_CONFIG:
             return DEFAULT_PLANS_CONFIG[plan_str]
         
-        # Check partial slug matches ('advanced', 'growth', 'starter')
+        # Check partial slug matches ('advanced', 'growth', 'starter', 'free')
         if 'advanced' in plan_str or 'enterprise' in plan_str:
             return DEFAULT_PLANS_CONFIG['advanced']
         elif 'growth' in plan_str or 'pro' in plan_str:
             return DEFAULT_PLANS_CONFIG['growth']
-        elif 'starter' in plan_str or 'free' in plan_str:
+        elif 'starter' in plan_str:
             return DEFAULT_PLANS_CONFIG['starter']
+        elif 'free' in plan_str or 'none' in plan_str or plan_str == '' or plan_str == 'no_plan':
+            return DEFAULT_PLANS_CONFIG['free']
 
         # 2. Check assigned_plan ForeignKey if active
         if client.assigned_plan and client.assigned_plan.status == 'ACTIVE':
@@ -420,7 +442,7 @@ class EntitlementService:
                 'channel_details': meta.get('channel_details', {})
             }
 
-        return DEFAULT_PLANS_CONFIG['starter']
+        return DEFAULT_PLANS_CONFIG['free']
 
     @staticmethod
     def evaluate_item_access(item_key: str, item_type: str, client: Client) -> str:
@@ -448,7 +470,15 @@ class EntitlementService:
         if client:
             try:
                 from api.models import ClientFeatureOverride
-                db_override = ClientFeatureOverride.objects.filter(client=client, feature__key__iexact=item_key).first()
+                from django.db.models import Q
+                clean_k = item_key.lower().replace('feature_', '').replace('connector_', '')
+                db_override = ClientFeatureOverride.objects.filter(
+                    client=client
+                ).filter(
+                    Q(feature__key__iexact=item_key) | 
+                    Q(feature__key__iexact=clean_k) | 
+                    Q(feature__key__iexact=f"feature_{clean_k}")
+                ).first()
                 if db_override:
                     if db_override.override_type == 'ADD':
                         return 'AVAILABLE'
@@ -471,7 +501,8 @@ class EntitlementService:
             k_low in allowed_channels or 
             clean_key in allowed_connectors or
             clean_key in allowed_channels or
-            clean_key in allowed_features):
+            clean_key in allowed_features or
+            f"feature_{clean_key}" in allowed_features):
             return 'AVAILABLE'
 
         return 'UPGRADE_REQUIRED'
@@ -481,7 +512,7 @@ class EntitlementService:
         """Builds a complete entitlement map for the client UI."""
         plan_config = EntitlementService.get_client_plan_config(client)
 
-        selected_channels = client.selected_channels if client else []
+        selected_channels = (client.selected_channels if (client and client.selected_channels is not None) else []) or []
         if not selected_channels and client and client.whatsapp_enabled:
             selected_channels = ['whatsapp']
         
@@ -520,13 +551,17 @@ class EntitlementService:
         for gc in all_connectors:
             k = gc.connector_key
             st = EntitlementService.evaluate_item_access(k, 'connector', client)
-            connectors_eval[k] = {
+            item_data = {
                 'key': k,
                 'name': gc.name,
                 'category': gc.category,
                 'status': st,
                 'is_coming_soon': getattr(gc, 'is_coming_soon', False)
             }
+            connectors_eval[k] = item_data
+            clean_k = k.lower().replace('connector_', '')
+            connectors_eval[clean_k] = item_data
+            connectors_eval[f'connector_{clean_k}'] = item_data
 
         # Evaluate Features
         all_features = list(Feature.objects.all())
@@ -534,13 +569,17 @@ class EntitlementService:
         for ft in all_features:
             k = ft.key
             st = EntitlementService.evaluate_item_access(k, 'feature', client)
-            features_eval[k] = {
+            item_data = {
                 'key': k,
                 'name': ft.name,
                 'category': ft.category,
                 'status': st,
                 'is_coming_soon': getattr(ft, 'is_coming_soon', False)
             }
+            features_eval[k] = item_data
+            clean_k = k.lower().replace('feature_', '')
+            features_eval[clean_k] = item_data
+            features_eval[f'feature_{clean_k}'] = item_data
 
         # Get custom added and removed override keys for client
         custom_added = []
@@ -549,8 +588,24 @@ class EntitlementService:
             try:
                 from api.models import ClientFeatureOverride
                 overrides = ClientFeatureOverride.objects.filter(client=client)
-                custom_added = list(overrides.filter(override_type='ADD').values_list('feature__key', flat=True))
-                custom_removed = list(overrides.filter(override_type='REMOVE').values_list('feature__key', flat=True))
+                raw_added = list(overrides.filter(override_type='ADD').values_list('feature__key', flat=True))
+                raw_removed = list(overrides.filter(override_type='REMOVE').values_list('feature__key', flat=True))
+
+                custom_added_set = set()
+                for k in raw_added:
+                    custom_added_set.add(k)
+                    clean_k = k.lower().replace('feature_', '')
+                    custom_added_set.add(clean_k)
+                    custom_added_set.add(f'feature_{clean_k}')
+                custom_added = list(custom_added_set)
+
+                custom_removed_set = set()
+                for k in raw_removed:
+                    custom_removed_set.add(k)
+                    clean_k = k.lower().replace('feature_', '')
+                    custom_removed_set.add(clean_k)
+                    custom_removed_set.add(f'feature_{clean_k}')
+                custom_removed = list(custom_removed_set)
             except Exception:
                 pass
 

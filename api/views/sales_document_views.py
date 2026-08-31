@@ -741,6 +741,13 @@ class SalesAnalyticsView(APIView):
     def get(self, request):
         client = getattr(request.user, 'client', None)
         if not client:
+            client_id = request.headers.get('X-Client-ID') or request.query_params.get('client_id')
+            if client_id:
+                client = Client.objects.filter(id=client_id).first()
+            if not client:
+                client = Client.objects.filter(users=request.user).first() or Client.objects.first()
+
+        if not client:
             return Response({'error': 'Client workspace not found.'}, status=400)
             
         docs = SalesDocument.objects.filter(client=client)
