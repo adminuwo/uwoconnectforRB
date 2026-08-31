@@ -114,7 +114,7 @@ class ClientEntitlementsView(APIView):
         if user and user.is_authenticated:
             if hasattr(user, 'client') and user.client:
                 return user.client
-            return Client.objects.filter(owner=user).first() or Client.objects.first()
+            return Client.objects.filter(users=user).first() or Client.objects.first()
         return None
 
     def get(self, request):
