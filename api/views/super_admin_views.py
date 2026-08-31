@@ -639,6 +639,11 @@ class SuperAdminClientsListView(APIView):
                 "invoice_count": invoices_count,
                 "products_count": client.products.count(),
                 "plan": client.plan,
+                "white_label_name": client.white_label_name or '',
+                "white_label_domain": client.white_label_domain or (client.settings.get('custom_domain') if isinstance(client.settings, dict) else ''),
+                "white_label_logo": client.white_label_logo or '',
+                "company_logo_url": client.company_logo_url or client.white_label_logo or '',
+                "settings": client.settings if isinstance(client.settings, dict) else {},
                 "user_id": str(primary_user.id) if primary_user else None
             })
 

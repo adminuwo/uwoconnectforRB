@@ -138,7 +138,7 @@ MIGRATION_MODULES = {
     'sessions': 'mongo_migrations.sessions',
 }
 
-# CORS Configuration: Enforce explicit allowed origins for CASA security compliance
+# CORS Configuration: Enforce allowed origins with support for custom white-label domains
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL', 'True').lower() in ('true', '1') if DEBUG else False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGIN_REGEXES = [
@@ -146,6 +146,8 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.aisa24\.com$",
     r"^https://.*\.azurewebsites\.net$",
     r"^https://.*\.vercel\.app$",
+    r"^https://.*\.ngrok-free\.app$",
+    r"^https://.*$",  # Allow custom white-label agency HTTPS domains
 ]
 CORS_ALLOWED_ORIGINS = [
     'https://uwoconnect.aisa24.com',
@@ -161,16 +163,17 @@ CORS_ALLOWED_ORIGINS = [
 # CSRF trusted origins — required for POST requests in production (DEBUG=False)
 CSRF_TRUSTED_ORIGINS = [
     'https://*.run.app',
+    'https://*.aisa24.com',
+    'https://*.azurewebsites.net',
+    'https://*.azurestaticapps.net',
+    'https://*.vercel.app',
+    'https://*.ngrok-free.app',
     'https://uwoconnectforb-743978421487.asia-south1.run.app',
     'https://uwoconnectforf-743978421487.asia-south1.run.app',
     'https://uwoconnectforb-743928421487.asia-south1.run.app',
     'https://uwoconnectforf-743928421487.asia-south1.run.app',
     'https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net',
-    'https://*.azurewebsites.net',
-    'https://*.azurestaticapps.net',
-    'https://*.vercel.app',
     'https://uwoconnect.aisa24.com',
-    'https://*.aisa24.com',
     'http://localhost:3000',
     'http://localhost:3001',
     'http://127.0.0.1:3000',

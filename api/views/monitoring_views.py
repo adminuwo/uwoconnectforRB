@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import action
 from django.utils import timezone
+from django.db.models import Q
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -17,24 +18,29 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if not user.client:
+        if not user.is_authenticated:
             return Conversation.objects.none()
 
-        allowed_channels = get_user_allowed_channels(user, user.client)
-        if not allowed_channels and user.role != 'ADMIN':
-            return Conversation.objects.none()
-        
-        queryset = Conversation.objects.filter(client=user.client)
-
-        if user.role != 'ADMIN':
+        if user.role == 'ADMIN':
+            client_id = self.request.query_params.get('client_id')
+            if client_id:
+                queryset = Conversation.objects.filter(client_id=client_id)
+            elif user.client:
+                queryset = Conversation.objects.filter(client=user.client)
+            else:
+                queryset = Conversation.objects.all()
+        else:
+            if not user.client:
+                return Conversation.objects.none()
+            allowed_channels = get_user_allowed_channels(user, user.client)
+            if not allowed_channels:
+                return Conversation.objects.none()
+            queryset = Conversation.objects.filter(client=user.client)
             queryset = queryset.filter(channel__in=allowed_channels)
-        
+
         channel = self.request.query_params.get('channel')
         if channel and channel != 'ALL':
-            if channel.upper() in allowed_channels or user.role == 'ADMIN':
-                queryset = queryset.filter(channel=channel.upper())
-            else:
-                return Conversation.objects.none()
+            queryset = queryset.filter(channel=channel.upper())
             
         status_param = self.request.query_params.get('status')
         if status_param and status_param != 'ALL':
@@ -72,26 +78,28 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.save()
 
         # Audit Log
-        audit = ConversationAuditLog.objects.create(
-            conversation=conversation,
-            client=user.client,
-            actor=user,
-            actor_name=user.username,
-            actor_role=user.enterprise_role or user.role,
-            event_type='TAKEOVER',
-            details={
-                'action': 'Force Takeover',
-                'previous_handler': previous_handler,
-                'new_handler': user.username,
-                'department': user.department
-            }
-        )
+        effective_client = conversation.client or user.client
+        if effective_client:
+            audit = ConversationAuditLog.objects.create(
+                conversation=conversation,
+                client=effective_client,
+                actor=user,
+                actor_name=user.username,
+                actor_role=user.enterprise_role or user.role,
+                event_type='TAKEOVER',
+                details={
+                    'action': 'Force Takeover',
+                    'previous_handler': previous_handler,
+                    'new_handler': user.username,
+                    'department': user.department
+                }
+            )
 
         # Broadcast via WebSocket
         channel_layer = get_channel_layer()
-        if channel_layer:
+        if channel_layer and effective_client:
             async_to_sync(channel_layer.group_send)(
-                f"inbox_{user.client.id}",
+                f"inbox_{effective_client.id}",
                 {
                     "type": "broadcast_event",
                     "event_data": {
@@ -107,6 +115,70 @@ class ConversationViewSet(viewsets.ModelViewSet):
         return Response({
             "status": "success",
             "message": f"Takeover successful. Conversation is now assigned to {user.username}.",
+            "conversation": ConversationSerializer(conversation).data
+        })
+
+    @action(detail=True, methods=['post'])
+    def resume_bot(self, request, pk=None):
+        conversation = self.get_object()
+        user = request.user
+        
+        # 1. Unassign conversation & unlock
+        conversation.assigned_to = None
+        conversation.assigned_department = "General"
+        conversation.is_locked = False
+        conversation.locked_by = None
+        conversation.save()
+
+        # 2. Find and unpause contact
+        contact = conversation.contact
+        if not contact:
+            formatted_number = str(conversation.contact_platform_id).replace('+', '').strip()
+            contact = Contact.objects.filter(
+                Q(client=conversation.client) & (
+                    Q(platform_id=conversation.contact_platform_id) | 
+                    Q(phone_number__icontains=formatted_number)
+                )
+            ).first()
+
+        if contact:
+            contact.bot_paused = False
+            contact.save()
+
+        # 3. Create Audit Log
+        effective_client = conversation.client or user.client
+        if effective_client:
+            ConversationAuditLog.objects.create(
+                conversation=conversation,
+                client=effective_client,
+                actor=user,
+                actor_name=user.username,
+                actor_role=user.enterprise_role or user.role,
+                event_type='BOT_RESUMED',
+                details={'action': f'AI Bot & Automations resumed by {user.username}'}
+            )
+
+        # 4. Broadcast via WebSocket
+        channel_layer = get_channel_layer()
+        if channel_layer and effective_client:
+            async_to_sync(channel_layer.group_send)(
+                f"inbox_{effective_client.id}",
+                {
+                    "type": "broadcast_event",
+                    "event_data": {
+                        "type": "takeover_event",
+                        "conversation_id": str(conversation.id),
+                        "actor": "AI Copilot",
+                        "actor_role": "BOT",
+                        "is_bot": True,
+                        "timestamp": timezone.now().isoformat()
+                    }
+                }
+            )
+
+        return Response({
+            "status": "success",
+            "message": "AI Bot & Workflow automations successfully resumed for this conversation.",
             "conversation": ConversationSerializer(conversation).data
         })
 

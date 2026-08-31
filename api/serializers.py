@@ -186,6 +186,7 @@ class RegisterSerializer(serializers.Serializer):
     phone_number = serializers.CharField(required=False, allow_blank=True)
     designation = serializers.CharField(required=False, allow_blank=True)
     department = serializers.CharField(required=False, allow_blank=True)
+    brand_domain = serializers.CharField(required=False, allow_blank=True)
 
     def validate_email(self, value):
         email = value.lower().strip()
@@ -200,6 +201,7 @@ class RegisterSerializer(serializers.Serializer):
         phone_number = validated_data.get('phone_number', '').strip()
         designation = validated_data.get('designation', '').strip() or 'Team Member'
         department = validated_data.get('department', '').strip() or 'General'
+        brand_domain = validated_data.get('brand_domain', '').strip().lower()
 
         if invite_token:
             from django.utils import timezone
@@ -233,9 +235,18 @@ class RegisterSerializer(serializers.Serializer):
                 invite.save()
             return user
         else:
+            parent_agency = None
+            if brand_domain:
+                parent_agency = Client.objects.filter(white_label_domain__iexact=brand_domain).first()
+
             client = Client.objects.create(
                 business_name=business_name,
-                phone_number=phone_number
+                phone_number=phone_number,
+                parent_agency=parent_agency,
+                settings={
+                    "registered_domain": brand_domain,
+                    "parent_agency_id": str(parent_agency.id) if parent_agency else None
+                } if parent_agency else {}
             )
     
             user = User.objects.create_user(

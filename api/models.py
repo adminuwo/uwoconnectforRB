@@ -80,6 +80,8 @@ class Client(models.Model):
     white_label_name = models.CharField(max_length=100, null=True, blank=True)
     white_label_domain = models.CharField(max_length=100, null=True, blank=True)
     white_label_logo = models.TextField(null=True, blank=True)
+    parent_agency = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='sub_clients')
+    is_agency = models.BooleanField(default=False)
     
     # Invoice & Branding Settings
     invoice_prefix = models.CharField(max_length=20, default='INV')

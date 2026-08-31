@@ -54,4 +54,5 @@ from .admin_channel_access_views import (
     EffectiveConnectorsView,
     GlobalConnectorsStatusView
 )
+from .whitelabel_views import WhiteLabelConfigView
 

@@ -28,7 +28,59 @@ class PlanViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def public_plans(self, request):
-        """Returns active plans with complete entitlement metadata for the pricing table."""
+        """Returns active plans with complete entitlement metadata, dynamically scoped to white-label agency if applicable."""
+        brand_domain = request.query_params.get('brand_domain') or request.headers.get('X-Brand-Domain')
+        target_agency = None
+
+        # 1. Resolve from Authenticated User
+        if request.user.is_authenticated and hasattr(request.user, 'client') and request.user.client:
+            user_client = request.user.client
+            if user_client.parent_agency:
+                target_agency = user_client.parent_agency
+            elif user_client.is_agency or user_client.plan == 'AGENCY' or user_client.white_label_domain:
+                target_agency = user_client
+
+        # 2. Resolve from Domain if not resolved
+        if not target_agency and brand_domain:
+            target_agency = Client.objects.filter(white_label_domain__iexact=brand_domain).first()
+
+        # 3. If Agency has custom plans configured, return agency custom plans
+        if target_agency and isinstance(target_agency.settings, dict) and target_agency.settings.get('custom_plans'):
+            custom_plans = target_agency.settings.get('custom_plans')
+            agency_plan_list = []
+            for p in custom_plans:
+                if p.get('active', True) is False:
+                    continue
+                p_slug = p.get('slug', 'starter').lower()
+                m_price = p.get('price_monthly') or p.get('price') or 499
+                y_price = p.get('price_yearly') or (m_price * 10)
+                
+                agency_plan_list.append({
+                    "id": f"agency-{target_agency.id}-{p_slug}",
+                    "name": p.get('name', p_slug.capitalize()),
+                    "slug": p_slug,
+                    "description": p.get('description', 'High performance enterprise automation plan.'),
+                    "price": float(m_price),
+                    "monthly_price": float(m_price),
+                    "yearly_price": float(y_price),
+                    "yearly_discount_percent": 15.0,
+                    "currency": p.get('currency', 'INR'),
+                    "billing_cycle": "Monthly",
+                    "status": "ACTIVE",
+                    "is_active": True,
+                    "is_recommended": p_slug == 'growth',
+                    "badge_text": "MOST POPULAR" if p_slug == 'growth' else ("POWER HOUSE" if p_slug == 'enterprise' else "STARTER"),
+                    "accent_color": "#10B981" if p_slug == 'starter' else ("#0D9488" if p_slug == 'growth' else "#6366F1"),
+                    "allowed_features": p.get('features', []),
+                    "additional_benefits": p.get('features', []),
+                    "feature_keys": [
+                        "channel_whatsapp", "channel_instagram", "channel_email",
+                        "feature_crm", "feature_quotation", "feature_autoreply"
+                    ] + (["feature_workflow", "feature_invoice", "feature_broadcast"] if p_slug != 'starter' else [])
+                      + (["feature_voice_call", "feature_ai_kb"] if p_slug == 'enterprise' else [])
+                })
+            return Response(agency_plan_list, status=status.HTTP_200_OK)
+
         plans = Plan.objects.filter(status='ACTIVE').order_by('display_order', 'price')
         if not plans.exists():
             # Return standard seeded defaults if database has no active plans

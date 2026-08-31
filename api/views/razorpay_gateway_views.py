@@ -127,6 +127,8 @@ class RazorpayOAuthCallbackView(APIView):
 
         try:
             client = Client.objects.get(id=client_id)
+            if client.white_label_domain:
+                frontend_url = f"https://{client.white_label_domain}"
         except Client.DoesNotExist:
             return HttpResponseRedirect(
                 f"{frontend_url}/client/payments/callback?razorpay_status=error&message=client_not_found"

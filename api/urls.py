@@ -48,6 +48,13 @@ from .views import (
     AdminBulkChannelAccessView, AdminChannelAuditLogsView, AdminChannelAuditLogView,
     EffectiveConnectorsView, GlobalConnectorsStatusView
 )
+from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
+from .views.agency_views import (
+    AgencyDashboardStatsView,
+    AgencySubClientsListView,
+    AgencySubClientActionView,
+    AgencyCustomPlansView
+)
 from .views.plan_management_views import FeatureViewSet, PlanViewSet, PlanFeatureViewSet, ClientFeatureOverrideViewSet, PlanAuditLogViewSet, ClientEntitlementsView
 from api.views.zoho_views import ZohoConnectView, ZohoCallbackView, ZohoDisconnectView, ZohoTestLeadView
 
@@ -103,6 +110,8 @@ urlpatterns = [
     path('', include(router.urls)),
     path('health', HealthCheckView.as_view(), name='health-check'),
     path('health/', HealthCheckView.as_view(), name='health-check-slash'),
+    path('whitelabel/config', WhiteLabelConfigView.as_view(), name='whitelabel-config'),
+    path('whitelabel/config/', WhiteLabelConfigView.as_view()),
     path('email/analytics/', EmailAnalyticsView.as_view(), name='email-analytics'),
     path('guides/progress/', GuideProgressView.as_view(), name='guide-progress-list'),
     path('guides/progress/<slug:slug>/', GuideProgressView.as_view(), name='guide-progress-detail'),
@@ -502,4 +511,16 @@ urlpatterns = [
     path('admin/team-analytics', SuperAdminTeamAnalyticsView.as_view()),
     path('admin/teams-channels/', SuperAdminAllTeamsView.as_view(), name='admin-teams-channels'),
     path('admin/teams-channels', SuperAdminAllTeamsView.as_view()),
+
+    # ── White-Label Agency Reseller Endpoints ──
+    path('agency/stats/', AgencyDashboardStatsView.as_view(), name='agency-stats'),
+    path('agency/stats', AgencyDashboardStatsView.as_view()),
+    path('agency/sub-clients/', AgencySubClientsListView.as_view(), name='agency-sub-clients'),
+    path('agency/sub-clients', AgencySubClientsListView.as_view()),
+    path('agency/sub-clients/<str:pk>/action/', AgencySubClientActionView.as_view(), name='agency-sub-client-action'),
+    path('agency/sub-clients/<str:pk>/action', AgencySubClientActionView.as_view()),
+    path('agency/plans/', AgencyCustomPlansView.as_view(), name='agency-custom-plans'),
+    path('agency/plans', AgencyCustomPlansView.as_view()),
+    path('admin/whitelabel/revenue/', SuperAdminWhiteLabelRevenueView.as_view(), name='admin-whitelabel-revenue'),
+    path('admin/whitelabel/revenue', SuperAdminWhiteLabelRevenueView.as_view()),
 ]

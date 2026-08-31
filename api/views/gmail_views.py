@@ -52,8 +52,18 @@ class GmailConnectView(APIView):
             prompt='consent' # Force consent to ensure we get a refresh token
         )
         
-        # Save mapping from state to client_id in cache for 1 hour
-        cache.set(f'gmail_state_{state}', client.id, timeout=3600)
+        # Determine tenant origin dynamically
+        client_origin = request.headers.get('Origin') or request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER', '')
+        if client_origin and '://' in client_origin:
+            parts = client_origin.split('/')
+            client_origin = f"{parts[0]}//{parts[2]}"
+        elif client.white_label_domain:
+            client_origin = f"https://{client.white_label_domain}"
+        else:
+            client_origin = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
+        # Save mapping from state to client info in cache for 1 hour
+        cache.set(f'gmail_state_{state}', {'client_id': str(client.id), 'return_origin': client_origin}, timeout=3600)
         # Save the PKCE code_verifier
         if hasattr(flow, 'code_verifier'):
             cache.set(f'gmail_verifier_{state}', flow.code_verifier, timeout=3600)
@@ -69,7 +79,9 @@ class GmailCallbackView(APIView):
         state = request.GET.get('state')
         error = request.GET.get('error')
         
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        state_data = cache.get(f'gmail_state_{state}')
+        client_id = state_data.get('client_id') if isinstance(state_data, dict) else state_data
+        frontend_url = state_data.get('return_origin') if isinstance(state_data, dict) else os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         
         # Check if state belongs to Google Calendar OAuth
         if state and cache.get(f'gcal_state_{state}'):
@@ -94,7 +106,6 @@ class GmailCallbackView(APIView):
         if error:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?gmail_error={error}")
             
-        client_id = cache.get(f'gmail_state_{state}')
         if not client_id:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?gmail_error=invalid_state")
             

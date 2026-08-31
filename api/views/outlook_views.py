@@ -109,8 +109,17 @@ class OutlookConnectView(APIView):
         redirect_uri = get_redirect_uri()
 
         import json as _json
+        client_origin = request.headers.get('Origin') or request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER', '')
+        if client_origin and '://' in client_origin:
+            parts = client_origin.split('/')
+            client_origin = f"{parts[0]}//{parts[2]}"
+        elif request.user.client and request.user.client.white_label_domain:
+            client_origin = f"https://{request.user.client.white_label_domain}"
+        else:
+            client_origin = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
         client_id_val = str(request.user.client.id) if request.user.client else ''
-        state_payload = _json.dumps({'client_id': client_id_val})
+        state_payload = _json.dumps({'client_id': client_id_val, 'return_origin': client_origin})
 
         auth_url = (
             f"{AUTH_ENDPOINT}?"
@@ -144,31 +153,39 @@ class OutlookCallbackView(APIView):
         error = request.GET.get('error')
         state = request.GET.get('state', '{}')
 
+        state_data = {}
+        try:
+            import json as _json
+            state_data = _json.loads(state) if state else {}
+        except Exception:
+            state_data = {}
+
+        target_origin = state_data.get('return_origin') or os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        target_channels_url = f"{target_origin}/client/channels"
+
         if error:
             logger.error(f"Outlook OAuth error: {error} - {request.GET.get('error_description')}")
-            return HttpResponseRedirect(f"{FRONTEND_CHANNELS_URL}?outlook_error={error}")
+            return HttpResponseRedirect(f"{target_channels_url}?outlook_error={error}")
 
         if not code:
-            return HttpResponseRedirect(f"{FRONTEND_CHANNELS_URL}?outlook_error=no_code")
+            return HttpResponseRedirect(f"{target_channels_url}?outlook_error=no_code")
 
         # Parse client_id from state to find the Client record
         try:
-            import json as _json
-            state_data = _json.loads(state)
             client_id = state_data.get('client_id')
             from ..models import Client
             client_user = Client.objects.get(id=client_id)
         except Exception as e:
             logger.error(f"Outlook callback state parse error: {e}")
-            return HttpResponseRedirect(f"{FRONTEND_CHANNELS_URL}?outlook_error=invalid_state")
+            return HttpResponseRedirect(f"{target_channels_url}?outlook_error=invalid_state")
 
         try:
             redirect_uri = get_redirect_uri()
             email = _exchange_and_save(client_user, code, redirect_uri)
-            return HttpResponseRedirect(f"{FRONTEND_CHANNELS_URL}?outlook_connected=true&email={email}")
+            return HttpResponseRedirect(f"{target_channels_url}?outlook_connected=true&email={email}")
         except Exception as e:
             logger.error(f"Outlook token exchange error: {e}")
-            return HttpResponseRedirect(f"{FRONTEND_CHANNELS_URL}?outlook_error=token_exchange_failed")
+            return HttpResponseRedirect(f"{target_channels_url}?outlook_error=token_exchange_failed")
 
     # ── POST: Direct API call from frontend ────────────────────────────────────
     def post(self, request):

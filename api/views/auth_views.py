@@ -419,7 +419,10 @@ class WhatsAppEmbeddedSignupView(APIView):
         display_phone_number = phone_data['data'][0].get('display_phone_number', '')
         
         # 4. Save to Client
-        client = request.user.client
+        client = getattr(request.user, 'client', None)
+        if not client:
+            return Response({"error": "No client workspace associated with this user account."}, status=400)
+            
         client.whatsapp_config = {
             "access_token": access_token,
             "waba_id": waba_id,
@@ -501,7 +504,9 @@ class InstagramEmbeddedSignupView(APIView):
         if not ig_account:
             return Response({"error": "No linked Instagram Business Account found on your Facebook Pages. Please link your Instagram account to your Facebook Page first."}, status=400)
 
-        client = request.user.client
+        client = getattr(request.user, 'client', None)
+        if not client:
+            return Response({"error": "No client workspace associated with this user account."}, status=400)
         
         # Save Instagram config
         client.instagram_config = {
@@ -596,7 +601,10 @@ class FacebookEmbeddedSignupView(APIView):
         page_access_token = page.get('access_token', long_lived_token)
         
         import datetime
-        client = request.user.client
+        client = getattr(request.user, 'client', None)
+        if not client:
+            return Response({"error": "No client workspace associated with this user account."}, status=400)
+            
         client.facebook_config = {
             "access_token": page_access_token,
             "page_id": fb_page_id,

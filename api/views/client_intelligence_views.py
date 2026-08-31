@@ -481,7 +481,7 @@ class ClientIntelligenceListView(APIView):
         page_size = min(100, max(1, int(request.query_params.get('page_size', 25))))
 
         # 1. Base QuerySet with Database-Level Filtering
-        qs = Client.objects.all()
+        qs = Client.objects.all().select_related('parent_agency')
 
         if search:
             qs = qs.filter(
@@ -498,6 +498,14 @@ class ClientIntelligenceListView(APIView):
 
         if plan_filter != 'ALL':
             qs = qs.filter(plan=plan_filter)
+
+        agency_type = request.query_params.get('agency_type', 'ALL').upper()
+        if agency_type == 'AGENCIES':
+            qs = qs.filter(Q(is_agency=True) | Q(plan__iexact='AGENCY') | ~Q(white_label_domain__isnull=True, white_label_domain='') | ~Q(white_label_name__isnull=True, white_label_name=''))
+        elif agency_type == 'SUB_CLIENTS':
+            qs = qs.filter(parent_agency__isnull=False)
+        elif agency_type == 'DIRECT':
+            qs = qs.filter(parent_agency__isnull=True, is_agency=False)
 
         # Apply database sorting
         order_prefix = '' if sort_order == 'asc' else '-'
@@ -615,6 +623,15 @@ class ClientIntelligenceListView(APIView):
                 'company_logo_url': client.company_logo_url or client.white_label_logo or '',
                 'created_at': client.created_at.isoformat() if client.created_at else None,
                 'created_date_formatted': client.created_at.strftime('%b %d, %Y') if client.created_at else '—',
+                'is_agency': bool(client.is_agency or (client.plan or '').upper() == 'AGENCY' or client.white_label_domain or client.white_label_name),
+                'white_label_name': client.white_label_name or '',
+                'white_label_domain': client.white_label_domain or '',
+                'parent_agency': {
+                    'id': str(client.parent_agency.id),
+                    'name': client.parent_agency.white_label_name or client.parent_agency.business_name or 'Parent Agency',
+                    'domain': client.parent_agency.white_label_domain or '',
+                    'logo_url': client.parent_agency.white_label_logo or client.parent_agency.company_logo_url or ''
+                } if client.parent_agency else None,
                 'plan': client.plan or 'GROWTH',
                 'status': client.status or 'ACTIVE',
                 'approval_status': approval_status,
@@ -1236,6 +1253,25 @@ class ClientIntelligenceActionView(APIView):
             client.phone_number = request.data.get('phone_number', client.phone_number)
             client.address = request.data.get('address', client.address)
             client.company_logo_url = request.data.get('company_logo_url', client.company_logo_url)
+            if 'white_label_name' in request.data:
+                client.white_label_name = request.data.get('white_label_name')
+            if 'white_label_domain' in request.data:
+                client.white_label_domain = request.data.get('white_label_domain', '').strip().lower()
+            if 'white_label_logo' in request.data:
+                client.white_label_logo = request.data.get('white_label_logo')
+            if 'primary_color' in request.data or 'support_email' in request.data or 'tagline' in request.data:
+                c_settings = client.settings if isinstance(client.settings, dict) else {}
+                if 'primary_color' in request.data:
+                    c_settings['primary_color'] = request.data.get('primary_color')
+                if 'accent_color' in request.data:
+                    c_settings['accent_color'] = request.data.get('accent_color')
+                if 'support_email' in request.data:
+                    c_settings['support_email'] = request.data.get('support_email')
+                if 'tagline' in request.data:
+                    c_settings['tagline'] = request.data.get('tagline')
+                if 'white_label_domain' in request.data:
+                    c_settings['custom_domain'] = request.data.get('white_label_domain')
+                client.settings = c_settings
             if 'plan' in request.data:
                 new_p = request.data.get('plan')
                 client.plan = new_p

@@ -332,6 +332,7 @@ class AuthService:
     @staticmethod
     def _serialize_user(user, override_name=None):
         client_plan = user.client.plan if (user and hasattr(user, 'client') and user.client and user.client.plan) else 'ADVANCED'
+        is_agency = bool(user.client and (user.client.is_agency or client_plan == 'AGENCY' or user.client.white_label_domain)) if (user and hasattr(user, 'client') and user.client) else False
         return {
             "id": str(user.id),
             "_id": str(user.id),
@@ -340,10 +341,14 @@ class AuthService:
             "role": user.role,
             "plan": client_plan,
             "client_plan": client_plan,
+            "is_agency": is_agency,
             "client": {
                 "id": str(user.client.id),
                 "business_name": user.client.business_name,
-                "plan": client_plan
+                "plan": client_plan,
+                "is_agency": is_agency,
+                "white_label_domain": user.client.white_label_domain or '',
+                "white_label_name": user.client.white_label_name or ''
             } if (user and hasattr(user, 'client') and user.client) else None,
             "clientId": str(user.client.id) if (user and hasattr(user, 'client') and user.client) else None
         }
