@@ -13,6 +13,21 @@ from api.models import Client, Plan, GlobalConnector, Feature
 
 # Default Master Plan configurations for fallback
 DEFAULT_PLANS_CONFIG = {
+    'free': {
+        'name': 'No Active Plan',
+        'slug': 'free',
+        'description': 'No active subscription plan found. Please select a plan to unlock workspace features.',
+        'monthly_price': 0,
+        'yearly_price': 0,
+        'yearly_discount_percent': 0.0,
+        'currency': '₹',
+        'tax_info': '',
+        'max_channels': 0,
+        'allowed_channels': [],
+        'allowed_connectors': [],
+        'allowed_features': [],
+        'channel_details': {}
+    },
     'starter': {
         'name': 'Starter',
         'slug': 'starter',
@@ -378,7 +393,7 @@ class EntitlementService:
     def get_client_plan_config(client: Client) -> Dict[str, Any]:
         """Resolves plan metadata for a client (using client.plan string or assigned_plan)."""
         if not client:
-            return DEFAULT_PLANS_CONFIG['starter']
+            return DEFAULT_PLANS_CONFIG['free']
 
         plan_str = (client.plan or '').strip().lower()
         
@@ -386,13 +401,15 @@ class EntitlementService:
         if plan_str in DEFAULT_PLANS_CONFIG:
             return DEFAULT_PLANS_CONFIG[plan_str]
         
-        # Check partial slug matches ('advanced', 'growth', 'starter')
+        # Check partial slug matches ('advanced', 'growth', 'starter', 'free')
         if 'advanced' in plan_str or 'enterprise' in plan_str:
             return DEFAULT_PLANS_CONFIG['advanced']
         elif 'growth' in plan_str or 'pro' in plan_str:
             return DEFAULT_PLANS_CONFIG['growth']
-        elif 'starter' in plan_str or 'free' in plan_str:
+        elif 'starter' in plan_str:
             return DEFAULT_PLANS_CONFIG['starter']
+        elif 'free' in plan_str or 'none' in plan_str or plan_str == '' or plan_str == 'no_plan':
+            return DEFAULT_PLANS_CONFIG['free']
 
         # 2. Check assigned_plan ForeignKey if active
         if client.assigned_plan and client.assigned_plan.status == 'ACTIVE':
@@ -425,7 +442,7 @@ class EntitlementService:
                 'channel_details': meta.get('channel_details', {})
             }
 
-        return DEFAULT_PLANS_CONFIG['starter']
+        return DEFAULT_PLANS_CONFIG['free']
 
     @staticmethod
     def evaluate_item_access(item_key: str, item_type: str, client: Client) -> str:
