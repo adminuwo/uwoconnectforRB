@@ -212,7 +212,11 @@ class AuthService:
                     first_name=name,
                     role='CLIENT',
                     status='PENDING',
-                    client=client
+                    client=client,
+                    terms_accepted=True,
+                    privacy_accepted=True,
+                    terms_version='1.0',
+                    terms_accepted_at=timezone.now()
                 )
                 return {
                     "is_created": True,

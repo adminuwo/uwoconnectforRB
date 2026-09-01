@@ -64,7 +64,7 @@ class RazorpayService:
                 mock_order_id = f"order_rzp_mock_{receipt_id}"
                 return {
                     'razorpay_order_id': mock_order_id,
-                    'razorpay_key_id': self.key_id or 'rzp_test_mock_key',
+                    'razorpay_key_id': self.key_id or 'rzp_test_1DP5mmOlF5G5ag',
                     'amount': amount_paise,
                     'currency': 'INR',
                     'is_mock': True,
@@ -75,7 +75,7 @@ class RazorpayService:
             mock_order_id = f"order_rzp_mock_{receipt_id}"
             return {
                 'razorpay_order_id': mock_order_id,
-                'razorpay_key_id': self.key_id or 'rzp_test_mock_key',
+                'razorpay_key_id': self.key_id or 'rzp_test_1DP5mmOlF5G5ag',
                 'amount': amount_paise,
                 'currency': 'INR',
                 'is_mock': True,

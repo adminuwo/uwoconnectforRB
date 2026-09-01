@@ -222,6 +222,7 @@ class RazorpayWebhookView(APIView):
         razorpay_payment_id = entity.get('id')
 
         if razorpay_order_id and event in ['payment.captured', 'order.paid']:
+            # 1. Check if it's a Subscription PaymentOrder
             try:
                 payment_order = PaymentOrder.objects.get(razorpay_order_id=razorpay_order_id)
                 if payment_order.status != 'PAID':
@@ -242,7 +243,28 @@ class RazorpayWebhookView(APIView):
                         details=f"Upgraded to {payment_order.plan} via Razorpay Webhook for Order #{razorpay_order_id}"
                     )
             except PaymentOrder.DoesNotExist:
-                logger.warning(f"Razorpay Webhook received for unknown order_id: {razorpay_order_id}")
+                # 2. Check if it's a WalletRechargeOrder
+                from api.models import WalletRechargeOrder
+                from api.services.wallet_services import PaymentService
+                try:
+                    recharge_order = WalletRechargeOrder.objects.filter(
+                        razorpay_order_id=razorpay_order_id
+                    ).first() or WalletRechargeOrder.objects.filter(
+                        order_id=razorpay_order_id
+                    ).first()
+
+                    if recharge_order and recharge_order.status != 'PAID':
+                        PaymentService.verify_and_credit_recharge(
+                            order_id=recharge_order.order_id,
+                            razorpay_payment_id=razorpay_payment_id,
+                            razorpay_signature='webhook_verified',
+                            force_mock_success=True
+                        )
+                        logger.info(f"[RazorpayWebhookView] Successfully credited wallet for order #{recharge_order.order_id}")
+                    elif not recharge_order:
+                        logger.warning(f"Razorpay Webhook received for unknown order_id: {razorpay_order_id}")
+                except Exception as w_err:
+                    logger.error(f"[RazorpayWebhookView] Error processing wallet recharge webhook: {w_err}")
 
         return Response({'status': 'OK'}, status=status.HTTP_200_OK)
 

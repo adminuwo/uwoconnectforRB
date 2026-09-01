@@ -64,6 +64,14 @@ from .views.sales_document_views import (
     PublicSalesDocumentRejectView, PublicSalesDocumentPDFView
 )
 from .views.invoice_views import InvoiceViewSet, PublicInvoiceView, PublicInvoicePDFView
+from .views.wallet_views import (
+    ClientWalletDashboardView, WalletRechargeCreateView, WalletRechargeVerifyView,
+    WalletWebhookView, AdminWalletOverviewView, AdminWalletAdjustmentView, AdminRateConfigView
+)
+from .views.broadcast_entitlement_views import (
+    BroadcastEntitlementSummaryView, BroadcastValidateView,
+    BroadcastConsumeView, BroadcastRefundView
+)
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -260,6 +268,30 @@ urlpatterns = [
     path('payments/history/', PaymentHistoryView.as_view()),
     path('payments/webhook', RazorpayWebhookView.as_view(), name='payment-webhook'),
     path('payments/webhook/', RazorpayWebhookView.as_view()),
+    # Prepaid Usage Wallet & Billing System
+    path('wallet/dashboard', ClientWalletDashboardView.as_view(), name='wallet-dashboard'),
+    path('wallet/dashboard/', ClientWalletDashboardView.as_view()),
+    path('wallet/recharge/create', WalletRechargeCreateView.as_view(), name='wallet-recharge-create'),
+    path('wallet/recharge/create/', WalletRechargeCreateView.as_view()),
+    path('wallet/recharge/verify', WalletRechargeVerifyView.as_view(), name='wallet-recharge-verify'),
+    path('wallet/recharge/verify/', WalletRechargeVerifyView.as_view()),
+    path('wallet/webhook', WalletWebhookView.as_view(), name='wallet-webhook'),
+    path('wallet/webhook/', WalletWebhookView.as_view()),
+    path('admin/wallet/overview', AdminWalletOverviewView.as_view(), name='admin-wallet-overview'),
+    path('admin/wallet/overview/', AdminWalletOverviewView.as_view()),
+    path('admin/wallet/adjustment', AdminWalletAdjustmentView.as_view(), name='admin-wallet-adjustment'),
+    path('admin/wallet/adjustment/', AdminWalletAdjustmentView.as_view()),
+    path('admin/wallet/rates', AdminRateConfigView.as_view(), name='admin-wallet-rates'),
+    path('admin/wallet/rates/', AdminRateConfigView.as_view()),
+    # Broadcast Entitlements & Wallet Usage
+    path('broadcasts/entitlement', BroadcastEntitlementSummaryView.as_view(), name='broadcast-entitlement-summary'),
+    path('broadcasts/entitlement/', BroadcastEntitlementSummaryView.as_view()),
+    path('broadcasts/validate', BroadcastValidateView.as_view(), name='broadcast-validate'),
+    path('broadcasts/validate/', BroadcastValidateView.as_view()),
+    path('broadcasts/consume', BroadcastConsumeView.as_view(), name='broadcast-consume'),
+    path('broadcasts/consume/', BroadcastConsumeView.as_view()),
+    path('broadcasts/refund', BroadcastRefundView.as_view(), name='broadcast-refund'),
+    path('broadcasts/refund/', BroadcastRefundView.as_view()),
     # OneDrive Integration
     path('onedrive/connect', OneDriveConnectView.as_view(), name='onedrive-connect'),
     path('onedrive/connect/', OneDriveConnectView.as_view()),

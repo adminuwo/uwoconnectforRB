@@ -191,6 +191,12 @@ class User(AbstractUser):
     last_login_browser = models.CharField(max_length=255, null=True, blank=True)
     last_login_os = models.CharField(max_length=255, null=True, blank=True)
     login_history = models.JSONField(default=list, blank=True)
+    
+    # Legal Consent & Terms Acceptance
+    terms_accepted = models.BooleanField(default=False)
+    privacy_accepted = models.BooleanField(default=False)
+    terms_version = models.CharField(max_length=20, default='1.0', blank=True)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.enterprise_role or self.role})"
@@ -1829,6 +1835,19 @@ class Plan(models.Model):
         return 1
 
     @property
+    def included_broadcasts(self):
+        if self.metadata and isinstance(self.metadata, dict) and 'included_broadcasts' in self.metadata:
+            return int(self.metadata['included_broadcasts'])
+        name_lower = self.name.lower()
+        if 'starter' in name_lower:
+            return 1
+        elif 'growth' in name_lower:
+            return 2
+        elif 'pro' in name_lower or 'advanced' in name_lower:
+            return 3
+        return 1
+
+    @property
     def allowed_channels(self):
         if self.metadata and isinstance(self.metadata, dict) and 'allowed_channels' in self.metadata:
             return self.metadata['allowed_channels']
@@ -1909,6 +1928,232 @@ class PlanAuditLog(models.Model):
 
     def __str__(self):
         return f"[{self.timestamp}] {self.admin_user} - {self.action} (Plan: {self.plan_name}, Feature: {self.feature_name})"
+
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# ── UWO CONNECT PREPAID WALLET & SUBSCRIPTION MODELS ──
+# ═════════════════════════════════════════════════════════════════════════════════
+
+class ClientSubscription(models.Model):
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('PAST_DUE', 'Past Due'),
+        ('CANCELLED', 'Cancelled'),
+        ('TRIAL', 'Trial'),
+    ]
+    client = models.OneToOneField(Client, on_delete=models.CASCADE, related_name='subscription')
+    plan_name = models.CharField(max_length=100, default='UwoConnect Pro')
+    price_monthly = models.DecimalField(max_digits=10, decimal_places=2, default=499.00)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    current_period_start = models.DateTimeField(default=timezone.now)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    auto_renew = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.client.business_name} - {self.plan_name} ({self.status})"
+
+
+class ClientWallet(models.Model):
+    client = models.OneToOneField(Client, on_delete=models.CASCADE, related_name='wallet')
+    balance_paise = models.BigIntegerField(default=0)  # minor units (paise)
+    low_balance_threshold_paise = models.BigIntegerField(default=10000) # Default ₹100 = 10,000 paise
+    
+    # Auto-recharge readiness (future)
+    auto_recharge_enabled = models.BooleanField(default=False)
+    auto_recharge_threshold_paise = models.BigIntegerField(default=10000)
+    auto_recharge_amount_paise = models.BigIntegerField(default=50000) # ₹500
+    saved_payment_method_id = models.CharField(max_length=100, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def balance_inr(self):
+        return round(self.balance_paise / 100.0, 2)
+
+    @property
+    def low_balance_threshold_inr(self):
+        return round(self.low_balance_threshold_paise / 100.0, 2)
+
+    @property
+    def is_low_balance(self):
+        return self.balance_paise < self.low_balance_threshold_paise
+
+    @property
+    def is_zero_balance(self):
+        return self.balance_paise <= 0
+
+    def __str__(self):
+        return f"Wallet {self.client.business_name}: ₹{self.balance_inr}"
+
+
+class WalletLedger(models.Model):
+    TYPE_CHOICES = [
+        ('RECHARGE', 'Wallet Recharge'),
+        ('USAGE', 'Usage Deduction'),
+        ('REFUND', 'Refund Credit'),
+        ('ADJUSTMENT', 'Manual Adjustment'),
+        ('BONUS', 'Promotional Bonus'),
+    ]
+    CATEGORY_CHOICES = [
+        ('WHATSAPP', 'WhatsApp Messaging'),
+        ('AI', 'AI Processing'),
+        ('BROADCAST', 'Broadcast Campaign'),
+        ('SYSTEM', 'System / Platform'),
+        ('GENERAL', 'General'),
+    ]
+    STATUS_CHOICES = [
+        ('SUCCESS', 'Success'),
+        ('FAILED', 'Failed'),
+        ('PENDING', 'Pending'),
+    ]
+    transaction_id = models.CharField(max_length=100, unique=True, db_index=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='wallet_ledger')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='wallet_transactions')
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    amount_paise = models.BigIntegerField()  # positive for credit, negative for debit
+    balance_before_paise = models.BigIntegerField()
+    balance_after_paise = models.BigIntegerField()
+    description = models.CharField(max_length=255)
+    service_category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='GENERAL')
+    reference_id = models.CharField(max_length=100, null=True, blank=True, db_index=True) # Payment Order ID / Webhook ID
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SUCCESS')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @property
+    def amount_inr(self):
+        return round(self.amount_paise / 100.0, 2)
+
+    @property
+    def balance_after_inr(self):
+        return round(self.balance_after_paise / 100.0, 2)
+
+    def __str__(self):
+        return f"[{self.type}] {self.client.business_name} - ₹{self.amount_inr} (Ref: {self.transaction_id})"
+
+
+class UsageRate(models.Model):
+    CATEGORY_CHOICES = [
+        ('MARKETING', 'WhatsApp Marketing Message'),
+        ('UTILITY', 'WhatsApp Utility Message'),
+        ('AUTHENTICATION', 'WhatsApp Authentication Message'),
+        ('SERVICE', 'WhatsApp Service Conversation'),
+        ('AI_TOKENS', 'AI Completion Tokens'),
+        ('BROADCAST', 'Additional Broadcast Campaign'),
+    ]
+    country_code = models.CharField(max_length=10, default='IN')
+    service_category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)
+    unit_price_paise = models.BigIntegerField(default=50) # Default 50 paise (₹0.50)
+    effective_from = models.DateTimeField(default=timezone.now)
+    effective_until = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, default='ACTIVE')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('country_code', 'service_category', 'status')
+
+    @property
+    def unit_price_inr(self):
+        return round(self.unit_price_paise / 100.0, 4)
+
+    def __str__(self):
+        return f"{self.country_code} - {self.service_category}: ₹{self.unit_price_inr}"
+
+
+class WalletRechargeOrder(models.Model):
+    order_id = models.CharField(max_length=100, unique=True)
+    razorpay_order_id = models.CharField(max_length=100, null=True, blank=True, unique=True)
+    razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='wallet_recharges')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    amount_inr = models.DecimalField(max_digits=10, decimal_places=2)
+    amount_paise = models.BigIntegerField()
+    status = models.CharField(max_length=20, default='PENDING') # PENDING, PAID, FAILED
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Wallet Order {self.order_id} - ₹{self.amount_inr} ({self.status})"
+
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# ── BROADCAST ENTITLEMENT & WALLET-PAID BROADCAST MODELS ──
+# ═════════════════════════════════════════════════════════════════════════════════
+
+class BroadcastEntitlement(models.Model):
+    TYPE_CHOICES = [
+        ('INCLUDED', 'Subscription Included'),
+        ('PURCHASED', 'Wallet Purchased'),
+    ]
+    SOURCE_CHOICES = [
+        ('SUBSCRIPTION', 'Subscription Plan'),
+        ('WALLET', 'Prepaid Wallet'),
+    ]
+    STATUS_CHOICES = [
+        ('AVAILABLE', 'Available'),
+        ('EXHAUSTED', 'Exhausted'),
+        ('EXPIRED', 'Expired'),
+        ('REFUNDED', 'Refunded'),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='broadcast_entitlements')
+    subscription = models.ForeignKey(ClientSubscription, on_delete=models.SET_NULL, null=True, blank=True, related_name='broadcast_entitlements')
+    billing_period_start = models.DateTimeField(default=timezone.now, db_index=True)
+    billing_period_end = models.DateTimeField(null=True, blank=True, db_index=True)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='INCLUDED')
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='SUBSCRIPTION')
+    included_quantity = models.IntegerField(default=1)
+    used_quantity = models.IntegerField(default=0)
+    remaining_quantity = models.IntegerField(default=1)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='AVAILABLE', db_index=True)
+    price_paise = models.BigIntegerField(default=0) # 0 for included, 94 for purchased
+    wallet_transaction_id = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @property
+    def price_inr(self):
+        return round(self.price_paise / 100.0, 2)
+
+    def __str__(self):
+        return f"{self.client.business_name} - {self.type} [{self.used_quantity}/{self.included_quantity} used]"
+
+
+class BroadcastUsage(models.Model):
+    STATUS_CHOICES = [
+        ('EXECUTED', 'Executed'),
+        ('FAILED', 'Failed'),
+        ('REFUNDED', 'Refunded'),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='broadcast_usages')
+    entitlement = models.ForeignKey(BroadcastEntitlement, on_delete=models.CASCADE, related_name='usages')
+    wallet_ledger = models.ForeignKey(WalletLedger, on_delete=models.SET_NULL, null=True, blank=True, related_name='broadcast_usages')
+    broadcast_id = models.CharField(max_length=100, db_index=True)
+    amount_paise = models.BigIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='EXECUTED')
+    idempotency_key = models.CharField(max_length=100, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @property
+    def amount_inr(self):
+        return round(self.amount_paise / 100.0, 2)
+
+    def __str__(self):
+        return f"Broadcast {self.broadcast_id} - {self.client.business_name} (₹{self.amount_inr})"
+
+
 
 
 

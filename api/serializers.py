@@ -187,6 +187,7 @@ class RegisterSerializer(serializers.Serializer):
     designation = serializers.CharField(required=False, allow_blank=True)
     department = serializers.CharField(required=False, allow_blank=True)
     brand_domain = serializers.CharField(required=False, allow_blank=True)
+    termsAccepted = serializers.BooleanField(required=False, default=True)
 
     def validate_email(self, value):
         email = value.lower().strip()
@@ -194,7 +195,13 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("A user with this email already exists.")
         return email
 
+    def validate_termsAccepted(self, value):
+        if value is False:
+            raise serializers.ValidationError("Please accept the Terms & Conditions and Privacy Policy to continue.")
+        return value
+
     def create(self, validated_data):
+        from django.utils import timezone
         email = validated_data['email'].lower().strip()
         business_name = validated_data.get('businessName', f"{validated_data['name']}'s Business")
         invite_token = validated_data.get('invite_token')
@@ -202,13 +209,13 @@ class RegisterSerializer(serializers.Serializer):
         designation = validated_data.get('designation', '').strip() or 'Team Member'
         department = validated_data.get('department', '').strip() or 'General'
         brand_domain = validated_data.get('brand_domain', '').strip().lower()
+        now = timezone.now()
 
         if invite_token:
-            from django.utils import timezone
             from django.db.models import Q
             invite = TeamInvite.objects.filter(
                 token=invite_token, 
-                expires_at__gt=timezone.now()
+                expires_at__gt=now
             ).filter(Q(is_used=False) | Q(is_qr=True)).first()
             
             if not invite:
@@ -227,7 +234,11 @@ class RegisterSerializer(serializers.Serializer):
                 enterprise_role='EMPLOYEE',
                 status='APPROVED',
                 client=invite.client,
-                permissions=invite.permissions
+                permissions=invite.permissions,
+                terms_accepted=True,
+                privacy_accepted=True,
+                terms_version='1.0',
+                terms_accepted_at=now
             )
             
             if not invite.is_qr:
@@ -259,7 +270,11 @@ class RegisterSerializer(serializers.Serializer):
                 department=department,
                 role='CLIENT',
                 status='PENDING',
-                client=client
+                client=client,
+                terms_accepted=True,
+                privacy_accepted=True,
+                terms_version='1.0',
+                terms_accepted_at=now
             )
             return user
 
