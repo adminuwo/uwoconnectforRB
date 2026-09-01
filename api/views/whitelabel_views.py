@@ -34,7 +34,7 @@ class WhiteLabelConfigView(APIView):
                     Q(settings__custom_domain__iexact=clean_domain)
                 ).first()
 
-        if not client and client_id:
+        if not is_default_domain and not client and client_id:
             try:
                 client = Client.objects.filter(id=client_id).first()
             except Exception:
