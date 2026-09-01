@@ -114,40 +114,45 @@ class FirebaseLoginView(views.APIView):
     authentication_classes = []
 
     def post(self, req):
-        id_token = req.data.get('id_token', '').strip()
-        name = req.data.get('name', '').strip()
-        invite_token = req.data.get('invite_token', '').strip()
-        business_name = req.data.get('business_name', '').strip()
+        try:
+            id_token = req.data.get('id_token', '').strip()
+            name = req.data.get('name', '').strip()
+            invite_token = req.data.get('invite_token', '').strip()
+            business_name = req.data.get('business_name', '').strip()
 
-        # Extract client IP address
-        x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip_address = x_forwarded_for.split(',')[0].strip()
-        else:
-            ip_address = req.META.get('REMOTE_ADDR')
-
-        from ..services.auth_service import AuthService
-        result = AuthService.process_firebase_login(id_token, name, invite_token, business_name, ip_address=ip_address)
-
-        if "error" in result:
-            return Response({"message": result["error"]}, status=result["status_code"])
-
-        if result.get("is_created"):
-            if result.get("status") == "PENDING":
-                return Response({
-                    "message": result["message"],
-                    "userId": result["userId"]
-                }, status=status.HTTP_201_CREATED)
+            # Extract client IP address
+            x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip_address = x_forwarded_for.split(',')[0].strip()
             else:
-                return Response({
-                    "user": result["user"],
-                    "token": result["token"]
-                }, status=status.HTTP_201_CREATED)
+                ip_address = req.META.get('REMOTE_ADDR')
 
-        return Response({
-            "user": result["user"],
-            "token": result["token"]
-        })
+            from ..services.auth_service import AuthService
+            result = AuthService.process_firebase_login(id_token, name, invite_token, business_name, ip_address=ip_address)
+
+            if "error" in result:
+                return Response({"message": result["error"]}, status=result["status_code"])
+
+            if result.get("is_created"):
+                if result.get("status") == "PENDING":
+                    return Response({
+                        "message": result["message"],
+                        "userId": result["userId"]
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({
+                        "user": result["user"],
+                        "token": result["token"]
+                    }, status=status.HTTP_201_CREATED)
+
+            return Response({
+                "user": result["user"],
+                "token": result["token"]
+            })
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Firebase login unhandled error")
+            return Response({"message": f"Login process failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

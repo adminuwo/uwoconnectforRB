@@ -15,6 +15,11 @@ class UserRepository:
     def create_user(**kwargs):
         return User.objects.create(**kwargs)
 
+    @staticmethod
+    def get_user_or_create(**kwargs):
+        defaults = kwargs.pop('defaults', {})
+        return User.objects.get_or_create(**kwargs, defaults=defaults)
+
 class TeamInviteRepository:
     @staticmethod
     def filter_invites(**kwargs):
