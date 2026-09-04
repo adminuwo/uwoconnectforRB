@@ -13,11 +13,17 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 import os
 import json
+import ipaddress
+import socket
+import urllib
+import urllib.parse
+from django.db.models import Q
+from bson import ObjectId
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from ..serializers import RegisterSerializer, UserSerializer, ClientSerializer, AutomationSerializer, WorkflowSerializer, ContactSerializer, TemplateSerializer, CampaignSerializer, SupportMessageSerializer, AuditLogSerializer, TeamInviteSerializer, ProductSerializer, OrderSerializer
-from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order
+from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, Conversation, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order
 import requests
 import logging
 logger = logging.getLogger(__name__)
@@ -25,9 +31,6 @@ from ..services.ai_service import get_ai_response, get_platform_assistance, get_
 from ..utils.channel_permissions import get_user_allowed_channels
 from rest_framework.permissions import BasePermission
 from .webhook_views import WhatsAppWebhookView, FacebookInstagramWebhookView
-import logging
-
-logger = logging.getLogger(__name__)
 def get_tenant_client(request):
     if not request.user or not request.user.is_authenticated:
         return None
@@ -155,12 +158,200 @@ class ClientViewSet(viewsets.ModelViewSet):
             profile_data = profile_res.json()
 
             if profile_res.status_code == 200 and profile_data.get('success'):
-                return Response({"status": "success", "message": "Profile picture updated successfully on WhatsApp!"})
+                # Fetch fresh profile picture URL from Meta
+                profile_pic_url = None
+                try:
+                    meta_get = requests.get(
+                        f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v20.0')}/{client.whatsapp_phone_number_id}/whatsapp_business_profile?fields=profile_picture_url",
+                        headers={"Authorization": f"Bearer {client.whatsapp_access_token}"},
+                        timeout=10
+                    )
+                    if meta_get.status_code == 200:
+                        m_data = meta_get.json().get('data', [])
+                        if m_data and isinstance(m_data, list) and len(m_data) > 0:
+                            profile_pic_url = m_data[0].get('profile_picture_url')
+                except Exception as ex:
+                    logger.warning(f"Failed to fetch profile picture URL from Meta: {ex}")
+
+                settings_dict = client.settings or {}
+                if profile_pic_url:
+                    settings_dict['whatsapp_profile_picture_url'] = profile_pic_url
+                    client.settings = settings_dict
+                    client.save(update_fields=['settings'])
+
+                return Response({
+                    "status": "success",
+                    "message": "Profile picture updated successfully on WhatsApp!",
+                    "profile_picture_url": profile_pic_url
+                })
             else:
                 return Response({"error": "Failed to update WhatsApp profile", "details": profile_data}, status=400)
                 
         except Exception as e:
             return Response({"error": f"An internal error occurred: {str(e)}"}, status=500)
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def get_whatsapp_profile_picture(self, request, pk=None):
+        client = self.get_object()
+        
+        # Verify ownership
+        if request.user.role != 'ADMIN' and request.user.client_id != client.id:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        if not client.whatsapp_phone_number_id or not client.whatsapp_access_token:
+            return Response({"profile_picture_url": None, "error": "WhatsApp not connected"}, status=200)
+
+        cached_url = (client.settings or {}).get('whatsapp_profile_picture_url')
+
+        # Try to query Meta live for the latest/active profile picture URL
+        try:
+            meta_get = requests.get(
+                f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v20.0')}/{client.whatsapp_phone_number_id}/whatsapp_business_profile?fields=profile_picture_url",
+                headers={"Authorization": f"Bearer {client.whatsapp_access_token}"},
+                timeout=10
+            )
+            if meta_get.status_code == 200:
+                m_data = meta_get.json().get('data', [])
+                if m_data and isinstance(m_data, list) and len(m_data) > 0:
+                    live_url = m_data[0].get('profile_picture_url')
+                    if live_url:
+                        settings_dict = client.settings or {}
+                        settings_dict['whatsapp_profile_picture_url'] = live_url
+                        client.settings = settings_dict
+                        client.save(update_fields=['settings'])
+                        return Response({"status": "success", "profile_picture_url": live_url})
+        except Exception as ex:
+            logger.warning(f"Failed to fetch live WhatsApp profile picture: {ex}")
+
+        return Response({"status": "success", "profile_picture_url": cached_url})
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def get_whatsapp_business_profile(self, request, pk=None):
+        client = self.get_object()
+        if request.user.role != 'ADMIN' and request.user.client_id != client.id:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        settings_dict = client.settings or {}
+        cached_profile = settings_dict.get('whatsapp_business_profile', {})
+        cached_hours = settings_dict.get('whatsapp_business_hours', {})
+
+        if not client.whatsapp_phone_number_id or not client.whatsapp_access_token:
+            return Response({
+                "profile": cached_profile,
+                "business_hours": cached_hours,
+                "is_connected": False
+            }, status=200)
+
+        # Fetch live details from Meta Graph API
+        live_profile = dict(cached_profile)
+        try:
+            url = f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v20.0')}/{client.whatsapp_phone_number_id}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical"
+            headers = {"Authorization": f"Bearer {client.whatsapp_access_token}"}
+            res = requests.get(url, headers=headers, timeout=10)
+            if res.status_code == 200:
+                data_list = res.json().get('data', [])
+                if data_list and isinstance(data_list, list) and len(data_list) > 0:
+                    meta_data = data_list[0]
+                    if meta_data.get('address'):
+                        live_profile['address'] = meta_data['address']
+                    if meta_data.get('description'):
+                        live_profile['description'] = meta_data['description']
+                    if meta_data.get('about'):
+                        live_profile['about'] = meta_data['about']
+                    if meta_data.get('email'):
+                        live_profile['email'] = meta_data['email']
+                    if meta_data.get('websites'):
+                        live_profile['websites'] = meta_data['websites']
+                    if meta_data.get('vertical'):
+                        live_profile['vertical'] = meta_data['vertical']
+                    if meta_data.get('profile_picture_url'):
+                        live_profile['profile_picture_url'] = meta_data['profile_picture_url']
+                        settings_dict['whatsapp_profile_picture_url'] = meta_data['profile_picture_url']
+
+                    settings_dict['whatsapp_business_profile'] = live_profile
+                    client.settings = settings_dict
+                    client.save(update_fields=['settings'])
+        except Exception as ex:
+            logger.warning(f"Failed to fetch live WhatsApp business profile from Meta: {ex}")
+
+        return Response({
+            "status": "success",
+            "profile": live_profile,
+            "business_hours": cached_hours,
+            "is_connected": True
+        })
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def update_whatsapp_business_profile(self, request, pk=None):
+        client = self.get_object()
+        if request.user.role != 'ADMIN' and request.user.client_id != client.id:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        if not client.whatsapp_phone_number_id or not client.whatsapp_access_token:
+            return Response({"error": "WhatsApp is not connected"}, status=400)
+
+        profile_data = request.data.get('profile', {})
+        business_hours = request.data.get('business_hours', {})
+
+        # Prepare Meta payload
+        meta_payload = {
+            "messaging_product": "whatsapp"
+        }
+        
+        if 'address' in profile_data:
+            meta_payload['address'] = str(profile_data['address']).strip()[:256]
+        if 'description' in profile_data:
+            meta_payload['description'] = str(profile_data['description']).strip()[:512]
+        if 'about' in profile_data:
+            meta_payload['about'] = str(profile_data['about']).strip()[:139]
+        if 'email' in profile_data:
+            meta_payload['email'] = str(profile_data['email']).strip()[:128]
+        if 'vertical' in profile_data and profile_data['vertical']:
+            meta_payload['vertical'] = str(profile_data['vertical']).strip()
+        if 'websites' in profile_data:
+            ws = profile_data['websites']
+            if isinstance(ws, list):
+                meta_payload['websites'] = [str(w).strip() for w in ws if str(w).strip()][:2]
+            elif isinstance(ws, str) and ws.strip():
+                meta_payload['websites'] = [ws.strip()]
+
+        # Call Meta Graph API
+        meta_url = f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v20.0')}/{client.whatsapp_phone_number_id}/whatsapp_business_profile"
+        headers = {
+            "Authorization": f"Bearer {client.whatsapp_access_token}",
+            "Content-Type": "application/json"
+        }
+
+        meta_error = None
+        try:
+            meta_res = requests.post(meta_url, headers=headers, json=meta_payload, timeout=12)
+            meta_json = meta_res.json()
+            if meta_res.status_code != 200 or not meta_json.get('success'):
+                meta_error = meta_json.get('error', {}).get('message') or str(meta_json)
+        except Exception as ex:
+            meta_error = str(ex)
+
+        if meta_error:
+            return Response({"error": f"Meta API Error: {meta_error}"}, status=400)
+
+        # Save to client settings
+        settings_dict = client.settings or {}
+        current_profile = settings_dict.get('whatsapp_business_profile', {})
+        current_profile.update(profile_data)
+        settings_dict['whatsapp_business_profile'] = current_profile
+
+        if business_hours:
+            settings_dict['whatsapp_business_hours'] = business_hours
+
+        client.settings = settings_dict
+        client.save(update_fields=['settings'])
+
+        return Response({
+            "status": "success",
+            "message": "WhatsApp Business Profile updated successfully on WhatsApp!",
+            "profile": current_profile,
+            "business_hours": settings_dict.get('whatsapp_business_hours', {})
+        })
 
 
 class ContactViewSet(viewsets.ModelViewSet):
@@ -408,10 +599,6 @@ class ClientMessagesView(APIView):
                 messages = messages.filter(channel__in=allowed_channels)
 
         if contact_id:
-            from django.db.models import Q
-            from ..models import Contact
-            from bson import ObjectId
-            
             search_terms = set([contact_id, str(contact_id).strip()])
             clean_digits = ''.join(filter(str.isdigit, str(contact_id)))
             if clean_digits:
@@ -432,6 +619,23 @@ class ClientMessagesView(APIView):
                 contact_obj = Contact.objects.filter(Q(client=client) & contact_q).first()
             except Exception as lookup_err:
                 pass
+
+            # Fallback: if contact_id is a Conversation ID or matches Conversation
+            if not contact_obj:
+                try:
+                    convo_q = Q(contact_platform_id=contact_id)
+                    if ObjectId.is_valid(str(contact_id)):
+                        convo_q |= Q(id=contact_id)
+                    convo_obj = Conversation.objects.filter(Q(client=client) & convo_q).first()
+                    if convo_obj:
+                        if getattr(convo_obj, 'contact_platform_id', None):
+                            search_terms.add(str(convo_obj.contact_platform_id))
+                        if getattr(convo_obj, 'contact_id', None):
+                            search_terms.add(str(convo_obj.contact_id))
+                        if getattr(convo_obj, 'contact', None):
+                            contact_obj = convo_obj.contact
+                except Exception:
+                    pass
 
             if contact_obj:
                 if contact_obj.platform_id:
@@ -495,7 +699,6 @@ class ClientMessagesView(APIView):
             )
             # Unpause bot for testing
             try:
-                from ..models import Contact
                 contact = Contact.objects.filter(Q(client=client) & (Q(platform_id=to_number) | Q(phone_number=to_number))).first()
                 if contact:
                     contact.bot_paused = False
@@ -655,11 +858,6 @@ class ClientMessagesView(APIView):
             })
             
         return Response({"status": "sent"})
-
-import ipaddress
-import socket
-import urllib.parse
-
 # Trusted Meta / WhatsApp CDN domains allowed for media proxying
 ALLOWED_MEDIA_DOMAINS = {
     'graph.facebook.com',

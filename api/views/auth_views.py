@@ -115,10 +115,14 @@ class FirebaseLoginView(views.APIView):
 
     def post(self, req):
         try:
-            id_token = req.data.get('id_token', '').strip()
-            name = req.data.get('name', '').strip()
-            invite_token = req.data.get('invite_token', '').strip()
-            business_name = req.data.get('business_name', '').strip()
+            id_token_raw = req.data.get('id_token')
+            if not id_token_raw or not isinstance(id_token_raw, str):
+                return Response({"message": "Valid id_token string is required."}, status=status.HTTP_400_BAD_REQUEST)
+            id_token = id_token_raw.strip()
+
+            name = str(req.data.get('name') or '').strip()
+            invite_token = str(req.data.get('invite_token') or '').strip()
+            business_name = str(req.data.get('business_name') or '').strip()
 
             # Extract client IP address
             x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
@@ -152,7 +156,7 @@ class FirebaseLoginView(views.APIView):
         except Exception as e:
             import logging
             logging.getLogger(__name__).exception("Firebase login unhandled error")
-            return Response({"message": f"Login process failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"message": f"Login process failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -161,9 +165,13 @@ class UWOLoginView(views.APIView):
     authentication_classes = []
 
     def post(self, req):
-        email = req.data.get('email', '').strip().lower()
-        name = req.data.get('name', '').strip()
-        uwo_token = req.data.get('uwo_token', '').strip()
+        email_raw = req.data.get('email')
+        if not email_raw or not isinstance(email_raw, str):
+            return Response({"message": "Valid email string is required."}, status=status.HTTP_400_BAD_REQUEST)
+        email = email_raw.strip().lower()
+
+        name = str(req.data.get('name') or '').strip()
+        uwo_token = str(req.data.get('uwo_token') or '').strip()
 
         # Extract client IP address
         x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')

@@ -258,7 +258,7 @@ class PublicProductCheckoutInfoView(APIView):
     def get(self, request, product_id):
         try:
             product = Product.objects.select_related('client').get(pk=product_id)
-        except Product.DoesNotExist:
+        except Exception:
             return Response({'error': 'Product not found.'}, status=404)
 
         # Validate payment readiness

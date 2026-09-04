@@ -569,6 +569,7 @@ class ConversationSerializer(serializers.ModelSerializer):
     locked_by_name = serializers.SerializerMethodField()
     contact_name = serializers.SerializerMethodField()
     contact_phone = serializers.SerializerMethodField()
+    bot_paused = serializers.SerializerMethodField()
 
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
@@ -601,6 +602,20 @@ class ConversationSerializer(serializers.ModelSerializer):
         if obj.contact:
             return obj.contact.phone_number
         return None
+
+    def get_bot_paused(self, obj):
+        if obj.contact:
+            return bool(obj.contact.bot_paused)
+        from django.db.models import Q
+        from .models import Contact
+        formatted_number = str(obj.contact_platform_id).replace('+', '').strip()
+        c = Contact.objects.filter(
+            Q(client=obj.client) & (
+                Q(platform_id=obj.contact_platform_id) | 
+                Q(phone_number__icontains=formatted_number)
+            )
+        ).first()
+        return bool(c.bot_paused) if c else False
 
 
 class ConversationAuditLogSerializer(serializers.ModelSerializer):

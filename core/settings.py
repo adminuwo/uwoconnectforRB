@@ -104,6 +104,7 @@ SIMPLE_JWT = {
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'api.middleware.SecurityAntiCacheMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -148,6 +149,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
     r"^https://.*\.ngrok-free\.app$",
     r"^https://.*$",  # Allow custom white-label agency HTTPS domains
+    r"^http://(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$",
 ]
 CORS_ALLOWED_ORIGINS = [
     'https://uwoconnect.aisa24.com',
@@ -158,6 +160,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:8080',
     'http://192.168.29.228:3000',
+    'http://192.168.29.24:3000',
 ]
 
 # CSRF trusted origins — required for POST requests in production (DEBUG=False)

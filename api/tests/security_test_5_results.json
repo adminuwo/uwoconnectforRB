@@ -1,0 +1,234 @@
+{
+  "crawled_routes": [
+    {
+      "route": "/",
+      "name": "Public Landing Page",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/auth/login",
+      "name": "User Login Portal",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/auth/register",
+      "name": "Team / Client Registration",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client",
+      "name": "Client Workspace Home",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/inbox",
+      "name": "Unified Multi-Channel Inbox",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/crm",
+      "name": "Contacts & Lead Pipeline",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/workflows",
+      "name": "Visual Workflow Engine Canvas",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/automations",
+      "name": "Auto-Reply Rule Manager",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/invoices",
+      "name": "Invoices & Billing Hub",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/quotations",
+      "name": "Sales Quotations Center",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/proposals",
+      "name": "Proposals Designer",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/catalog",
+      "name": "Product Catalog Manager",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/team",
+      "name": "Team Members & Permissions",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/calls",
+      "name": "WebRTC Audio/Video Call Manager",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/client/billing",
+      "name": "Prepaid Wallet & Ledger",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/admin",
+      "name": "Super Admin Control Center",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/admin/clients",
+      "name": "Client Intelligence & Tenant Matrix",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/admin/plans",
+      "name": "Plan Management & Entitlements",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/admin/audit-logs",
+      "name": "Immutable System Audit Trail",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/privacy",
+      "name": "Public Privacy Policy",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    },
+    {
+      "route": "/terms",
+      "name": "Public Terms of Service",
+      "status": "STABLE",
+      "uncaught_errors": 0
+    }
+  ],
+  "cache_header_verification": [
+    {
+      "endpoint": "/api/profile/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/contacts/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/conversations/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/invoices/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/quotations/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/proposals/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/products/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/orders/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/client/entitlements/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    },
+    {
+      "endpoint": "/api/admin/overview/",
+      "cache_control": "no-store, no-cache, must-revalidate, private, max-age=0",
+      "pragma": "no-cache",
+      "compliant": true
+    }
+  ],
+  "storage_inventory": [
+    {
+      "storage_type": "window.localStorage",
+      "key": "token / uwo_token",
+      "purpose": "JWT API Bearer Token",
+      "contains_sensitive_secrets": false,
+      "contains_passwords": false,
+      "status": "APPROVED (Short-lived 24-hr Bearer Token)"
+    },
+    {
+      "storage_type": "window.localStorage",
+      "key": "user",
+      "purpose": "User Profile Cache (id, name, email, role, department, client_id)",
+      "contains_sensitive_secrets": false,
+      "contains_passwords": false,
+      "status": "APPROVED (Zero password hashes / Zero secret keys)"
+    },
+    {
+      "storage_type": "window.localStorage",
+      "key": "aisa_tour_*",
+      "purpose": "Interactive Guided Tour Progress State",
+      "contains_sensitive_secrets": false,
+      "contains_passwords": false,
+      "status": "APPROVED (Non-sensitive UI State)"
+    },
+    {
+      "storage_type": "window.sessionStorage",
+      "key": "N/A",
+      "purpose": "Empty",
+      "contains_sensitive_secrets": false,
+      "contains_passwords": false,
+      "status": "APPROVED (Zero Session Storage Leaks)"
+    },
+    {
+      "storage_type": "Browser Cookies",
+      "key": "sessionid, csrftoken",
+      "purpose": "CSRF Mitigation & Session Boundary",
+      "contains_sensitive_secrets": false,
+      "contains_passwords": false,
+      "status": "APPROVED (HttpOnly & SameSite=Lax flags enforced)"
+    }
+  ]
+}

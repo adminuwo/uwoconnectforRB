@@ -1,0 +1,97 @@
+{
+  "burst_resilience": [
+    {
+      "endpoint": "/api/health/",
+      "method": "GET",
+      "total_requests": 50,
+      "elapsed_seconds": 8.629,
+      "requests_per_second": 5.79,
+      "avg_latency_ms": 172.57,
+      "status_distribution": {
+        "200": 50
+      },
+      "resilient": true
+    },
+    {
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "total_requests": 50,
+      "elapsed_seconds": 0.238,
+      "requests_per_second": 209.68,
+      "avg_latency_ms": 4.77,
+      "status_distribution": {
+        "400": 50
+      },
+      "resilient": true
+    },
+    {
+      "endpoint": "/api/auth/forgot-password/send-otp",
+      "method": "POST",
+      "total_requests": 50,
+      "elapsed_seconds": 5.348,
+      "requests_per_second": 9.35,
+      "avg_latency_ms": 106.96,
+      "status_distribution": {
+        "404": 50
+      },
+      "resilient": true
+    },
+    {
+      "endpoint": "/api/whitelabel/config",
+      "method": "GET",
+      "total_requests": 50,
+      "elapsed_seconds": 0.115,
+      "requests_per_second": 436.39,
+      "avg_latency_ms": 2.29,
+      "status_distribution": {
+        "200": 50
+      },
+      "resilient": true
+    }
+  ],
+  "payload_limits": [
+    {
+      "scenario": "10MB Oversized JSON",
+      "status_code": 400,
+      "safe": true
+    },
+    {
+      "scenario": "Deeply Nested JSON (60 levels)",
+      "status_code": 400,
+      "safe": true
+    },
+    {
+      "scenario": "Malformed Multipart Boundary",
+      "status_code": 401,
+      "safe": true
+    }
+  ],
+  "malformed_headers": [
+    {
+      "scenario": "Missing Host Header",
+      "status_code": 400,
+      "safe": true
+    },
+    {
+      "scenario": "Invalid Content-Type Header",
+      "status_code": 200,
+      "safe": true
+    },
+    {
+      "scenario": "Mismatched Content-Length Header",
+      "status_code": 200,
+      "safe": true
+    },
+    {
+      "scenario": "Gigantic Header Value (16KB)",
+      "status_code": 200,
+      "safe": true
+    },
+    {
+      "scenario": "Invalid Unicode in Header",
+      "status_code": 200,
+      "safe": true
+    }
+  ],
+  "process_stability": true
+}
