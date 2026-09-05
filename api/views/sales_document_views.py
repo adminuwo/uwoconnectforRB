@@ -63,18 +63,47 @@ class SalesDocumentViewSet(viewsets.ModelViewSet):
 
         return qs
 
+    @staticmethod
+    def _generate_next_document_number(client, doc_type):
+        prefix = 'QTN' if doc_type == 'QUOTATION' else 'PRP' if doc_type == 'PROPOSAL' else 'INV'
+        year = timezone.now().year
+        prefix_pattern = f"UWO-{prefix}-{year}-"
+        
+        existing_doc_numbers = SalesDocument.objects.filter(
+            client=client,
+            document_type=doc_type,
+            document_number__startswith=prefix_pattern
+        ).values_list('document_number', flat=True)
+        
+        max_num = 0
+        for d_num in existing_doc_numbers:
+            try:
+                num_part = int(str(d_num).split('-')[-1])
+                if num_part > max_num:
+                    max_num = num_part
+            except (ValueError, IndexError):
+                pass
+        
+        next_num = max_num + 1
+        while SalesDocument.objects.filter(
+            client=client,
+            document_number=f"UWO-{prefix}-{year}-{next_num:05d}",
+            version=1
+        ).exists():
+            next_num += 1
+            
+        return f"UWO-{prefix}-{year}-{next_num:05d}"
+
     def perform_create(self, serializer):
         user = self.request.user
-        client = user.client
+        client = getattr(user, 'client', None)
+        if not client:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'client': 'No associated workspace client found for user account.'})
         
-        # Determine prefix and count auto-increments
+        # Determine prefix and collision-safe auto-incrementing serial number
         doc_type = self.request.data.get('document_type', 'QUOTATION')
-        prefix = 'QTN' if doc_type == 'QUOTATION' else 'PRP' if doc_type == 'PROPOSAL' else 'INV'
-        
-        # Count existing docs to build serial number
-        count = SalesDocument.objects.filter(client=client, document_type=doc_type).count() + 1
-        year = timezone.now().year
-        doc_number = f"UWO-{prefix}-{year}-{count:05d}"
+        doc_number = self._generate_next_document_number(client, doc_type)
         
         # Secure URL token
         secure_token = secrets.token_urlsafe(32)
@@ -374,10 +403,7 @@ class SalesDocumentViewSet(viewsets.ModelViewSet):
         user = request.user
         
         # New serial
-        count = SalesDocument.objects.filter(client=doc.client, document_type=doc.document_type).count() + 1
-        prefix = 'QTN' if doc.document_type == 'QUOTATION' else 'PRP' if doc.document_type == 'PROPOSAL' else 'INV'
-        year = timezone.now().year
-        new_num = f"UWO-{prefix}-{year}-{count:05d}"
+        new_num = self._generate_next_document_number(doc.client, doc.document_type)
         secure_token = secrets.token_urlsafe(32)
         
         with transaction.atomic():
@@ -464,9 +490,7 @@ class SalesDocumentViewSet(viewsets.ModelViewSet):
             }, status=400)
             
         user = request.user
-        count = SalesDocument.objects.filter(client=doc.client, document_type='INVOICE').count() + 1
-        year = timezone.now().year
-        inv_num = f"UWO-INV-{year}-{count:05d}"
+        inv_num = self._generate_next_document_number(doc.client, 'INVOICE')
         secure_token = secrets.token_urlsafe(32)
         
         with transaction.atomic():

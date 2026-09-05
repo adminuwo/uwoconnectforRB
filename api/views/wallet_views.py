@@ -19,7 +19,25 @@ class ClientWalletDashboardView(APIView):
 
     def get(self, request):
         user = request.user
-        if not user.client:
+        if not getattr(user, 'client', None):
+            if getattr(user, 'role', '') == 'ADMIN' or getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False):
+                try:
+                    from django.db.models import Sum
+                    total_wallets = ClientWallet.objects.aggregate(total=Sum('balance_paise'))['total'] or 0
+                except Exception:
+                    total_wallets = sum(getattr(w, 'balance_paise', 0) or 0 for w in ClientWallet.objects.all())
+                return Response({
+                    'wallet_balance_inr': round(total_wallets / 100.0, 2),
+                    'wallet_balance_paise': total_wallets,
+                    'is_low_balance': False,
+                    'is_zero_balance': False,
+                    'subscription': {
+                        'status': 'ACTIVE',
+                        'plan_name': 'SUPER_ADMIN',
+                        'price_monthly': 0
+                    },
+                    'transactions': []
+                }, status=status.HTTP_200_OK)
             return Response({'error': 'No workspace client associated with user.'}, status=status.HTTP_400_BAD_REQUEST)
 
         client = user.client
