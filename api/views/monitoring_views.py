@@ -77,6 +77,20 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.locked_at = timezone.now()
         conversation.save()
 
+        # Pause bot for contact (Human Takeover)
+        contact = conversation.contact
+        if not contact:
+            formatted_number = str(conversation.contact_platform_id).replace('+', '').strip()
+            contact = Contact.objects.filter(
+                Q(client=conversation.client) & (
+                    Q(platform_id=conversation.contact_platform_id) | 
+                    Q(phone_number__icontains=formatted_number)
+                )
+            ).first()
+        if contact:
+            contact.bot_paused = True
+            contact.save()
+
         # Audit Log
         effective_client = conversation.client or user.client
         if effective_client:

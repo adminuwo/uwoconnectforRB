@@ -18,6 +18,7 @@ class WhiteLabelConfigView(APIView):
         client_id = request.query_params.get('client_id', '').strip()
 
         client = None
+        is_default_domain = False
 
         if domain:
             # Strip protocol and port if provided

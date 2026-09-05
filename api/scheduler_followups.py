@@ -70,21 +70,42 @@ def followup_poller():
                             continue
                             
                         # If no reply, SEND FOLLOW-UP!
-                        if fu.followup_template and client.whatsapp_phone_number_id:
+                        if fu.followup_template and client.whatsapp_phone_number_id and client.whatsapp_access_token:
                             try:
-                                MetaWebhookService.send_template_message(
-                                    client=client,
-                                    to_number=phone,
-                                    template_name=fu.followup_template.name,
-                                    language_code=fu.followup_template.language,
-                                    components=[],
-                                    phone_number_id=client.whatsapp_phone_number_id
+                                from api.integrations.meta_integration import MetaIntegration
+                                from api.repositories.message_repository import MessageRepository
+                                payload = {
+                                    "messaging_product": "whatsapp",
+                                    "to": phone,
+                                    "type": "template",
+                                    "template": {
+                                        "name": fu.followup_template.name,
+                                        "language": {"code": fu.followup_template.language or "en"}
+                                    }
+                                }
+                                res = MetaIntegration.send_whatsapp_message(
+                                    phone_number_id=client.whatsapp_phone_number_id,
+                                    token=client.whatsapp_access_token,
+                                    payload=payload
                                 )
-                                FollowUpLog.objects.create(followup=fu, contact=contact, status='SENT')
+                                if res.status_code in [200, 201]:
+                                    FollowUpLog.objects.create(followup=fu, contact=contact, status='SENT')
+                                    MessageRepository.create_message(
+                                        client=client,
+                                        channel='WHATSAPP',
+                                        from_address=client.whatsapp_phone_number_id,
+                                        to_address=phone,
+                                        body=f"[Follow-up Template: {fu.followup_template.name}]",
+                                        message_type='OUTGOING',
+                                        status='SENT'
+                                    )
+                                else:
+                                    print(f"[FollowUp Error] Meta API returned {res.status_code}: {res.text}")
+                                    FollowUpLog.objects.create(followup=fu, contact=contact, status='FAILED')
                             except Exception as send_err:
                                 print(f"[FollowUp Error] Could not send to {phone}: {send_err}")
                                 FollowUpLog.objects.create(followup=fu, contact=contact, status='FAILED')
-                                
+                                        
         except Exception as e:
             print(f"[FollowUp Poller Error]: {e}")
             

@@ -123,11 +123,15 @@ class CampaignViewSet(viewsets.ModelViewSet):
             except Exception as ex:
                 print(f"Error resolving template ID {template_id}: {ex}")
 
+        # Determine channel and platforms
+        platforms = self.request.data.get('platforms') or ['WHATSAPP']
+        channel = self.request.data.get('channel') or (platforms[0] if platforms else 'WHATSAPP')
+
         scheduled_at = serializer.validated_data.get('scheduled_at')
         if scheduled_at and scheduled_at > timezone.now():
-            campaign = serializer.save(client=client, template=template_obj, status='SCHEDULED')
+            campaign = serializer.save(client=client, template=template_obj, channel=channel, platforms=platforms, status='SCHEDULED')
         else:
-            campaign = serializer.save(client=client, template=template_obj, status='SENDING')
+            campaign = serializer.save(client=client, template=template_obj, channel=channel, platforms=platforms, status='SENDING')
 
         # Create optional follow-up
         delay_hours = self.request.data.get('followup_delay_hours')
