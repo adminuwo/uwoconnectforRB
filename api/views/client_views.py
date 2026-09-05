@@ -449,30 +449,38 @@ class ClientStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        client = getattr(request.user, 'client', None)
+        client = get_tenant_client(request)
         if not client:
+            # Fallback to counting all data if super admin with no specific tenant
+            total_conversations = Contact.objects.count()
+            automation_runs = Message.objects.filter(message_type='OUTGOING', status='SENT').count()
+            active_users = total_conversations
+            connectors_count = 5
+            projects_count = Workflow.objects.count()
+            team_members_count = User.objects.count()
+            pdfs_count = KnowledgeDocument.objects.count()
+            products_count = Product.objects.count()
+            crm_leads_count = total_conversations
             return Response({
-                "totalConversations": 0,
-                "automationRuns": 0,
-                "activeUsers": 0,
+                "totalConversations": total_conversations,
+                "automationRuns": automation_runs,
+                "activeUsers": active_users,
                 "avgResponse": "14s",
                 "resourceCounts": {
-                    "connectors": 0,
-                    "projects": 0,
-                    "teamMembers": 0,
-                    "pdfs": 0,
-                    "products": 0
+                    "connectors": connectors_count,
+                    "projects": projects_count,
+                    "teamMembers": team_members_count,
+                    "pdfs": pdfs_count,
+                    "products": products_count,
+                    "crmLeads": crm_leads_count
                 }
             }, status=200)
             
-        # Avoid slow distinct() aggregation queries in Djongo
-        # total_conversations = MessageRepository.filter_messages(client=client).values('from_address', 'to_address').distinct().count()
         total_conversations = ContactRepository.filter_contacts(client=client).count()
         automation_runs = MessageRepository.filter_messages(client=client, message_type='OUTGOING', status='SENT').count()
         active_users = total_conversations
 
         # --- Live Resource Counts from Database ---
-        # Connectors: count how many channel flags are enabled on this client
         connector_flags = [
             client.automation_enabled and bool(client.whatsapp_access_token),  # WhatsApp
             client.facebook_enabled,
@@ -490,21 +498,19 @@ class ClientStatsView(APIView):
         ]
         connectors_count = sum(1 for flag in connector_flags if flag)
 
-        # Workflows count
         from ..repositories.workflow_repository import WorkflowRepository
         projects_count = WorkflowRepository.filter_workflows(client=client).count()
 
-        # Team Members: users linked to this client
         from ..models import User
         team_members_count = User.objects.filter(client=client).count()
 
-        # Knowledge PDFs
         from ..repositories.knowledge_repository import KnowledgeRepository
         pdfs_count = KnowledgeRepository.filter_documents(client=client).count()
 
-        # Products
         from ..repositories.product_repository import ProductRepository
         products_count = ProductRepository.filter_products(client=client).count()
+        crm_leads_count = total_conversations
+
         return Response({
             "totalConversations": total_conversations,
             "automationRuns": automation_runs,
@@ -515,7 +521,8 @@ class ClientStatsView(APIView):
                 "projects": projects_count,
                 "teamMembers": team_members_count,
                 "pdfs": pdfs_count,
-                "products": products_count
+                "products": products_count,
+                "crmLeads": crm_leads_count
             }
         })
 

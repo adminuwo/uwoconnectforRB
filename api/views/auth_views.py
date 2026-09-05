@@ -3,7 +3,7 @@ from rest_framework import status, views, viewsets
 from rest_framework.response import Response
 from firebase_admin import auth as firebase_auth
 from django.contrib.auth import authenticate
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from django.http import HttpResponse
@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from ..serializers import RegisterSerializer, UserSerializer, ClientSerializer, AutomationSerializer, WorkflowSerializer, ContactSerializer, TemplateSerializer, CampaignSerializer, SupportMessageSerializer, AuditLogSerializer, TeamInviteSerializer, ProductSerializer, OrderSerializer
 from ..repositories.client_repository import ClientRepository
-from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order
+from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order, QrAuthSession
 import requests
 import os
 import json
@@ -713,3 +713,138 @@ class InstagramOAuthCallbackView(APIView):
             "message": "Instagram Business Account connected successfully",
             "instagram_config": client.instagram_config,
         })
+
+
+# ============================================================================
+# QR CODE BASED WEB <-> MOBILE AUTHENTICATION / DEVICE HANDOFF VIEWS
+# ============================================================================
+import secrets
+import datetime
+from django.utils import timezone
+from rest_framework_simplejwt.tokens import RefreshToken
+
+class QrAuthCreateView(views.APIView):
+    """
+    Web user requests a short-lived (120s) single-use QR auth session.
+    Returns session_id, expires_at, and qr_url.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        from .client_views import get_tenant_client
+        client = get_tenant_client(request) or getattr(user, 'client', None)
+
+        session_id = secrets.token_hex(32)
+        now = timezone.now()
+        expires_at = now + datetime.timedelta(seconds=120)
+
+        x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+        ip_address = x_forwarded.split(',')[0].strip() if x_forwarded else request.META.get('REMOTE_ADDR')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        qr_session = QrAuthSession.objects.create(
+            session_id=session_id,
+            user=user,
+            client=client,
+            status='WAITING',
+            ip_address=ip_address,
+            user_agent=user_agent,
+            expires_at=expires_at,
+        )
+
+        qr_url = f"uwoconnect://auth/qr?session_id={session_id}"
+        web_fallback_url = f"https://uwoconnect.aisa24.com/auth/qr?session_id={session_id}"
+
+        return Response({
+            "session_id": session_id,
+            "status": qr_session.status,
+            "expires_at": expires_at.isoformat(),
+            "expires_in_seconds": 120,
+            "qr_url": qr_url,
+            "web_fallback_url": web_fallback_url,
+        }, status=status.HTTP_201_CREATED)
+
+
+class QrAuthStatusView(views.APIView):
+    """
+    Polls current status of a QR auth session.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, session_id):
+        try:
+            qr_session = QrAuthSession.objects.get(session_id=session_id)
+        except QrAuthSession.DoesNotExist:
+            return Response({"error": "QR Session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not qr_session.is_valid() and qr_session.status != 'CONSUMED':
+            return Response({
+                "session_id": session_id,
+                "status": "EXPIRED",
+                "expires_in_seconds": 0
+            }, status=200)
+
+        now = timezone.now()
+        rem_seconds = max(0, int((qr_session.expires_at - now).total_seconds()))
+
+        return Response({
+            "session_id": session_id,
+            "status": qr_session.status,
+            "expires_in_seconds": rem_seconds,
+        }, status=200)
+
+
+class QrAuthConsumeView(views.APIView):
+    """
+    Consumes a valid, unexpired QR auth session and issues a fresh mobile JWT token.
+    Enforces atomic single-use consumption to prevent replay attacks.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        session_id = request.data.get('session_id', '').strip()
+        if not session_id:
+            return Response({"error": "session_id is required"}, status=400)
+
+        try:
+            qr_session = QrAuthSession.objects.select_related('user', 'client').get(session_id=session_id)
+        except QrAuthSession.DoesNotExist:
+            return Response({"error": "Invalid or non-existent QR authentication session"}, status=404)
+
+        if qr_session.status == 'CONSUMED':
+            return Response({"error": "This QR code has already been consumed (replay protection)"}, status=400)
+
+        if not qr_session.is_valid():
+            return Response({"error": "This QR code has expired or is no longer valid"}, status=400)
+
+        qr_session.status = 'CONSUMED'
+        qr_session.consumed_at = timezone.now()
+        qr_session.save(update_fields=['status', 'consumed_at'])
+
+        user = qr_session.user
+        user.is_online = True
+        user.last_active_at = timezone.now()
+        user.save(update_fields=['is_online', 'last_active_at'])
+
+        try:
+            AuditLog.objects.create(
+                admin_name=user.username,
+                client_name=user.client.business_name if user.client else "Platform",
+                module="Authentication",
+                action="QR_DEVICE_HANDOFF",
+                before_value=f"Session: {session_id[:8]}...",
+                after_value=f"User {user.username} authenticated via QR Code handoff",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+        except Exception:
+            pass
+
+        from ..services.auth_service import AuthService
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "user": AuthService._serialize_user(user),
+            "token": str(refresh.access_token)
+        }, status=200)
+

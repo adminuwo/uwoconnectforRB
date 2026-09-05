@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    RegisterView, LoginView, GoogleLoginView, GoogleClientIdView, FirebaseLoginView, UWOLoginView, ClientViewSet, AutomationViewSet, WorkflowViewSet, 
+    RegisterView, LoginView, GoogleLoginView, GoogleClientIdView, FirebaseLoginView, UWOLoginView, ClientViewSet, AutomationViewSet, WorkflowViewSet, QrAuthCreateView, QrAuthStatusView, QrAuthConsumeView, 
 
     ContactViewSet, AdminStatsView, ClientStatsView, AdminAutomationsView, AdminMessagesView, 
     WhatsAppWebhookView, FacebookInstagramWebhookView, AdminUsersView, ProfileView, ClientMessagesView, MediaProxyView,
@@ -150,6 +150,14 @@ urlpatterns = [
     path('auth/firebase-login', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/uwo-login', UWOLoginView.as_view(), name='uwo-login'),
 
+    # QR Code Based Authentication & Device Handoff
+    path('auth/qr/create', QrAuthCreateView.as_view(), name='qr-auth-create'),
+    path('auth/qr/create/', QrAuthCreateView.as_view()),
+    path('auth/qr/status/<str:session_id>', QrAuthStatusView.as_view(), name='qr-auth-status'),
+    path('auth/qr/status/<str:session_id>/', QrAuthStatusView.as_view()),
+    path('auth/qr/consume', QrAuthConsumeView.as_view(), name='qr-auth-consume'),
+    path('auth/qr/consume/', QrAuthConsumeView.as_view()),
+
     path('auth/forgot-password/send-otp', ForgotPasswordSendOTPView.as_view(), name='forgot-password-send-otp'),
     path('auth/forgot-password/verify-otp', ForgotPasswordVerifyOTPView.as_view(), name='forgot-password-verify-otp'),
     path('auth/forgot-password/reset', ForgotPasswordResetView.as_view(), name='forgot-password-reset'),
@@ -163,6 +171,7 @@ urlpatterns = [
     path('messages/', ClientMessagesView.as_view(), name='client-messages'),
     path('messages/suggest_draft/', SuggestDraftView.as_view(), name='suggest-draft'),
     path('client/stats', ClientStatsView.as_view(), name='client-stats'),
+    path('client/stats/', ClientStatsView.as_view()),
     path('client/entitlements', ClientEntitlementsView.as_view(), name='client-entitlements'),
     path('client/entitlements/', ClientEntitlementsView.as_view()),
     path('admin/stats', AdminStatsView.as_view(), name='admin-stats'),

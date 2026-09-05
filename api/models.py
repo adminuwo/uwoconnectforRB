@@ -2154,6 +2154,47 @@ class BroadcastUsage(models.Model):
         return f"Broadcast {self.broadcast_id} - {self.client.business_name} (₹{self.amount_inr})"
 
 
+class QrAuthSession(models.Model):
+    STATUS_CHOICES = [
+        ('CREATED', 'Created'),
+        ('WAITING', 'Waiting'),
+        ('SCANNED', 'Scanned'),
+        ('AUTHENTICATING', 'Authenticating'),
+        ('AUTHENTICATED', 'Authenticated'),
+        ('CONSUMED', 'Consumed'),
+        ('EXPIRED', 'Expired'),
+        ('CANCELLED', 'Cancelled'),
+        ('FAILED', 'Failed'),
+    ]
+
+    session_id = models.CharField(max_length=64, unique=True, db_index=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='qr_auth_sessions')
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='qr_auth_sessions')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='CREATED')
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    expires_at = models.DateTimeField(db_index=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def is_valid(self):
+        if self.status in ['CONSUMED', 'EXPIRED', 'CANCELLED', 'FAILED']:
+            return False
+        if timezone.now() >= self.expires_at:
+            if self.status != 'EXPIRED':
+                self.status = 'EXPIRED'
+                self.save(update_fields=['status'])
+            return False
+        return True
+
+    def __str__(self):
+        return f"QrAuthSession {self.session_id[:8]}... ({self.user.username} - {self.status})"
+
+
+
 
 
 
