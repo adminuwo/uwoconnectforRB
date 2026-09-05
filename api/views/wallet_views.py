@@ -19,13 +19,44 @@ class ClientWalletDashboardView(APIView):
 
     def get(self, request):
         user = request.user
-        if not getattr(user, 'client', None):
-            if getattr(user, 'role', '') == 'ADMIN' or getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False):
+        is_admin = getattr(user, 'role', '') == 'ADMIN' or getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False)
+        client = getattr(user, 'client', None)
+
+        # Allow Admin to inspect a specific client workspace via query parameter
+        if is_admin and not client:
+            client_id = request.query_params.get('client_id')
+            if client_id:
+                try:
+                    client = Client.objects.filter(id=client_id).first()
+                except Exception:
+                    pass
+
+        # If still no specific client and user is Admin, return global overview
+        if not client:
+            if is_admin:
                 try:
                     from django.db.models import Sum
                     total_wallets = ClientWallet.objects.aggregate(total=Sum('balance_paise'))['total'] or 0
                 except Exception:
                     total_wallets = sum(getattr(w, 'balance_paise', 0) or 0 for w in ClientWallet.objects.all())
+
+                # Return recent system-wide ledger transactions for admin
+                global_entries = WalletLedger.objects.all().order_by('-created_at')[:50]
+                transactions_data = [{
+                    'id': str(entry.id),
+                    'transaction_id': entry.transaction_id,
+                    'client_name': entry.client.business_name if entry.client else 'System',
+                    'type': entry.type,
+                    'amount_inr': entry.amount_inr,
+                    'amount_paise': entry.amount_paise,
+                    'balance_after_inr': entry.balance_after_inr,
+                    'description': entry.description,
+                    'service_category': entry.service_category,
+                    'reference_id': entry.reference_id,
+                    'status': entry.status,
+                    'created_at': entry.created_at.isoformat()
+                } for entry in global_entries]
+
                 return Response({
                     'wallet_balance_inr': round(total_wallets / 100.0, 2),
                     'wallet_balance_paise': total_wallets,
@@ -36,17 +67,17 @@ class ClientWalletDashboardView(APIView):
                         'plan_name': 'SUPER_ADMIN',
                         'price_monthly': 0
                     },
-                    'transactions': []
+                    'transactions': transactions_data
                 }, status=status.HTTP_200_OK)
+
             return Response({'error': 'No workspace client associated with user.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        client = user.client
         summary = WalletService.get_wallet_summary(client)
 
-        # Retrieve recent ledger transactions
+        # Retrieve recent ledger transactions for client
         ledger_entries = WalletLedger.objects.filter(client=client).order_by('-created_at')[:50]
         transactions_data = [{
-            'id': entry.id,
+            'id': str(entry.id),
             'transaction_id': entry.transaction_id,
             'type': entry.type,
             'amount_inr': entry.amount_inr,
@@ -68,7 +99,18 @@ class WalletRechargeCreateView(APIView):
 
     def post(self, request):
         user = request.user
-        if not user.client:
+        is_admin = getattr(user, 'role', '') == 'ADMIN' or getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False)
+        client = getattr(user, 'client', None)
+
+        if is_admin and not client:
+            client_id = request.data.get('client_id')
+            if client_id:
+                try:
+                    client = Client.objects.filter(id=client_id).first()
+                except Exception:
+                    pass
+
+        if not client:
             return Response({'error': 'No workspace client associated with user.'}, status=status.HTTP_400_BAD_REQUEST)
 
         raw_amount = request.data.get('amount')
@@ -81,7 +123,7 @@ class WalletRechargeCreateView(APIView):
 
         try:
             order_data = PaymentService.create_wallet_recharge_order(
-                client=user.client,
+                client=client,
                 user=user,
                 amount_inr=amount_inr
             )
@@ -96,7 +138,9 @@ class WalletRechargeVerifyView(APIView):
 
     def post(self, request):
         user = request.user
-        if not user.client:
+        is_admin = getattr(user, 'role', '') == 'ADMIN' or getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False)
+
+        if not getattr(user, 'client', None) and not is_admin:
             return Response({'error': 'No workspace client associated with user.'}, status=status.HTTP_400_BAD_REQUEST)
 
         order_id = request.data.get('order_id') or request.data.get('razorpay_order_id')
@@ -130,13 +174,18 @@ class WalletWebhookView(APIView):
         logger.info(f"[WalletWebhookView] Payload: {payload}")
 
         event = payload.get('event')
-        entity = payload.get('payload', {}).get('payment', {}).get('entity', {})
-        razorpay_order_id = entity.get('order_id')
-        razorpay_payment_id = entity.get('id')
+        payment_entity = payload.get('payload', {}).get('payment', {}).get('entity', {})
+        order_entity = payload.get('payload', {}).get('order', {}).get('entity', {})
+
+        razorpay_order_id = payment_entity.get('order_id') or order_entity.get('id')
+        razorpay_payment_id = payment_entity.get('id')
 
         if razorpay_order_id and event in ['payment.captured', 'order.paid']:
             try:
                 recharge_order = WalletRechargeOrder.objects.filter(razorpay_order_id=razorpay_order_id).first()
+                if not recharge_order:
+                    recharge_order = WalletRechargeOrder.objects.filter(order_id=razorpay_order_id).first()
+
                 if recharge_order and recharge_order.status != 'PAID':
                     PaymentService.verify_and_credit_recharge(
                         order_id=recharge_order.order_id,
@@ -165,7 +214,7 @@ class AdminWalletOverviewView(APIView):
             last_tx = WalletLedger.objects.filter(client=client).order_by('-created_at').first()
 
             result.append({
-                'client_id': client.id,
+                'client_id': str(client.id),
                 'business_name': client.business_name,
                 'subscription_status': summary['subscription']['status'],
                 'subscription_amount': summary['subscription']['price_monthly'],
@@ -191,16 +240,25 @@ class AdminWalletAdjustmentView(APIView):
             return Response({'error': 'Unauthorized admin access required.'}, status=status.HTTP_403_FORBIDDEN)
 
         client_id = request.data.get('client_id')
-        adjustment_type = request.data.get('type', 'ADJUSTMENT') # ADJUSTMENT or REFUND
+        adjustment_type = request.data.get('type', 'ADJUSTMENT') # ADJUSTMENT, REFUND, BONUS, DEBIT
         amount_inr = request.data.get('amount')
         reason = request.data.get('reason')
+        is_deduction = request.data.get('is_deduction', False)
 
-        if not client_id or not amount_inr or not reason:
+        if not client_id or amount_inr is None or not reason:
             return Response({'error': 'client_id, amount, and reason are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             client = Client.objects.get(id=client_id)
             amount_float = float(amount_inr)
+            
+            # If specified as deduction or negative amount
+            if is_deduction or adjustment_type == 'DEBIT':
+                amount_float = -abs(amount_float)
+            
+            if adjustment_type == 'DEBIT':
+                adjustment_type = 'ADJUSTMENT'
+
             amount_paise = int(round(amount_float * 100))
 
             if adjustment_type not in ['ADJUSTMENT', 'REFUND', 'BONUS']:
@@ -217,7 +275,7 @@ class AdminWalletAdjustmentView(APIView):
 
             return Response({
                 'success': True,
-                'message': f"Successfully applied {adjustment_type} of ₹{amount_float} to {client.business_name}.",
+                'message': f"Successfully applied {adjustment_type} of ₹{abs(amount_float)} to {client.business_name}.",
                 'new_balance_inr': ledger_entry.balance_after_inr
             }, status=status.HTTP_200_OK)
         except Client.DoesNotExist:
