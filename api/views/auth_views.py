@@ -381,8 +381,9 @@ class WhatsAppEmbeddedSignupView(APIView):
             return Response({"error": reason or "You do not have access to this channel."}, status=status_code)
 
         code = request.data.get('code')
-        if not code:
-            return Response({"error": "No code provided"}, status=400)
+        access_token = request.data.get('access_token')
+        if not code and not access_token:
+            return Response({"error": "No authorization code or access token provided"}, status=400)
 
         import os
         import requests
@@ -393,24 +394,25 @@ class WhatsAppEmbeddedSignupView(APIView):
         if not client_id or not client_secret:
             return Response({"error": "Facebook App credentials not configured on server."}, status=500)
 
-        # 1. Exchange code for access token
-        token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
-        token_payload = {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "code": code
-        }
-        redirect_uri = request.data.get('redirect_uri')
-        if redirect_uri:
-            token_payload["redirect_uri"] = redirect_uri
-        
-        token_res = requests.get(token_url, params=token_payload)
-        token_data = token_res.json()
-        
-        if "error" in token_data:
-            return Response({"error": "Failed to exchange code", "details": token_data}, status=400)
+        # 1. Exchange code for access token if not directly supplied
+        if not access_token and code:
+            token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
+            token_payload = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code
+            }
+            redirect_uri = request.data.get('redirect_uri')
+            if redirect_uri:
+                token_payload["redirect_uri"] = redirect_uri
             
-        access_token = token_data.get('access_token')
+            token_res = requests.get(token_url, params=token_payload)
+            token_data = token_res.json()
+            
+            if "error" in token_data:
+                return Response({"error": "Failed to exchange code", "details": token_data}, status=400)
+                
+            access_token = token_data.get('access_token')
         
         waba_id = request.data.get('waba_id')
         phone_number_id = request.data.get('phone_number_id')
