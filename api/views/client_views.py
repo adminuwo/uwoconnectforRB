@@ -803,7 +803,21 @@ class ClientMessagesView(APIView):
         
         new_msg = None
         
-        if channel == 'WHATSAPP':
+        if message_type == 'INTERNAL':
+            sender_name = request.user.username if (request.user and request.user.is_authenticated) else 'Team Member'
+            sender_avatar = f"https://api.dicebear.com/7.x/avataaars/svg?seed={sender_name}"
+            new_msg = MessageRepository.create_message(
+                client=client,
+                channel=channel or 'WHATSAPP',
+                from_address=sender_name,
+                to_address=to_number,
+                body=body,
+                message_type='INTERNAL',
+                sender_name=sender_name,
+                sender_avatar=sender_avatar,
+                status='SENT'
+            )
+        elif channel == 'WHATSAPP':
             phone_number_id = client.whatsapp_phone_number_id or 'WHATSAPP_SYSTEM'
             webhook_view = WhatsAppWebhookView()
             try:
