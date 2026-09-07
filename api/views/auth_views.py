@@ -400,6 +400,9 @@ class WhatsAppEmbeddedSignupView(APIView):
             "client_secret": client_secret,
             "code": code
         }
+        redirect_uri = request.data.get('redirect_uri')
+        if redirect_uri:
+            token_payload["redirect_uri"] = redirect_uri
         
         token_res = requests.get(token_url, params=token_payload)
         token_data = token_res.json()
