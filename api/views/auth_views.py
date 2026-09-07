@@ -387,6 +387,8 @@ class WhatsAppEmbeddedSignupView(APIView):
 
         import os
         import requests
+        import logging
+        logger = logging.getLogger(__name__)
         
         client_id = os.getenv('FACEBOOK_APP_ID')
         client_secret = os.getenv('FACEBOOK_APP_SECRET')
@@ -397,22 +399,61 @@ class WhatsAppEmbeddedSignupView(APIView):
         # 1. Exchange code for access token if not directly supplied
         if not access_token and code:
             token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
-            token_payload = {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "code": code
-            }
-            redirect_uri = request.data.get('redirect_uri')
-            if redirect_uri:
-                token_payload["redirect_uri"] = redirect_uri
+            candidate_uris = []
+            req_uri = request.data.get('redirect_uri')
+            if req_uri:
+                candidate_uris.append(req_uri)
+            candidate_uris.extend([
+                "https://uwoconnectforrf-743928421487.asia-south1.run.app/",
+                "https://uwoconnect.aisa24.com/client/channels?state=whatsapp",
+                "https://uwoconnect.aisa24.com/client/channels",
+                "https://uwoconnect.aisa24.com/",
+                ""
+            ])
             
-            token_res = requests.get(token_url, params=token_payload)
-            token_data = token_res.json()
-            
-            if "error" in token_data:
-                return Response({"error": "Failed to exchange code", "details": token_data}, status=400)
+            token_data = {}
+            for cand_uri in candidate_uris:
+                token_payload = {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": code
+                }
+                if cand_uri:
+                    token_payload["redirect_uri"] = cand_uri
+                
+                try:
+                    token_res = requests.get(token_url, params=token_payload, timeout=10)
+                    token_data = token_res.json()
+                    if "access_token" in token_data:
+                        logger.info(f"[WhatsAppEmbeddedSignup] Token exchanged successfully with redirect_uri: '{cand_uri}'")
+                        break
+                except Exception as e:
+                    logger.warning(f"[WhatsAppEmbeddedSignup] Token exchange attempt error with '{cand_uri}': {e}")
+
+            if "error" in token_data or not token_data.get('access_token'):
+                logger.error(f"[WhatsAppEmbeddedSignup] Token exchange failed with all candidate URIs: {token_data}")
+                return Response({"error": "Failed to exchange code for access token", "details": token_data}, status=400)
                 
             access_token = token_data.get('access_token')
+
+        # 1.5 Upgrade to Long-Lived Access Token
+        if access_token:
+            try:
+                ll_res = requests.get(
+                    "https://graph.facebook.com/v20.0/oauth/access_token",
+                    params={
+                        "grant_type": "fb_exchange_token",
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "fb_exchange_token": access_token
+                    },
+                    timeout=10
+                )
+                ll_data = ll_res.json()
+                if "access_token" in ll_data:
+                    access_token = ll_data["access_token"]
+            except Exception as e:
+                logger.warning(f"[WhatsAppEmbeddedSignup] Long-lived token exchange warning: {e}")
         
         waba_id = request.data.get('waba_id')
         phone_number_id = request.data.get('phone_number_id')
@@ -437,7 +478,7 @@ class WhatsAppEmbeddedSignupView(APIView):
                         waba_id = scope['target_ids'][0]
                         break
 
-        # 3. Get Phone Number ID
+        # 3. Get Phone Number ID if not provided
         if waba_id and not phone_number_id:
             phone_url = f"https://graph.facebook.com/v20.0/{waba_id}/phone_numbers?access_token={access_token}"
             phone_res = requests.get(phone_url)
@@ -447,14 +488,24 @@ class WhatsAppEmbeddedSignupView(APIView):
                 phone_number_id = phone_data['data'][0]['id']
                 display_phone_number = phone_data['data'][0].get('display_phone_number', '')
 
+        # 3.5 Fetch display phone number if phone_number_id is known
+        if phone_number_id and not display_phone_number:
+            try:
+                p_url = f"https://graph.facebook.com/v20.0/{phone_number_id}?fields=display_phone_number,verified_name&access_token={access_token}"
+                p_res = requests.get(p_url, timeout=10)
+                p_data = p_res.json()
+                display_phone_number = p_data.get('display_phone_number') or p_data.get('verified_name', '')
+            except Exception as e:
+                logger.warning(f"[WhatsAppEmbeddedSignup] Phone details fetch warning: {e}")
+
         # 4. Subscribe WABA to webhook events
         if waba_id:
             try:
                 sub_url = f"https://graph.facebook.com/v20.0/{waba_id}/subscribed_apps"
-                requests.post(sub_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+                sub_res = requests.post(sub_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+                logger.info(f"[WhatsAppEmbeddedSignup] Webhook subscribe status: {sub_res.status_code}")
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Could not subscribe WABA {waba_id}: {e}")
+                logger.warning(f"[WhatsAppEmbeddedSignup] Could not subscribe WABA {waba_id}: {e}")
         
         # 5. Save to Client
         client = getattr(request.user, 'client', None)
