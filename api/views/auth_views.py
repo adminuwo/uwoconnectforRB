@@ -460,23 +460,48 @@ class WhatsAppEmbeddedSignupView(APIView):
         display_phone_number = ''
 
         # 2. Get shared WABA info if not provided
+        client = getattr(request.user, 'client', None)
+        claimed_wabas = set(
+            Client.objects.filter(whatsapp_waba_id__isnull=False)
+            .exclude(id=client.id if client else None)
+            .values_list('whatsapp_waba_id', flat=True)
+        )
+
         if not waba_id:
+            candidate_wabas = []
             waba_url = f"https://graph.facebook.com/v20.0/me/client_whatsapp_business_accounts?access_token={access_token}"
-            waba_res = requests.get(waba_url)
-            waba_data = waba_res.json()
+            try:
+                waba_res = requests.get(waba_url, timeout=10)
+                waba_data = waba_res.json()
+                if waba_data.get('data'):
+                    for item in waba_data['data']:
+                        candidate_wabas.append(item.get('id'))
+            except Exception as e:
+                logger.warning(f"[WhatsAppEmbeddedSignup] client_waba error: {e}")
+
+            # Fallback: check debug_token to find granular_scopes target_ids
+            if not candidate_wabas:
+                try:
+                    debug_url = f"https://graph.facebook.com/debug_token?input_token={access_token}&access_token={client_id}|{client_secret}"
+                    debug_res = requests.get(debug_url, timeout=10)
+                    debug_data = debug_res.json()
+                    scopes = debug_data.get('data', {}).get('granular_scopes', [])
+                    for scope in scopes:
+                        if scope.get('scope') == 'whatsapp_business_management' and scope.get('target_ids'):
+                            candidate_wabas.extend(scope['target_ids'])
+                except Exception as e:
+                    logger.warning(f"[WhatsAppEmbeddedSignup] debug_token error: {e}")
+
+            # Pick the best candidate: prefer one not already claimed by another client
+            for cand in candidate_wabas:
+                if str(cand) not in claimed_wabas:
+                    waba_id = str(cand)
+                    break
             
-            if waba_data.get('data') and len(waba_data['data']) > 0:
-                waba_id = waba_data['data'][0]['id']
-            else:
-                # Fallback: check debug_token to find granular_scopes target_ids
-                debug_url = f"https://graph.facebook.com/debug_token?input_token={access_token}&access_token={client_id}|{client_secret}"
-                debug_res = requests.get(debug_url)
-                debug_data = debug_res.json()
-                scopes = debug_data.get('data', {}).get('granular_scopes', [])
-                for scope in scopes:
-                    if scope.get('scope') == 'whatsapp_business_management' and scope.get('target_ids'):
-                        waba_id = scope['target_ids'][0]
-                        break
+            # Fallback if all claimed or empty
+            if not waba_id and candidate_wabas:
+                waba_id = str(candidate_wabas[0])
+
 
         # 3. Get Phone Number ID if not provided
         if waba_id and not phone_number_id:
