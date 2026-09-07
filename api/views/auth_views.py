@@ -601,10 +601,11 @@ class FacebookEmbeddedSignupView(APIView):
 
         if code:
             token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
+            redirect_uri = request.data.get('redirect_uri') or "https://uwoconnect.aisa24.com/client/channels?state=facebook"
             token_payload = {
                 "client_id": client_id,
                 "client_secret": client_secret,
-                "redirect_uri": "https://uwoconnect.aisa24.com/client/channels",
+                "redirect_uri": redirect_uri,
                 "code": code
             }
             token_res = requests.get(token_url, params=token_payload)
