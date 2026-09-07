@@ -61,6 +61,53 @@ class ConversationViewSet(viewsets.ModelViewSet):
             
         return queryset.order_by('-last_message_at', '-updated_at')
 
+    def get_object(self):
+        pk = self.kwargs.get('pk')
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # 1. Direct PK query (works for integer or hex string ObjectId)
+        obj = queryset.filter(pk=pk).first()
+        if obj:
+            self.check_object_permissions(self.request, obj)
+            return obj
+        
+        # 2. String fallback (contact_platform_id / phone_number lookup)
+        formatted_num = str(pk).replace('+', '').strip()
+        obj = queryset.filter(
+            Q(contact_platform_id=pk) |
+            Q(contact_platform_id=formatted_num) |
+            Q(contact__phone_number=pk) |
+            Q(contact__phone_number__icontains=formatted_num)
+        ).first()
+
+        if not obj:
+            # 3. Create or resolve Conversation if missing
+            user = self.request.user
+            client = user.client
+            if client:
+                contact = Contact.objects.filter(
+                    Q(client=client) & (
+                        Q(platform_id=pk) |
+                        Q(phone_number__icontains=formatted_num)
+                    )
+                ).first()
+                obj, _ = Conversation.objects.get_or_create(
+                    client=client,
+                    contact_platform_id=pk,
+                    defaults={
+                        'contact': contact,
+                        'channel': (contact.preferred_channel if contact and contact.preferred_channel else 'WHATSAPP').upper(),
+                        'status': 'OPEN'
+                    }
+                )
+
+        if not obj:
+            from rest_framework.exceptions import NotFound
+            raise NotFound(f"Conversation {pk} not found")
+
+        self.check_object_permissions(self.request, obj)
+        return obj
+
     def perform_create(self, serializer):
         serializer.save(client=self.request.user.client)
 
@@ -200,9 +247,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
     def transfer(self, request, pk=None):
         conversation = self.get_object()
         user = request.user
-        target_user_id = request.data.get('target_user_id')
-        target_department = request.data.get('target_department', 'General')
-        reason = request.data.get('reason', 'Transfer requested by admin/team member')
+        target_user_id = request.data.get('target_user_id') or request.data.get('agent_id')
+        target_department = request.data.get('target_department') or request.data.get('department') or 'General'
+        reason = request.data.get('reason') or request.data.get('note') or 'Transfer requested by admin/team member'
 
         target_user = None
         target_username = target_department
