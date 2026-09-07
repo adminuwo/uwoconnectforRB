@@ -412,29 +412,49 @@ class WhatsAppEmbeddedSignupView(APIView):
             
         access_token = token_data.get('access_token')
         
-        # 2. Get shared WABA info from the embedded signup callback
-        # In the embedded signup flow, Meta gives us shared WABA IDs 
-        waba_url = f"https://graph.facebook.com/v20.0/me/client_whatsapp_business_accounts?access_token={access_token}"
-        waba_res = requests.get(waba_url)
-        waba_data = waba_res.json()
-        
-        if "error" in waba_data or not waba_data.get('data'):
-            return Response({"error": "Could not find WhatsApp Business Accounts", "details": waba_data}, status=400)
+        waba_id = request.data.get('waba_id')
+        phone_number_id = request.data.get('phone_number_id')
+        display_phone_number = ''
+
+        # 2. Get shared WABA info if not provided
+        if not waba_id:
+            waba_url = f"https://graph.facebook.com/v20.0/me/client_whatsapp_business_accounts?access_token={access_token}"
+            waba_res = requests.get(waba_url)
+            waba_data = waba_res.json()
             
-        waba_id = waba_data['data'][0]['id']
-        
+            if waba_data.get('data') and len(waba_data['data']) > 0:
+                waba_id = waba_data['data'][0]['id']
+            else:
+                # Fallback: check debug_token to find granular_scopes target_ids
+                debug_url = f"https://graph.facebook.com/debug_token?input_token={access_token}&access_token={client_id}|{client_secret}"
+                debug_res = requests.get(debug_url)
+                debug_data = debug_res.json()
+                scopes = debug_data.get('data', {}).get('granular_scopes', [])
+                for scope in scopes:
+                    if scope.get('scope') == 'whatsapp_business_management' and scope.get('target_ids'):
+                        waba_id = scope['target_ids'][0]
+                        break
+
         # 3. Get Phone Number ID
-        phone_url = f"https://graph.facebook.com/v20.0/{waba_id}/phone_numbers?access_token={access_token}"
-        phone_res = requests.get(phone_url)
-        phone_data = phone_res.json()
-        
-        if "error" in phone_data or not phone_data.get('data'):
-            return Response({"error": "Could not find Phone Numbers for WABA", "details": phone_data}, status=400)
+        if waba_id and not phone_number_id:
+            phone_url = f"https://graph.facebook.com/v20.0/{waba_id}/phone_numbers?access_token={access_token}"
+            phone_res = requests.get(phone_url)
+            phone_data = phone_res.json()
             
-        phone_number_id = phone_data['data'][0]['id']
-        display_phone_number = phone_data['data'][0].get('display_phone_number', '')
+            if phone_data.get('data') and len(phone_data['data']) > 0:
+                phone_number_id = phone_data['data'][0]['id']
+                display_phone_number = phone_data['data'][0].get('display_phone_number', '')
+
+        # 4. Subscribe WABA to webhook events
+        if waba_id:
+            try:
+                sub_url = f"https://graph.facebook.com/v20.0/{waba_id}/subscribed_apps"
+                requests.post(sub_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Could not subscribe WABA {waba_id}: {e}")
         
-        # 4. Save to Client
+        # 5. Save to Client
         client = getattr(request.user, 'client', None)
         if not client:
             return Response({"error": "No client workspace associated with this user account."}, status=400)
@@ -448,7 +468,8 @@ class WhatsAppEmbeddedSignupView(APIView):
         client.whatsapp_access_token = access_token
         client.whatsapp_waba_id = waba_id
         client.whatsapp_phone_number_id = phone_number_id
-        client.phone_number = display_phone_number
+        if display_phone_number:
+            client.phone_number = display_phone_number
         client.whatsapp_enabled = True
         client.save()
         
