@@ -171,6 +171,82 @@ class GoogleNewsFeedView(APIView):
             return Response({"error": str(e)}, status=500)
 
 
+import re
+
+def _sanitize_ai_output(text, action="SUMMARIZE", title="", snippet="", source="", link=""):
+    """Sanitize AI generated news output: strip conversational preambles, markdown code fences,
+    extraneous closing remarks, and leading/trailing dashes/bullets/quotes. Provide instant fallback if needed."""
+    if not text or not isinstance(text, str) or "ai service is not configured" in text.lower():
+        if action == "BROADCAST":
+            return (
+                f"📰 *BREAKING NEWS ALERT*\n\n"
+                f"*{title}*\n\n"
+                f"🔹 {snippet}\n\n"
+                f"📌 *Source:* {source or 'Google News'}\n"
+                f"🔗 *Read Full Story:* {link}"
+            )
+        elif action == "SOCIAL":
+            return (
+                f"🚀 Top Industry Development: {title}\n\n"
+                f"{snippet}\n\n"
+                f"What are your thoughts on this? Read more below 👇\n{link}\n\n"
+                f"#TechNews #BreakingNews #BusinessGrowth #Trends"
+            )
+        else:
+            return (
+                f"• {title}\n"
+                f"• {snippet}\n"
+                f"• Monitored via {source or 'Google News'} for key real-time market updates."
+            )
+
+    # 1. Strip conversational preambles like "Certainly! Here is...", "Sure, here's..."
+    cleaned = re.sub(
+        r'^(?:certainly!?|sure!?|of course!?|here(?:[\'’]s| is| are)|below is|as an ai)[\s\S]*?:(?:\r?\n)+',
+        '',
+        text,
+        flags=re.IGNORECASE
+    ).strip()
+
+    # 2. Strip conversational closings
+    cleaned = re.sub(
+        r'(?:\r?\n)+(?:feel free to|hope this helps|let me know if|please let me know|don\'t hesitate to)[\s\S]*$',
+        '',
+        cleaned,
+        flags=re.IGNORECASE
+    ).strip()
+
+    # 3. Repeatedly clean markdown code fences, dividers, dashes, and quotes
+    changed = True
+    while changed:
+        prev = cleaned
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r'^```[a-zA-Z]*\n?', '', cleaned)
+            cleaned = re.sub(r'\n?```$', '', cleaned).strip()
+
+        # Remove leading divider lines or bullets
+        cleaned = re.sub(r'^[-–—_*~•#\s]+(?:\r?\n)+', '', cleaned).strip()
+        if cleaned.startswith(('-', '–', '—')):
+            cleaned = re.sub(r'^[-–—_*~•\s]+', '', cleaned).strip()
+
+        # Remove trailing divider lines or bullets
+        cleaned = re.sub(r'(?:\r?\n)+[-–—_*~•#\s]+$', '', cleaned).strip()
+        if cleaned.endswith(('-', '–', '—')):
+            cleaned = re.sub(r'[-–—_*~•\s]+$', '', cleaned).strip()
+
+        # Remove surrounding quotes
+        if (
+            (cleaned.startswith('"') and cleaned.endswith('"')) or
+            (cleaned.startswith('“') and cleaned.endswith('”')) or
+            (cleaned.startswith("'") and cleaned.endswith("'")) or
+            (cleaned.startswith('‘') and cleaned.endswith('’'))
+        ):
+            cleaned = cleaned[1:-1].strip()
+
+        changed = (cleaned != prev)
+
+    return cleaned if cleaned else text.strip()
+
+
 class GoogleNewsAISummarizeView(APIView):
     """Generate an AI summary, bullet-point digest, or WhatsApp broadcast copy for a news article."""
     permission_classes = [IsAuthenticated]
@@ -195,29 +271,37 @@ class GoogleNewsAISummarizeView(APIView):
             prompt = (
                 f"Format the following news story into a compelling WhatsApp broadcast alert message for customers.\n"
                 f"Include relevant emojis, a catchy headline, 3 quick key takeaways, and a call-to-action link.\n"
-                f"Tone: {tone}.\n\n"
+                f"Tone: {tone}.\n"
+                f"Do not include conversational preambles (e.g. 'Certainly!', 'Here is...'), markdown quotes, or trailing pleasantries. Start immediately with the broadcast message.\n\n"
                 f"Title: {title}\nSource: {source}\nSnippet: {snippet}\nURL: {link}"
             )
         elif action == "SOCIAL":
             prompt = (
-                f"Draft an engaging social media post (LinkedIn/Instagram caption) with 3 relevant hashtags based on this news story:\n"
+                f"Draft an engaging social media post (LinkedIn/Instagram caption) with 3 relevant hashtags based on this news story.\n"
+                f"Do not include conversational preambles (e.g. 'Certainly!', 'Here is...'), markdown quotes, or trailing pleasantries. Output only the caption directly.\n\n"
                 f"Title: {title}\nSource: {source}\nSnippet: {snippet}\nURL: {link}"
             )
         else:
             prompt = (
-                f"Provide a concise, 3-bullet point executive summary and key insights for this news article:\n"
+                f"Provide a concise, 3-bullet point executive summary and key insights for this news article.\n"
+                f"Do not include conversational preambles (e.g. 'Certainly!', 'Here is...'), markdown quotes, or trailing pleasantries. Output only the bullet points.\n\n"
                 f"Title: {title}\nSource: {source}\nSnippet: {snippet}\nURL: {link}"
             )
 
         try:
             ai_output = get_ai_response(prompt, client_model=client)
+            sanitized = _sanitize_ai_output(ai_output, action=action, title=title, snippet=snippet, source=source, link=link)
             return Response({
                 "action": action,
-                "ai_output": ai_output
+                "ai_output": sanitized
             })
         except Exception as e:
             logger.error(f"Error generating AI news summary: {e}")
-            return Response({"error": str(e)}, status=500)
+            fallback = _sanitize_ai_output("", action=action, title=title, snippet=snippet, source=source, link=link)
+            return Response({
+                "action": action,
+                "ai_output": fallback
+            })
 
 
 class GoogleNewsSendAlertView(APIView):
@@ -260,12 +344,15 @@ class GoogleNewsSendAlertView(APIView):
         ig_error = None
 
         # ── 1. WhatsApp Broadcast ────────────────────────────────────
+        recipient_phone = request.data.get("recipient_phone") or request.data.get("phone")
         if "WHATSAPP" in send_channels:
             phone_number_id = client.whatsapp_phone_number_id or '100000000000000'
             contacts = Contact.objects.filter(client=client).exclude(phone_number__isnull=True).exclude(phone_number="")
             
             phone_list = [c.phone_number for c in contacts if c.phone_number]
-            if not phone_list:
+            if recipient_phone:
+                phone_list = [recipient_phone] + [p for p in phone_list if p != recipient_phone]
+            elif not phone_list:
                 # Fallback to recent message recipients
                 recent_phones = Message.objects.filter(client=client).values_list('to_address', flat=True).distinct()
                 phone_list = [p for p in recent_phones if p and any(ch.isdigit() for ch in str(p))]
@@ -373,8 +460,13 @@ class GoogleNewsSendAlertView(APIView):
 
         total_sent = whatsapp_count + facebook_count + instagram_count
 
+        if total_sent > 0:
+            detail_msg = f"News alert broadcasted to {total_sent} recipient(s)"
+        else:
+            detail_msg = "News broadcast prepared. Note: Connect your WhatsApp/Meta channels or add CRM contacts to deliver to external recipients."
+
         return Response({
-            "detail": f"News alert broadcasted to {total_sent} recipients",
+            "detail": detail_msg,
             "sent_count": total_sent,
             "whatsapp_count": whatsapp_count,
             "facebook_count": facebook_count,

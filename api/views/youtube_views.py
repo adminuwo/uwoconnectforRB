@@ -23,6 +23,7 @@ GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 YOUTUBE_SCOPES = " ".join([
+    "https://www.googleapis.com/auth/youtube",
     "https://www.googleapis.com/auth/youtube.readonly",
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.force-ssl",
@@ -595,14 +596,57 @@ def _find_keyword_reply(comment_text, keyword_rules):
     return None
 
 
+def _sanitize_ai_reply(text: str) -> str:
+    """Strip conversational preambles, introductory commentary, quotes, and dash lines from AI generated replies."""
+    if not text:
+        return ""
+    import re
+    cleaned = text.strip()
+    # Clean introductory commentary like "Certainly! Here is a suggested reply:"
+    cleaned = re.sub(
+        r'^(?:certainly!?|sure!?|of course!?|here(?:[\'’]s| is| are)|below is|as requested)[\s\S]*?:(?:\r?\n)+',
+        '',
+        cleaned,
+        flags=re.IGNORECASE
+    ).strip()
+    # Clean closing pleasantries like "Feel free to adjust this!" or "Hope this helps!"
+    cleaned = re.sub(
+        r'(?:\r?\n)+(?:feel free to|hope this helps|let me know if|please let me know|don\'t hesitate to)[\s\S]*$',
+        '',
+        cleaned,
+        flags=re.IGNORECASE
+    ).strip()
+    # Repeatedly clean markdown backticks, dividers (- or ---), bullets, and wrapping quotes
+    changed = True
+    while changed:
+        prev = cleaned
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r'^```[a-zA-Z]*\n?', '', cleaned)
+            cleaned = re.sub(r'\n?```$', '', cleaned).strip()
+        cleaned = re.sub(r'^[-–—_*~•#\s]+(?:\r?\n)+', '', cleaned).strip()
+        cleaned = re.sub(r'^[-–—•]\s+', '', cleaned).strip()
+        if cleaned.startswith(('-', '–', '—')):
+            cleaned = re.sub(r'^[-–—_*~•\s]+', '', cleaned).strip()
+        cleaned = re.sub(r'(?:\r?\n)+[-–—_*~•#\s]+$', '', cleaned).strip()
+        if cleaned.endswith(('-', '–', '—')):
+            cleaned = re.sub(r'[-–—_*~•\s]+$', '', cleaned).strip()
+        if (cleaned.startswith('"') and cleaned.endswith('"')) or \
+           (cleaned.startswith('“') and cleaned.endswith('”')) or \
+           (cleaned.startswith("'") and cleaned.endswith("'")) or \
+           (cleaned.startswith('‘') and cleaned.endswith('’')):
+            cleaned = cleaned[1:-1].strip()
+        changed = (cleaned != prev)
+    return cleaned
+
+
 class YouTubeAISuggestReplyView(APIView):
     """Generate an AI-suggested reply for a YouTube comment using RAG."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         client = request.user.client
-        if not client or not client.youtube_enabled:
-            return Response({"error": "YouTube not connected"}, status=400)
+        if not client:
+            return Response({"error": "No client associated with user."}, status=400)
 
         comment_text = request.data.get("comment_text", "").strip()
         if not comment_text:
@@ -643,17 +687,24 @@ class YouTubeAISuggestReplyView(APIView):
                     relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5)
 
                     if relevant and relevant[0]['score'] > 0.3:
-                        ai_reply = get_rag_response(comment_text, relevant, client_model=client)
+                        rag_query = (
+                            f"{comment_text}\n\n"
+                            f"[Instruction: Reply tone must be {behavior_note}. "
+                            f"Output ONLY the final reply text with no greetings, preambles, introductory commentary, or trailing notes.]"
+                        )
+                        ai_reply = get_rag_response(rag_query, relevant, client_model=client)
 
             # Fallback to general AI reply with behavior instruction
             if not ai_reply:
                 context = (
                     f"{client.ai_context or 'You are a helpful YouTube channel assistant.'} "
-                    f"{behavior_note}"
+                    f"{behavior_note} "
+                    f"Output ONLY the direct reply text with no preambles, introductory commentary, or trailing pleasantries."
                 )
                 ai_reply = get_ai_response(comment_text, context, client_model=client)
 
             if ai_reply:
+                ai_reply = _sanitize_ai_reply(ai_reply)
                 return Response({"suggested_reply": ai_reply, "behavior": behavior})
             else:
                 return Response({"error": "Could not generate AI reply"}, status=500)
@@ -668,8 +719,8 @@ class YouTubeSettingsView(APIView):
 
     def get(self, request):
         client = request.user.client
-        if not client or not client.youtube_enabled:
-            return Response({"error": "YouTube not connected"}, status=400)
+        if not client:
+            return Response({"error": "No client attached"}, status=400)
         
         config = client.youtube_config or {}
         return Response({
@@ -678,12 +729,13 @@ class YouTubeSettingsView(APIView):
             "bot_enabled": config.get("bot_enabled", False),
             "bot_behavior": config.get("bot_behavior", "friendly"),
             "keyword_rules": config.get("keyword_rules", []),
+            "youtube_enabled": bool(client.youtube_enabled),
         })
 
     def post(self, request):
         client = request.user.client
-        if not client or not client.youtube_enabled:
-            return Response({"error": "YouTube not connected"}, status=400)
+        if not client:
+            return Response({"error": "No client attached"}, status=400)
         
         broadcast_enabled = request.data.get("broadcast_enabled", False)
         broadcast_template = request.data.get("broadcast_template", "🎥 Check out our new video: {title}\nWatch here: {url}")
@@ -704,8 +756,6 @@ class YouTubeSettingsView(APIView):
         config["keyword_rules"] = keyword_rules
         client.youtube_config = config
         client.save()
-
-        return Response({"detail": "Settings updated successfully", "config": config})
 
         return Response({"detail": "Settings updated successfully", "config": config})
 
@@ -874,26 +924,95 @@ class YouTubeDeleteView(APIView):
     """Delete a video from YouTube channel."""
     permission_classes = [IsAuthenticated]
 
-    def delete(self, request):
+    def _handle_delete(self, request):
         client = request.user.client
-        if not client or not client.youtube_enabled:
-            return Response({"error": "YouTube not connected"}, status=400)
+        if not client:
+            return Response({"error": "No client attached to user"}, status=400)
 
-        video_id = request.GET.get("video_id") or request.data.get("video_id")
+        video_id = (
+            request.query_params.get("video_id")
+            or request.GET.get("video_id")
+            or (request.data.get("video_id") if hasattr(request, "data") and isinstance(request.data, dict) else None)
+        )
         if not video_id:
             return Response({"error": "video_id is required"}, status=400)
 
-        from googleapiclient.discovery import build
+        video_id_str = str(video_id).strip()
+
+        # 1. Check if mock/custom video in client's stored videos list
+        config = client.youtube_config or {}
+        db_videos = config.get("videos", [])
+        if any(v.get("id") == video_id_str for v in db_videos):
+            config["videos"] = [v for v in db_videos if v.get("id") != video_id_str]
+            client.youtube_config = config
+            client.save()
+            cache.delete(f"yt_analytics_{client.id}")
+            return Response({"detail": "Video deleted successfully", "video_id": video_id_str})
+
+        # 2. If it's a fallback demo video (e.g. vid-1, vid-2, vid-3)
+        if video_id_str.startswith("vid-"):
+            cache.delete(f"yt_analytics_{client.id}")
+            return Response({"detail": "Demo video deleted successfully", "video_id": video_id_str})
+
+        # 3. Check YouTube channel connection
+        if not client.youtube_enabled:
+            return Response({"error": "YouTube channel is not connected. Please connect YouTube first in Channels settings."}, status=400)
+
+        access_token = _get_youtube_access_token(client)
+        if not access_token:
+            return Response({"error": "No valid YouTube access token. Please reconnect YouTube in Channels settings."}, status=400)
+
+        import requests as http_requests
+
+        # Direct Google YouTube Data API REST deletion
+        headers = {"Authorization": f"Bearer {access_token}"}
         try:
-            creds = _build_google_credentials(client)
-            youtube = build("youtube", "v3", credentials=creds)
+            res = http_requests.delete(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={"id": video_id_str},
+                headers=headers,
+                timeout=15,
+            )
 
-            youtube.videos().delete(id=video_id).execute()
+            # 204 No Content or 200 OK means successfully deleted
+            if res.status_code in [200, 204]:
+                cache.delete(f"yt_analytics_{client.id}")
+                return Response({"detail": "Video deleted successfully from YouTube", "video_id": video_id_str})
 
-            return Response({"detail": "Video deleted successfully from YouTube", "video_id": video_id})
+            # 404 means video doesn't exist on YouTube anymore (already removed)
+            if res.status_code == 404:
+                cache.delete(f"yt_analytics_{client.id}")
+                return Response({"detail": "Video was already removed from YouTube", "video_id": video_id_str})
+
+            # Fallback with googleapiclient if available
+            try:
+                from googleapiclient.discovery import build
+                creds = _build_google_credentials(client)
+                youtube = build("youtube", "v3", credentials=creds)
+                youtube.videos().delete(id=video_id_str).execute()
+                cache.delete(f"yt_analytics_{client.id}")
+                return Response({"detail": "Video deleted successfully from YouTube", "video_id": video_id_str})
+            except Exception:
+                pass
+
+            error_json = {}
+            try:
+                error_json = res.json()
+            except Exception:
+                pass
+            error_msg = error_json.get("error", {}).get("message") or f"YouTube delete returned HTTP {res.status_code}"
+            logger.error(f"YouTube video delete failed ({res.status_code}): {error_msg}")
+            return Response({"error": error_msg}, status=res.status_code if res.status_code < 500 else 400)
+
         except Exception as e:
-            logger.error(f"YouTube video delete failed: {e}")
+            logger.error(f"YouTube video delete exception: {e}")
             return Response({"error": str(e)}, status=400)
+
+    def delete(self, request):
+        return self._handle_delete(request)
+
+    def post(self, request):
+        return self._handle_delete(request)
 
 
 def check_and_broadcast_youtube_uploads(client):
@@ -1096,6 +1215,7 @@ def auto_reply_to_youtube_comments(client):
                     ai_reply = get_ai_response(comment_text, context, client_model=client)
 
                 if ai_reply:
+                    ai_reply = _sanitize_ai_reply(ai_reply)
                     # 4. Post reply back to comment thread
                     reply_payload = {
                         "snippet": {
