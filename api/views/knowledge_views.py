@@ -102,57 +102,111 @@ class KnowledgeBaseView(APIView):
             return Response({"message": "No client associated"}, status=400)
 
         file = request.FILES.get('file')
-        title = request.data.get('title', '')
+        title = request.data.get('title', '').strip()
+        website_url = request.data.get('website_url', '').strip()
+        content_snippet = (request.data.get('content_snippet') or request.data.get('text') or '').strip()
+        doc_type = (request.data.get('doc_type') or '').upper()
 
-        if not file:
-            return Response({"message": "File is required"}, status=400)
-
-        # File size check — max 5MB
-        if file.size > 5 * 1024 * 1024:
-            return Response({"message": "File too large. Maximum size is 5MB."}, status=400)
-
-        ext = os.path.splitext(file.name)[1].lower().lstrip('.')
-        if ext not in ['pdf', 'docx', 'txt']:
-            return Response({"message": "Only PDF, DOCX, and TXT files are supported."}, status=400)
-
-        if not title:
-            title = os.path.splitext(file.name)[0]
-
-        # === STEP 1: Extract text from file ===
         extracted_text = ""
-        try:
-            if ext == 'pdf':
-                # pyrefly: ignore [missing-import]
-                import PyPDF2
-                pdf_reader = PyPDF2.PdfReader(file)
-                for page in pdf_reader.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        extracted_text += page_text + "\n"
-            elif ext == 'docx':
-                import docx
-                doc_file = docx.Document(file)
-                for para in doc_file.paragraphs:
-                    if para.text.strip():
-                        extracted_text += para.text + "\n"
-            elif ext == 'txt':
-                extracted_text = file.read().decode('utf-8', errors='ignore')
-        except Exception as e:
-            print(f"Text extraction error: {str(e)}")
-            return Response({"message": f"Could not extract text from file: {str(e)}"}, status=400)
+        file_type = "txt"
+        file_size = 0
+
+        # === 1. File Upload (PDF, DOCX, TXT) ===
+        if file:
+            if file.size > 15 * 1024 * 1024:
+                return Response({"message": "File too large. Maximum size is 15MB."}, status=400)
+
+            ext = os.path.splitext(file.name)[1].lower().lstrip('.')
+            if ext not in ['pdf', 'docx', 'txt']:
+                return Response({"message": "Only PDF, DOCX, and TXT files are supported."}, status=400)
+
+            file_type = ext
+            file_size = file.size
+            if not title:
+                title = os.path.splitext(file.name)[0]
+
+            try:
+                if ext == 'pdf':
+                    import PyPDF2
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    for page in pdf_reader.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            extracted_text += page_text + "\n"
+                elif ext == 'docx':
+                    import docx
+                    doc_file = docx.Document(file)
+                    for para in doc_file.paragraphs:
+                        if para.text.strip():
+                            extracted_text += para.text + "\n"
+                elif ext == 'txt':
+                    extracted_text = file.read().decode('utf-8', errors='ignore')
+            except Exception as e:
+                print(f"Text extraction error: {str(e)}")
+                return Response({"message": f"Could not extract text from file: {str(e)}"}, status=400)
+
+        # === 2. Website URL ===
+        elif website_url or doc_type == 'URL':
+            if not website_url:
+                return Response({"message": "Website URL is required"}, status=400)
+
+            if not website_url.startswith('http://') and not website_url.startswith('https://'):
+                website_url = 'https://' + website_url
+
+            file_type = 'url'
+            if not title:
+                from urllib.parse import urlparse
+                parsed = urlparse(website_url)
+                title = parsed.netloc or website_url
+
+            try:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
+                resp = requests.get(website_url, headers=headers, timeout=15)
+                resp.raise_for_status()
+
+                try:
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(resp.text, 'html.parser')
+                    for tag in soup(['script', 'style', 'nav', 'footer', 'noscript', 'header']):
+                        tag.decompose()
+                    extracted_text = soup.get_text(separator=' ', strip=True)
+                except Exception:
+                    import re
+                    clean = re.sub(r'<script.*?</script>', '', resp.text, flags=re.DOTALL | re.IGNORECASE)
+                    clean = re.sub(r'<style.*?</style>', '', clean, flags=re.DOTALL | re.IGNORECASE)
+                    clean = re.sub(r'<[^>]+>', ' ', clean)
+                    extracted_text = ' '.join(clean.split())
+
+                file_size = len(extracted_text.encode('utf-8'))
+            except Exception as e:
+                return Response({"message": f"Failed to fetch content from URL: {str(e)}"}, status=400)
+
+        # === 3. Direct Text / FAQ ===
+        elif content_snippet or doc_type == 'TEXT':
+            extracted_text = content_snippet
+            file_type = 'txt'
+            file_size = len(extracted_text.encode('utf-8'))
+            if not title:
+                title = (extracted_text[:40] + '...') if len(extracted_text) > 40 else 'Knowledge Note'
+
+        else:
+            return Response({"message": "Please provide a document file, website URL, or text content to index."}, status=400)
 
         if not extracted_text.strip():
-            return Response({"message": "No readable text found in the file. Please check the file content."}, status=400)
+            return Response({"message": "No readable text content found to index."}, status=400)
 
         knowledge_doc = KnowledgeRepository.create_knowledgedocument(
             client=client,
-            title=title,
+            title=title or 'Knowledge Document',
             extracted_text=extracted_text.strip(),
-            file_type=ext,
-            file_size=file.size,
+            file_type=file_type,
+            file_size=file_size,
         )
-        knowledge_doc.file = file
-        knowledge_doc.save()
+        if file:
+            knowledge_doc.file = file
+            knowledge_doc.save()
 
         # === STEP 3: Chunk the text ===
         chunks = chunk_text(extracted_text.strip(), chunk_size=800, overlap=100)
@@ -185,7 +239,7 @@ class KnowledgeBaseView(APIView):
             "embedded": embedded_count,
             "fully_embedded": embedded_count == len(chunks),
             "created_at": knowledge_doc.created_at,
-            "message": f"Document uploaded! {len(chunks)} chunks created, {embedded_count} embedded."
+            "message": f"Knowledge indexed! {len(chunks)} chunks created, {embedded_count} embedded."
         }, status=201)
 
     def delete(self, request, pk=None):

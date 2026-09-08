@@ -25,3 +25,4 @@ google-auth-httplib2
 google-auth-oauthlib
 pytz
 reportlab
+beautifulsoup4
