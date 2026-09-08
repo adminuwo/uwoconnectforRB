@@ -357,12 +357,15 @@ class GoogleNewsSendAlertView(APIView):
                 recent_phones = Message.objects.filter(client=client).values_list('to_address', flat=True).distinct()
                 phone_list = [p for p in recent_phones if p and any(ch.isdigit() for ch in str(p))]
 
+            client_phone_digits = ''.join(c for c in str(client.phone_number or '') if c.isdigit())
+            default_prefix = client_phone_digits[:-10] if len(client_phone_digits) > 10 else '91'
+
             for raw_phone in phone_list:
                 try:
                     to_digits = ''.join(c for c in str(raw_phone) if c.isdigit())
                     # Valid WhatsApp numbers must have 10 to 15 digits (excludes 16+ digit Meta PSIDs)
                     if 10 <= len(to_digits) <= 15:
-                        to_number = to_digits if len(to_digits) != 10 else f"91{to_digits}"
+                        to_number = to_digits if len(to_digits) != 10 else f"{default_prefix}{to_digits}"
                         MetaWebhookService.send_whatsapp_message(
                             client=client,
                             to_number=to_number,

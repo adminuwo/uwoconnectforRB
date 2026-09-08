@@ -832,11 +832,13 @@ class ClientMessagesView(APIView):
             
         channel = channel.upper()
 
-        # Sanitize WhatsApp phone number: remove non-digits, prepend 91 for 10-digit Indian numbers
+        # Sanitize WhatsApp phone number: remove non-digits; if 10-digit, derive country code from client phone or default 91
         if channel == 'WHATSAPP':
             digits = re.sub(r'\D', '', str(target_dest))
             if len(digits) == 10:
-                target_dest = f"91{digits}"
+                client_digits = re.sub(r'\D', '', str(getattr(client, 'phone_number', '') or ''))
+                country_prefix = client_digits[:-10] if len(client_digits) > 10 else '91'
+                target_dest = f"{country_prefix}{digits}"
             elif digits:
                 target_dest = digits
         
