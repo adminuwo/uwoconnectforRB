@@ -162,6 +162,7 @@ urlpatterns = [
     path('auth/forgot-password/verify-otp', ForgotPasswordVerifyOTPView.as_view(), name='forgot-password-verify-otp'),
     path('auth/forgot-password/reset', ForgotPasswordResetView.as_view(), name='forgot-password-reset'),
     path('auth/whatsapp/embedded-signup', WhatsAppEmbeddedSignupView.as_view(), name='whatsapp-embedded-signup'),
+    path('auth/whatsapp/embedded-signup/', WhatsAppEmbeddedSignupView.as_view()),
     path('auth/instagram/embedded-signup', InstagramEmbeddedSignupView.as_view(), name='instagram-embedded-signup'),
     path('auth/facebook/embedded-signup', FacebookEmbeddedSignupView.as_view(), name='facebook-embedded-signup'),
     path('auth/instagram/oauth-callback', InstagramOAuthCallbackView.as_view(), name='instagram-oauth-callback'),

@@ -381,11 +381,16 @@ class WhatsAppEmbeddedSignupView(APIView):
             return Response({"error": reason or "You do not have access to this channel."}, status=status_code)
 
         code = request.data.get('code')
-        if not code:
-            return Response({"error": "No code provided"}, status=400)
+        access_token = request.data.get('access_token')
+        waba_id = request.data.get('waba_id')
+        phone_number_id = request.data.get('phone_number_id')
+        if not code and not access_token and not (waba_id or phone_number_id):
+            return Response({"error": "No authorization code or WABA details provided"}, status=400)
 
         import os
         import requests
+        import logging
+        logger = logging.getLogger(__name__)
         
         client_id = os.getenv('FACEBOOK_APP_ID')
         client_secret = os.getenv('FACEBOOK_APP_SECRET')
@@ -393,49 +398,119 @@ class WhatsAppEmbeddedSignupView(APIView):
         if not client_id or not client_secret:
             return Response({"error": "Facebook App credentials not configured on server."}, status=500)
 
-        # 1. Exchange code for access token
-        token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
-        token_payload = {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "code": code
-        }
-        redirect_uri = request.data.get('redirect_uri')
-        if redirect_uri:
-            token_payload["redirect_uri"] = redirect_uri
-        
-        token_res = requests.get(token_url, params=token_payload)
-        token_data = token_res.json()
-        
-        if "error" in token_data:
-            return Response({"error": "Failed to exchange code", "details": token_data}, status=400)
+        client = getattr(request.user, 'client', None)
+
+        # 1. Exchange code for access token if supplied
+        if not access_token and code:
+            token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
+            candidate_uris = []
+            req_uri = request.data.get('redirect_uri')
+            if req_uri:
+                candidate_uris.append(req_uri)
+            candidate_uris.extend([
+                "https://uwoconnectforrf-743928421487.asia-south1.run.app/",
+                "https://uwoconnect.aisa24.com/client/channels?state=whatsapp",
+                "https://uwoconnect.aisa24.com/client/channels",
+                "https://uwoconnect.aisa24.com/",
+                ""
+            ])
             
-        access_token = token_data.get('access_token')
+            token_data = {}
+            for cand_uri in candidate_uris:
+                token_payload = {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": code
+                }
+                if cand_uri:
+                    token_payload["redirect_uri"] = cand_uri
+                
+                try:
+                    token_res = requests.get(token_url, params=token_payload, timeout=10)
+                    token_data = token_res.json()
+                    if "access_token" in token_data:
+                        logger.info(f"[WhatsAppEmbeddedSignup] Token exchanged successfully with redirect_uri: '{cand_uri}'")
+                        break
+                except Exception as e:
+                    logger.warning(f"[WhatsAppEmbeddedSignup] Token exchange attempt error with '{cand_uri}': {e}")
+
+            if "access_token" in token_data:
+                access_token = token_data.get('access_token')
+
+        # Fallback access token if code was not returned but waba_id/phone_number_id provided
+        if not access_token:
+            access_token = getattr(client, 'whatsapp_access_token', None) or os.getenv('WHATSAPP_SYSTEM_TOKEN', '')
+            if not access_token:
+                access_token = f"{client_id}|{client_secret}"
+
+        # 1.5 Upgrade to Long-Lived Access Token
+        if access_token:
+            try:
+                ll_res = requests.get(
+                    "https://graph.facebook.com/v20.0/oauth/access_token",
+                    params={
+                        "grant_type": "fb_exchange_token",
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "fb_exchange_token": access_token
+                    },
+                    timeout=10
+                )
+                ll_data = ll_res.json()
+                if "access_token" in ll_data:
+                    access_token = ll_data["access_token"]
+            except Exception as e:
+                logger.warning(f"[WhatsAppEmbeddedSignup] Long-lived token exchange warning: {e}")
         
         waba_id = request.data.get('waba_id')
         phone_number_id = request.data.get('phone_number_id')
         display_phone_number = ''
 
         # 2. Get shared WABA info if not provided
-        if not waba_id:
-            waba_url = f"https://graph.facebook.com/v20.0/me/client_whatsapp_business_accounts?access_token={access_token}"
-            waba_res = requests.get(waba_url)
-            waba_data = waba_res.json()
-            
-            if waba_data.get('data') and len(waba_data['data']) > 0:
-                waba_id = waba_data['data'][0]['id']
-            else:
-                # Fallback: check debug_token to find granular_scopes target_ids
-                debug_url = f"https://graph.facebook.com/debug_token?input_token={access_token}&access_token={client_id}|{client_secret}"
-                debug_res = requests.get(debug_url)
-                debug_data = debug_res.json()
-                scopes = debug_data.get('data', {}).get('granular_scopes', [])
-                for scope in scopes:
-                    if scope.get('scope') == 'whatsapp_business_management' and scope.get('target_ids'):
-                        waba_id = scope['target_ids'][0]
-                        break
+        client = getattr(request.user, 'client', None)
+        claimed_wabas = set(
+            Client.objects.filter(whatsapp_waba_id__isnull=False)
+            .exclude(id=client.id if client else None)
+            .values_list('whatsapp_waba_id', flat=True)
+        )
 
-        # 3. Get Phone Number ID
+        if not waba_id:
+            candidate_wabas = []
+            waba_url = f"https://graph.facebook.com/v20.0/me/client_whatsapp_business_accounts?access_token={access_token}"
+            try:
+                waba_res = requests.get(waba_url, timeout=10)
+                waba_data = waba_res.json()
+                if waba_data.get('data'):
+                    for item in waba_data['data']:
+                        candidate_wabas.append(item.get('id'))
+            except Exception as e:
+                logger.warning(f"[WhatsAppEmbeddedSignup] client_waba error: {e}")
+
+            # Fallback: check debug_token to find granular_scopes target_ids
+            if not candidate_wabas:
+                try:
+                    debug_url = f"https://graph.facebook.com/debug_token?input_token={access_token}&access_token={client_id}|{client_secret}"
+                    debug_res = requests.get(debug_url, timeout=10)
+                    debug_data = debug_res.json()
+                    scopes = debug_data.get('data', {}).get('granular_scopes', [])
+                    for scope in scopes:
+                        if scope.get('scope') == 'whatsapp_business_management' and scope.get('target_ids'):
+                            candidate_wabas.extend(scope['target_ids'])
+                except Exception as e:
+                    logger.warning(f"[WhatsAppEmbeddedSignup] debug_token error: {e}")
+
+            # Pick the best candidate: prefer one not already claimed by another client
+            for cand in candidate_wabas:
+                if str(cand) not in claimed_wabas:
+                    waba_id = str(cand)
+                    break
+            
+            # Fallback if all claimed or empty
+            if not waba_id and candidate_wabas:
+                waba_id = str(candidate_wabas[0])
+
+
+        # 3. Get Phone Number ID if not provided
         if waba_id and not phone_number_id:
             phone_url = f"https://graph.facebook.com/v20.0/{waba_id}/phone_numbers?access_token={access_token}"
             phone_res = requests.get(phone_url)
@@ -445,14 +520,24 @@ class WhatsAppEmbeddedSignupView(APIView):
                 phone_number_id = phone_data['data'][0]['id']
                 display_phone_number = phone_data['data'][0].get('display_phone_number', '')
 
+        # 3.5 Fetch display phone number if phone_number_id is known
+        if phone_number_id and not display_phone_number:
+            try:
+                p_url = f"https://graph.facebook.com/v20.0/{phone_number_id}?fields=display_phone_number,verified_name&access_token={access_token}"
+                p_res = requests.get(p_url, timeout=10)
+                p_data = p_res.json()
+                display_phone_number = p_data.get('display_phone_number') or p_data.get('verified_name', '')
+            except Exception as e:
+                logger.warning(f"[WhatsAppEmbeddedSignup] Phone details fetch warning: {e}")
+
         # 4. Subscribe WABA to webhook events
         if waba_id:
             try:
                 sub_url = f"https://graph.facebook.com/v20.0/{waba_id}/subscribed_apps"
-                requests.post(sub_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+                sub_res = requests.post(sub_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+                logger.info(f"[WhatsAppEmbeddedSignup] Webhook subscribe status: {sub_res.status_code}")
             except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Could not subscribe WABA {waba_id}: {e}")
+                logger.warning(f"[WhatsAppEmbeddedSignup] Could not subscribe WABA {waba_id}: {e}")
         
         # 5. Save to Client
         client = getattr(request.user, 'client', None)
@@ -599,10 +684,11 @@ class FacebookEmbeddedSignupView(APIView):
 
         if code:
             token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
+            redirect_uri = request.data.get('redirect_uri') or "https://uwoconnect.aisa24.com/client/channels?state=facebook"
             token_payload = {
                 "client_id": client_id,
                 "client_secret": client_secret,
-                "redirect_uri": "https://uwoconnect.aisa24.com/client/channels",
+                "redirect_uri": redirect_uri,
                 "code": code
             }
             token_res = requests.get(token_url, params=token_payload)
