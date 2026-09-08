@@ -560,10 +560,69 @@ class HealthCheckView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response({
-            "status": "healthy",
+        import time
+        from django.conf import settings
+        from django.db import connection
+
+        db_status = "connected"
+        db_latency_ms = None
+        try:
+            connection.ensure_connection()
+            if connection.connection is not None:
+                start_t = time.time()
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1;")
+                    cursor.fetchone()
+                db_latency_ms = round((time.time() - start_t) * 1000, 2)
+            else:
+                db_status = "not_initialized"
+        except Exception as e:
+            db_status = f"unconnected: {str(e)}"
+
+        detailed = request.query_params.get('detailed') == '1'
+        is_healthy = "unconnected" not in db_status
+
+        payload = {
+            "status": "healthy" if is_healthy else "degraded",
             "service": "UWOConnect Backend API",
-            "environment": "production",
-            "timestamp": timezone.now().isoformat()
-        }, status=status.HTTP_200_OK)
+            "environment": "production" if not getattr(settings, 'DEBUG', False) else "development",
+            "database": {
+                "status": db_status,
+                "latency_ms": db_latency_ms
+            },
+            "timestamp": timezone.now().isoformat(),
+            "version": "1.0.0"
+        }
+
+        if detailed:
+            import sys
+            import platform
+            payload["system"] = {
+                "python_version": sys.version.split()[0],
+                "platform": platform.platform()
+            }
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+
+def backend_robots_view(request):
+    from django.http import HttpResponse
+    content = "User-agent: *\nDisallow: /admin/\nDisallow: /api/\n"
+    return HttpResponse(content, content_type="text/plain")
+
+
+def backend_sitemap_view(request):
+    from django.http import HttpResponse
+    content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://uwoconnect.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>"""
+    return HttpResponse(content, content_type="application/xml")
+
+
 
