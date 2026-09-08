@@ -75,6 +75,9 @@ class InboxConsumer(AsyncWebsocketConsumer):
             action_type = data.get('type')
 
             if action_type in ['typing_status', 'view_conversation', 'takeover_event', 'transfer_event', 'lock_event', 'status_change_event', 'note_event']:
+                if hasattr(self, 'user') and self.user:
+                    data['sender_user_id'] = str(self.user.id)
+                    data['sender_type'] = 'agent'
                 # Broadcast payload to group
                 await self.channel_layer.group_send(
                     self.room_group_name,

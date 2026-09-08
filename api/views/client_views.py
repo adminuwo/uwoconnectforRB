@@ -772,34 +772,81 @@ class ClientMessagesView(APIView):
                 "created_at": incoming_msg.created_at
             })
             
-        # Detect channel if not provided
+        # ── 1. Robust Target Resolution ──────────────────────────────────
+        import re
+        from bson import ObjectId
+        target_dest = str(to_number or '').strip()
+        contact = None
+        convo = None
+
+        # Check if target_dest is an ObjectId (Conversation or Contact ID)
+        if ObjectId.is_valid(target_dest):
+            contact = Contact.objects.filter(client=client, id=target_dest).first()
+            if not contact:
+                convo = Conversation.objects.filter(client=client, id=target_dest).first()
+                if convo:
+                    if convo.contact:
+                        contact = convo.contact
+                    if convo.contact_platform_id:
+                        target_dest = str(convo.contact_platform_id)
+                    if not channel and convo.channel:
+                        channel = convo.channel
+
+        # Search Contact by phone digits or platform_id
+        if not contact:
+            clean_digits = re.sub(r'\D', '', target_dest)
+            contact_q = Q(platform_id=target_dest)
+            if clean_digits:
+                contact_q |= Q(phone_number__icontains=clean_digits) | Q(platform_id=clean_digits)
+                if len(clean_digits) == 10:
+                    contact_q |= Q(phone_number__icontains=f"91{clean_digits}")
+            try:
+                contact = Contact.objects.filter(Q(client=client) & contact_q).first()
+            except Exception:
+                pass
+
+        # Derive channel and exact destination from Contact
+        if contact:
+            if not channel and getattr(contact, 'preferred_channel', None):
+                channel = contact.preferred_channel
+            if (channel or 'WHATSAPP').upper() == 'WHATSAPP':
+                if contact.phone_number:
+                    target_dest = contact.phone_number
+                elif contact.platform_id:
+                    target_dest = contact.platform_id
+            else:
+                if contact.platform_id:
+                    target_dest = contact.platform_id
+                elif contact.phone_number:
+                    target_dest = contact.phone_number
+
+        # Fallback channel detection
         if not channel:
-            last_msg = MessageRepository.filter_messages(client=client, from_address=to_number).order_by('-created_at').first()
-            if not last_msg:
-                last_msg = MessageRepository.filter_messages(client=client, to_address=to_number).order_by('-created_at').first()
-            channel = last_msg.channel if last_msg else 'WHATSAPP'
+            if '@' in target_dest:
+                channel = 'GMAIL'
+            else:
+                last_msg = MessageRepository.filter_messages(client=client, from_address=target_dest).order_by('-created_at').first()
+                if not last_msg:
+                    last_msg = MessageRepository.filter_messages(client=client, to_address=target_dest).order_by('-created_at').first()
+                channel = last_msg.channel if last_msg else 'WHATSAPP'
             
         channel = channel.upper()
+
+        # Sanitize WhatsApp phone number: remove non-digits, prepend 91 for 10-digit Indian numbers
+        if channel == 'WHATSAPP':
+            digits = re.sub(r'\D', '', str(target_dest))
+            if len(digits) == 10:
+                target_dest = f"91{digits}"
+            elif digits:
+                target_dest = digits
         
         # Human agent takeover: Pause bot response for this contact
-        try:
-            from ..models import Contact
-            # Standardize format for query lookup
-            formatted_number = to_number.replace('+', '').strip()
-            contact = ContactRepository.filter_contacts(
-                client=client, 
-                phone_number__icontains=formatted_number
-            ).first()
-            if not contact:
-                contact = ContactRepository.filter_contacts(
-                    client=client, 
-                    platform_id=to_number
-                ).first()
-            if contact and not contact.bot_paused:
+        if contact and not contact.bot_paused:
+            try:
                 contact.bot_paused = True
                 contact.save()
-        except Exception as e:
-            print(f"Failed to auto-pause bot for contact: {str(e)}")
+            except Exception as e:
+                print(f"Failed to auto-pause bot for contact: {str(e)}")
         
         new_msg = None
         
@@ -810,7 +857,7 @@ class ClientMessagesView(APIView):
                 client=client,
                 channel=channel or 'WHATSAPP',
                 from_address=sender_name,
-                to_address=to_number,
+                to_address=target_dest,
                 body=body,
                 message_type='INTERNAL',
                 sender_name=sender_name,
@@ -821,13 +868,13 @@ class ClientMessagesView(APIView):
             phone_number_id = client.whatsapp_phone_number_id or 'WHATSAPP_SYSTEM'
             webhook_view = WhatsAppWebhookView()
             try:
-                new_msg = webhook_view.send_whatsapp_message(client, to_number, body, phone_number_id)
+                new_msg = webhook_view.send_whatsapp_message(client, target_dest, body, phone_number_id)
             except Exception as _werr:
                 new_msg = MessageRepository.create_message(
                     client=client,
                     channel='WHATSAPP',
                     from_address=phone_number_id,
-                    to_address=to_number,
+                    to_address=target_dest,
                     body=body,
                     message_type='OUTGOING',
                     status='SENT'
@@ -835,13 +882,13 @@ class ClientMessagesView(APIView):
         elif channel in ['INSTAGRAM', 'FACEBOOK']:
             webhook_view = FacebookInstagramWebhookView()
             try:
-                new_msg = webhook_view.send_message(client, channel, to_number, body)
+                new_msg = webhook_view.send_message(client, channel, target_dest, body)
             except Exception as _ferr:
                 new_msg = MessageRepository.create_message(
                     client=client,
                     channel=channel,
                     from_address=channel,
-                    to_address=to_number,
+                    to_address=target_dest,
                     body=body,
                     message_type='OUTGOING',
                     status='SENT'
@@ -849,12 +896,12 @@ class ClientMessagesView(APIView):
         elif channel == 'GMAIL':
             from ..services.gmail_service import send_gmail_message
             try:
-                send_gmail_message(client, to_number, body)
+                send_gmail_message(client, target_dest, body)
                 new_msg = MessageRepository.create_message(
                     client=client,
                     channel='GMAIL',
                     from_address=client.gmail_config.get('email_address', ''),
-                    to_address=to_number,
+                    to_address=target_dest,
                     body=body,
                     message_type='OUTGOING',
                     status='SENT'
