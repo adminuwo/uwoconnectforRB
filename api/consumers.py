@@ -102,6 +102,10 @@ class InboxConsumer(AsyncWebsocketConsumer):
             'message': message
         }))
 
+    # Forward message delivery and read receipts
+    async def message_status_update(self, event):
+        await self.send(text_data=json.dumps(event))
+
 class TeamChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         query_string = self.scope['query_string'].decode()

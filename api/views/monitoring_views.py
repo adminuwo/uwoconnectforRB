@@ -394,6 +394,35 @@ class ConversationViewSet(viewsets.ModelViewSet):
             "note_id": str(msg.id)
         })
 
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        conversation = self.get_object()
+        conversation.unread_count_admin = 0
+        conversation.unread_count_employee = 0
+        conversation.save()
+
+        client = getattr(request.user, 'client', None) or conversation.client
+        if client and conversation.contact_platform_id:
+            from ..models import Message
+            from ..services.meta_webhook_service import MetaWebhookService
+            # Mark incoming messages from this contact as READ
+            recent_incomings = Message.objects.filter(
+                client=client,
+                from_address=conversation.contact_platform_id,
+                message_type='INCOMING'
+            ).exclude(status='READ')
+
+            for inc_msg in recent_incomings[:10]:
+                inc_msg.status = 'READ'
+                inc_msg.save()
+                if inc_msg.whatsapp_message_id:
+                    MetaWebhookService.mark_whatsapp_message_as_read(
+                        client=client,
+                        wamid=inc_msg.whatsapp_message_id
+                    )
+
+        return Response({"status": "success", "message": "Conversation marked as read"})
+
     @action(detail=True, methods=['get'])
     def audit_logs(self, request, pk=None):
         conversation = self.get_object()
