@@ -247,7 +247,10 @@ class MetaWebhookService:
                                             client=client,
                                             metadata__response__messages__0__id=wamid
                                         ).first()
+                                    if not msg_to_update:
+                                        msg_to_update = Message.objects.filter(whatsapp_message_id=wamid).first()
                                     if msg_to_update:
+                                        msg_client = msg_to_update.client or client
                                         current_status = (msg_to_update.status or 'SENT').upper()
                                         status_ranks = {'PENDING': 0, 'SENT': 1, 'DELIVERED': 2, 'READ': 3, 'FAILED': 99}
                                         new_rank = status_ranks.get(status_raw, 0)
@@ -262,9 +265,9 @@ class MetaWebhookService:
                                                 from channels.layers import get_channel_layer
                                                 from asgiref.sync import async_to_sync
                                                 channel_layer = get_channel_layer()
-                                                if channel_layer:
+                                                if channel_layer and msg_client:
                                                     async_to_sync(channel_layer.group_send)(
-                                                        f"inbox_{client.id}",
+                                                        f"inbox_{msg_client.id}",
                                                         {
                                                             "type": "message_status_update",
                                                             "message_id": str(msg_to_update.id),

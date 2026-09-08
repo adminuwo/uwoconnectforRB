@@ -665,9 +665,44 @@ class ClientMessagesView(APIView):
 
         # Sort descending by indexed ID to get latest messages fast without MongoDB memory overflow
         messages = messages.order_by('-id')[offset:offset+limit]
-        
+        msg_list = list(messages)
+
+        # Find the latest incoming message timestamp to determine customer read state
+        latest_incoming_time = None
+        for m in msg_list:
+            if m.message_type == 'INCOMING':
+                m_time = getattr(m, 'created_at', None)
+                if m_time and (latest_incoming_time is None or m_time > latest_incoming_time):
+                    latest_incoming_time = m_time
+
+        # Automatically mark incoming messages as READ on agent viewing & trigger Meta WhatsApp read receipt
+        if contact_id and client:
+            try:
+                from ..services.meta_webhook_service import MetaWebhookService
+                unread_incomings = [m for m in msg_list if m.message_type == 'INCOMING' and (m.status or '').upper() != 'READ']
+                for u_msg in unread_incomings[:10]:
+                    u_msg.status = 'READ'
+                    u_msg.save()
+                    if getattr(u_msg, 'whatsapp_message_id', None):
+                        MetaWebhookService.mark_whatsapp_message_as_read(client, u_msg.whatsapp_message_id)
+            except Exception:
+                pass
+
         data = []
-        for msg in messages:
+        for msg in msg_list:
+            msg_status = (getattr(msg, 'status', None) or 'SENT').upper()
+
+            # If an outgoing message was created prior to a customer's incoming reply, it was definitively read!
+            if msg.message_type == 'OUTGOING' and msg_status in ['SENT', 'DELIVERED', 'RECEIVED', 'PENDING']:
+                if latest_incoming_time and getattr(msg, 'created_at', None) and msg.created_at <= latest_incoming_time:
+                    msg_status = 'READ'
+                    if msg.status != 'READ':
+                        try:
+                            msg.status = 'READ'
+                            msg.save()
+                        except Exception:
+                            pass
+
             data.append({
                 "id": str(msg.id),
                 "from_address": msg.from_address,
@@ -675,7 +710,8 @@ class ClientMessagesView(APIView):
                 "body": msg.body,
                 "channel": msg.channel,
                 "message_type": msg.message_type,
-                "status": msg.status,
+                "status": msg_status,
+                "whatsapp_message_id": getattr(msg, 'whatsapp_message_id', None),
                 "buttons": getattr(msg, 'buttons', []) or [],
                 "metadata": msg.metadata or {},
                 "created_at": msg.created_at

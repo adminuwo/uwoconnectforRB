@@ -396,30 +396,90 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
-        conversation = self.get_object()
-        conversation.unread_count_admin = 0
-        conversation.unread_count_employee = 0
-        conversation.save()
+        from bson import ObjectId
+        from ..models import Message, Conversation
+        from ..services.meta_webhook_service import MetaWebhookService
+        import re
 
-        client = getattr(request.user, 'client', None) or conversation.client
-        if client and conversation.contact_platform_id:
-            from ..models import Message
-            from ..services.meta_webhook_service import MetaWebhookService
+        client = getattr(request.user, 'client', None)
+        conversation = None
+
+        target_str = str(pk or '').strip()
+        if ObjectId.is_valid(target_str):
+            conversation = Conversation.objects.filter(id=target_str).first()
+
+        if not conversation and client:
+            clean_digits = re.sub(r'\D', '', target_str)
+            q = Q(client=client) & (Q(contact_platform_id=target_str) | Q(contact_phone=target_str))
+            if clean_digits:
+                q |= Q(client=client) & (Q(contact_platform_id__icontains=clean_digits) | Q(contact_phone__icontains=clean_digits))
+            conversation = Conversation.objects.filter(q).first()
+
+        if conversation:
+            client = client or conversation.client
+            conversation.unread_count_admin = 0
+            conversation.unread_count_employee = 0
+            conversation.save()
+
+        # Resolve all possible addresses for this contact
+        search_addresses = set([target_str])
+        if conversation:
+            if conversation.contact_platform_id:
+                search_addresses.add(str(conversation.contact_platform_id))
+            if conversation.contact_phone:
+                search_addresses.add(str(conversation.contact_phone))
+
+        clean_d = re.sub(r'\D', '', target_str)
+        if clean_d:
+            search_addresses.add(clean_d)
+            if len(clean_d) == 10:
+                search_addresses.add(f"91{clean_d}")
+                search_addresses.add(f"+91{clean_d}")
+            elif clean_d.startswith("91") and len(clean_d) == 12:
+                search_addresses.add(clean_d[2:])
+                search_addresses.add(f"+{clean_d}")
+
+        if client:
             # Mark incoming messages from this contact as READ
-            recent_incomings = Message.objects.filter(
-                client=client,
-                from_address=conversation.contact_platform_id,
-                message_type='INCOMING'
-            ).exclude(status='READ')
+            inc_filter = Q(client=client, message_type='INCOMING', from_address__in=list(search_addresses))
+            recent_incomings = Message.objects.filter(inc_filter).exclude(status='READ')
 
-            for inc_msg in recent_incomings[:10]:
+            channel_layer = None
+            try:
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+            except Exception:
+                channel_layer = None
+
+            for inc_msg in recent_incomings[:25]:
                 inc_msg.status = 'READ'
                 inc_msg.save()
+
                 if inc_msg.whatsapp_message_id:
-                    MetaWebhookService.mark_whatsapp_message_as_read(
-                        client=client,
-                        wamid=inc_msg.whatsapp_message_id
-                    )
+                    try:
+                        MetaWebhookService.mark_whatsapp_message_as_read(
+                            client=client,
+                            wamid=inc_msg.whatsapp_message_id
+                        )
+                    except Exception as _m_err:
+                        pass
+
+                if channel_layer:
+                    try:
+                        async_to_sync(channel_layer.group_send)(
+                            f"inbox_{client.id}",
+                            {
+                                "type": "message_status_update",
+                                "message_id": str(inc_msg.id),
+                                "whatsapp_message_id": inc_msg.whatsapp_message_id,
+                                "status": "READ",
+                                "from_address": inc_msg.from_address,
+                                "to_address": inc_msg.to_address
+                            }
+                        )
+                    except Exception:
+                        pass
 
         return Response({"status": "success", "message": "Conversation marked as read"})
 
