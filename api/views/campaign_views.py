@@ -183,17 +183,26 @@ class CampaignViewSet(viewsets.ModelViewSet):
         if not prompt:
             return Response({"error": "Prompt or message body is required"}, status=400)
             
-        system_instruction = "You are an expert copywriter for business multi-channel broadcast messaging."
+        import re
+        system_instruction = (
+            "You are an expert copywriter. Output ONLY the raw final message/email body content. "
+            "Never include preambles, introductory commentary (such as 'Certainly!', 'Here is a polished version:'), "
+            "closing remarks (such as 'Feel free to...', 'Hope this helps!'), or wrapping quotation marks. "
+            "Your entire output must be the message text itself, ready to send."
+        )
         if action_type == 'improve':
-            full_prompt = f"Improve and polish this message to increase customer engagement and conversion: '{prompt}'"
+            full_prompt = (
+                f"Rewrite and polish this email message to be professional, clear, and engaging. "
+                f"Output ONLY the final email body directly, with NO preambles, NO introductory commentary, and NO closing notes:\n\n{prompt}"
+            )
         elif action_type == 'translate':
-            full_prompt = f"Translate the following message accurately into {language}: '{prompt}'"
+            full_prompt = f"Translate the following message accurately into {language}. Output ONLY the translated text:\n\n{prompt}"
         elif action_type == 'fix_grammar':
-            full_prompt = f"Fix all spelling, punctuation, and grammar mistakes in this message while keeping its core meaning: '{prompt}'"
+            full_prompt = f"Fix all spelling, punctuation, and grammar mistakes in this message while keeping its core meaning. Output ONLY the corrected text:\n\n{prompt}"
         elif action_type == 'tone':
-            full_prompt = f"Rewrite this message in a {tone} tone suitable for multi-channel broadcasting: '{prompt}'"
+            full_prompt = f"Rewrite this message in a {tone} tone. Output ONLY the rewritten text:\n\n{prompt}"
         else:
-            full_prompt = f"Generate a compelling broadcast message based on this description: '{prompt}'"
+            full_prompt = f"Generate a compelling message based on this description. Output ONLY the message text:\n\n{prompt}"
 
         try:
             from ..services.ai_service import get_ai_response
@@ -202,13 +211,48 @@ class CampaignViewSet(viewsets.ModelViewSet):
                 # Graceful smart polish fallback if OPENAI_API_KEY is not set
                 cleaned = prompt.strip()
                 if action_type == 'improve':
-                    generated_text = f"Hello {{first_name}}!\n\n{cleaned}\n\nWe have an exclusive offer just for you on UWOConnect today. Reply YES to claim now!"
+                    generated_text = f"Hello,\n\n{cleaned}\n\nBest regards,\nUWOConnect Team"
                 elif action_type == 'fix_grammar':
                     generated_text = cleaned.capitalize()
                     if not generated_text.endswith(('.', '!', '?')):
                         generated_text += '.'
                 else:
-                    generated_text = f"Special Announcement: {cleaned} - Visit UWOConnect today for more details!"
+                    generated_text = cleaned
+            else:
+                # Clean any conversational preambles like "Certainly! Here's a polished version:"
+                generated_text = re.sub(
+                    r'^(?:certainly!?|sure!?|of course!?|here(?:[\'’]s| is| are)|below is)[\s\S]*?:(?:\r?\n)+',
+                    '',
+                    generated_text,
+                    flags=re.IGNORECASE
+                ).strip()
+                # Clean any conversational closings like "Feel free to adjust any specifics!"
+                generated_text = re.sub(
+                    r'(?:\r?\n)+(?:feel free to|hope this helps|let me know if|please let me know|don\'t hesitate to)[\s\S]*$',
+                    '',
+                    generated_text,
+                    flags=re.IGNORECASE
+                ).strip()
+                # Repeatedly clean divider lines (- or ---), bullets, and quotes
+                changed = True
+                while changed:
+                    prev = generated_text
+                    if generated_text.startswith("```"):
+                        generated_text = re.sub(r'^```[a-zA-Z]*\n?', '', generated_text)
+                        generated_text = re.sub(r'\n?```$', '', generated_text).strip()
+                    generated_text = re.sub(r'^[-–—_*~•#\s]+(?:\r?\n)+', '', generated_text).strip()
+                    generated_text = re.sub(r'^[-–—•]\s+', '', generated_text).strip()
+                    if generated_text.startswith(('-', '–', '—')):
+                        generated_text = re.sub(r'^[-–—_*~•\s]+', '', generated_text).strip()
+                    generated_text = re.sub(r'(?:\r?\n)+[-–—_*~•#\s]+$', '', generated_text).strip()
+                    if generated_text.endswith(('-', '–', '—')):
+                        generated_text = re.sub(r'[-–—_*~•\s]+$', '', generated_text).strip()
+                    if (generated_text.startswith('"') and generated_text.endswith('"')) or \
+                       (generated_text.startswith('“') and generated_text.endswith('”')) or \
+                       (generated_text.startswith("'") and generated_text.endswith("'")) or \
+                       (generated_text.startswith('‘') and generated_text.endswith('’')):
+                        generated_text = generated_text[1:-1].strip()
+                    changed = (generated_text != prev)
 
             return Response({"result": generated_text, "action_type": action_type})
         except Exception as e:

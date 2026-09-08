@@ -394,6 +394,95 @@ class ConversationViewSet(viewsets.ModelViewSet):
             "note_id": str(msg.id)
         })
 
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        from bson import ObjectId
+        from ..models import Message, Conversation
+        from ..services.meta_webhook_service import MetaWebhookService
+        import re
+
+        client = getattr(request.user, 'client', None)
+        conversation = None
+
+        target_str = str(pk or '').strip()
+        if ObjectId.is_valid(target_str):
+            conversation = Conversation.objects.filter(id=target_str).first()
+
+        if not conversation and client:
+            clean_digits = re.sub(r'\D', '', target_str)
+            q = Q(client=client) & (Q(contact_platform_id=target_str) | Q(contact_phone=target_str))
+            if clean_digits:
+                q |= Q(client=client) & (Q(contact_platform_id__icontains=clean_digits) | Q(contact_phone__icontains=clean_digits))
+            conversation = Conversation.objects.filter(q).first()
+
+        if conversation:
+            client = client or conversation.client
+            conversation.unread_count_admin = 0
+            conversation.unread_count_employee = 0
+            conversation.save()
+
+        # Resolve all possible addresses for this contact
+        search_addresses = set([target_str])
+        if conversation:
+            if conversation.contact_platform_id:
+                search_addresses.add(str(conversation.contact_platform_id))
+            if conversation.contact_phone:
+                search_addresses.add(str(conversation.contact_phone))
+
+        clean_d = re.sub(r'\D', '', target_str)
+        if clean_d:
+            search_addresses.add(clean_d)
+            if len(clean_d) == 10:
+                search_addresses.add(f"91{clean_d}")
+                search_addresses.add(f"+91{clean_d}")
+            elif clean_d.startswith("91") and len(clean_d) == 12:
+                search_addresses.add(clean_d[2:])
+                search_addresses.add(f"+{clean_d}")
+
+        if client:
+            # Mark incoming messages from this contact as READ
+            inc_filter = Q(client=client, message_type='INCOMING', from_address__in=list(search_addresses))
+            recent_incomings = Message.objects.filter(inc_filter).exclude(status='READ')
+
+            channel_layer = None
+            try:
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+            except Exception:
+                channel_layer = None
+
+            for inc_msg in recent_incomings[:25]:
+                inc_msg.status = 'READ'
+                inc_msg.save()
+
+                if inc_msg.whatsapp_message_id:
+                    try:
+                        MetaWebhookService.mark_whatsapp_message_as_read(
+                            client=client,
+                            wamid=inc_msg.whatsapp_message_id
+                        )
+                    except Exception as _m_err:
+                        pass
+
+                if channel_layer:
+                    try:
+                        async_to_sync(channel_layer.group_send)(
+                            f"inbox_{client.id}",
+                            {
+                                "type": "message_status_update",
+                                "message_id": str(inc_msg.id),
+                                "whatsapp_message_id": inc_msg.whatsapp_message_id,
+                                "status": "READ",
+                                "from_address": inc_msg.from_address,
+                                "to_address": inc_msg.to_address
+                            }
+                        )
+                    except Exception:
+                        pass
+
+        return Response({"status": "success", "message": "Conversation marked as read"})
+
     @action(detail=True, methods=['get'])
     def audit_logs(self, request, pk=None):
         conversation = self.get_object()
@@ -471,10 +560,69 @@ class HealthCheckView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response({
-            "status": "healthy",
+        import time
+        from django.conf import settings
+        from django.db import connection
+
+        db_status = "connected"
+        db_latency_ms = None
+        try:
+            connection.ensure_connection()
+            if connection.connection is not None:
+                start_t = time.time()
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1;")
+                    cursor.fetchone()
+                db_latency_ms = round((time.time() - start_t) * 1000, 2)
+            else:
+                db_status = "not_initialized"
+        except Exception as e:
+            db_status = f"unconnected: {str(e)}"
+
+        detailed = request.query_params.get('detailed') == '1'
+        is_healthy = "unconnected" not in db_status
+
+        payload = {
+            "status": "healthy" if is_healthy else "degraded",
             "service": "UWOConnect Backend API",
-            "environment": "production",
-            "timestamp": timezone.now().isoformat()
-        }, status=status.HTTP_200_OK)
+            "environment": "production" if not getattr(settings, 'DEBUG', False) else "development",
+            "database": {
+                "status": db_status,
+                "latency_ms": db_latency_ms
+            },
+            "timestamp": timezone.now().isoformat(),
+            "version": "1.0.0"
+        }
+
+        if detailed:
+            import sys
+            import platform
+            payload["system"] = {
+                "python_version": sys.version.split()[0],
+                "platform": platform.platform()
+            }
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+
+def backend_robots_view(request):
+    from django.http import HttpResponse
+    content = "User-agent: *\nDisallow: /admin/\nDisallow: /api/\n"
+    return HttpResponse(content, content_type="text/plain")
+
+
+def backend_sitemap_view(request):
+    from django.http import HttpResponse
+    content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://uwoconnect.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>"""
+    return HttpResponse(content, content_type="application/xml")
+
+
 

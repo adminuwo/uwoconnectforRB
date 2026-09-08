@@ -230,6 +230,58 @@ class MetaWebhookService:
                                     MetaWebhookService.handle_automations_whatsapp(client, from_number, body, phone_number_id)
                                 else:
                                     print(f"Bot paused for contact {from_number}. No automated response.")
+
+                        # Handle WhatsApp delivery and read receipts
+                        statuses = value.get('statuses') or []
+                        for st in statuses:
+                            wamid = st.get('id')
+                            status_raw = (st.get('status') or '').strip().upper()
+                            if wamid and status_raw in ['SENT', 'DELIVERED', 'READ', 'FAILED']:
+                                try:
+                                    msg_to_update = Message.objects.filter(
+                                        client=client,
+                                        whatsapp_message_id=wamid
+                                    ).first()
+                                    if not msg_to_update:
+                                        msg_to_update = Message.objects.filter(
+                                            client=client,
+                                            metadata__response__messages__0__id=wamid
+                                        ).first()
+                                    if not msg_to_update:
+                                        msg_to_update = Message.objects.filter(whatsapp_message_id=wamid).first()
+                                    if msg_to_update:
+                                        msg_client = msg_to_update.client or client
+                                        current_status = (msg_to_update.status or 'SENT').upper()
+                                        status_ranks = {'PENDING': 0, 'SENT': 1, 'DELIVERED': 2, 'READ': 3, 'FAILED': 99}
+                                        new_rank = status_ranks.get(status_raw, 0)
+                                        curr_rank = status_ranks.get(current_status, 0)
+
+                                        if new_rank >= curr_rank or status_raw == 'FAILED':
+                                            msg_to_update.status = status_raw
+                                            msg_to_update.save()
+
+                                            # Real-time WebSocket event broadcast to inbox group
+                                            try:
+                                                from channels.layers import get_channel_layer
+                                                from asgiref.sync import async_to_sync
+                                                channel_layer = get_channel_layer()
+                                                if channel_layer and msg_client:
+                                                    async_to_sync(channel_layer.group_send)(
+                                                        f"inbox_{msg_client.id}",
+                                                        {
+                                                            "type": "message_status_update",
+                                                            "message_id": str(msg_to_update.id),
+                                                            "whatsapp_message_id": wamid,
+                                                            "status": status_raw,
+                                                            "from_address": msg_to_update.from_address,
+                                                            "to_address": msg_to_update.to_address
+                                                        }
+                                                    )
+                                            except Exception as _ws_err:
+                                                pass
+                                except Exception as _st_err:
+                                    logger.warning(f"Error updating message status from webhook: {_st_err}")
+
             return {"status": "success", "status_code": 200}
         except Exception as e:
             print(f"Error processing webhook: {str(e)}")
@@ -693,6 +745,29 @@ class MetaWebhookService:
             except Exception:
                 pass
             return None
+
+    @staticmethod
+    def mark_whatsapp_message_as_read(client, wamid, phone_number_id=None):
+        """Mark an incoming WhatsApp message as read via Meta Graph API so customer sees blue double ticks."""
+        if not wamid or not client or not client.whatsapp_access_token:
+            return
+        phone_id = phone_number_id or getattr(client, 'whatsapp_phone_number_id', None)
+        if not phone_id:
+            return
+        url = f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v19.0')}/{phone_id}/messages"
+        headers = {
+            "Authorization": f"Bearer {client.whatsapp_access_token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "messaging_product": "whatsapp",
+            "status": "read",
+            "message_id": wamid
+        }
+        try:
+            requests.post(url, headers=headers, json=payload, timeout=5)
+        except Exception as _e:
+            logger.warning(f"Error marking WhatsApp message as read: {_e}")
 
     @staticmethod
     def send_fb_ig_message(client, platform, recipient_id, text_body, buttons=None, media_url=None, media_type=None):
