@@ -59,7 +59,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(contact_platform_id__icontains=search) | queryset.filter(last_message_summary__icontains=search)
             
-        return queryset.order_by('-last_message_at', '-updated_at')
+        return queryset.select_related('contact', 'assigned_to', 'locked_by').order_by('-last_message_at', '-updated_at')
 
     def get_object(self):
         pk = self.kwargs.get('pk')

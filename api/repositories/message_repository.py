@@ -31,24 +31,48 @@ class MessageRepository:
             
             # Create or update Conversation safely without MultipleObjectsReturned exception
             try:
+                contact_obj = Contact.objects.filter(client=client, platform_id=platform_id).first()
+                inferred_ch = msg.channel
+                if not inferred_ch or inferred_ch == 'WHATSAPP':
+                    cname = (contact_obj.name if contact_obj else '') or ''
+                    pid_str = str(platform_id).lower()
+                    if 'INSTAGRAM' in cname.upper() or 'instagram' in pid_str or pid_str.startswith('ig_'):
+                        inferred_ch = 'INSTAGRAM'
+                    elif 'FACEBOOK' in cname.upper() or 'facebook' in pid_str or pid_str.startswith('fb_'):
+                        inferred_ch = 'FACEBOOK'
+                    elif '@' in pid_str:
+                        inferred_ch = 'GMAIL'
+                    else:
+                        inferred_ch = inferred_ch or 'WHATSAPP'
+
                 convo = Conversation.objects.filter(client=client, contact_platform_id=platform_id).first()
                 if not convo:
                     convo = Conversation.objects.create(
                         client=client,
                         contact_platform_id=platform_id,
-                        channel=msg.channel or 'WHATSAPP',
-                        contact=Contact.objects.filter(client=client, platform_id=platform_id).first(),
+                        channel=inferred_ch,
+                        contact=contact_obj,
                         last_message_summary=msg.body,
                         last_message_at=msg.created_at or timezone.now()
                     )
                 else:
                     convo.last_message_summary = msg.body
                     convo.last_message_at = msg.created_at or timezone.now()
+                    if inferred_ch and inferred_ch != 'WHATSAPP':
+                        convo.channel = inferred_ch
                     if not convo.contact:
-                        convo.contact = Contact.objects.filter(client=client, platform_id=platform_id).first()
+                        convo.contact = contact_obj
                     convo.save()
             except Exception as _convo_err:
                 pass
+
+            # Automatic Lead Qualification for Incoming Messages (Pricing / Product Inquiry)
+            if msg.message_type == 'INCOMING' and msg.body:
+                try:
+                    from ..services.lead_qualification_service import LeadQualificationService
+                    LeadQualificationService.qualify_and_update_contact(client, platform_id, msg.body)
+                except Exception as _lead_err:
+                    pass
 
             # Real-time WebSocket event broadcast to inbox group
             try:

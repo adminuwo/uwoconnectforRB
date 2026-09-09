@@ -201,6 +201,26 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.enterprise_role or self.role})"
 
+class UserPreference(models.Model):
+    THEME_LIGHT = 'light'
+    THEME_DARK = 'dark'
+    THEME_CUSTOM = 'custom'
+    THEME_CHOICES = [
+        (THEME_LIGHT, 'Light'),
+        (THEME_DARK, 'Dark'),
+        (THEME_CUSTOM, 'Custom'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='preferences')
+    theme_mode = models.CharField(max_length=20, choices=THEME_CHOICES, default=THEME_LIGHT)
+    primary_color = models.CharField(max_length=20, blank=True, default='#059669')
+    accent_color = models.CharField(max_length=20, blank=True, default='#0d9488')
+    language = models.CharField(max_length=20, default='en')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.theme_mode} ({self.language})"
+
 class TeamInvite(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='team_invites')
     email = models.EmailField(blank=True, default='')
@@ -425,6 +445,8 @@ class KnowledgeChunk(models.Model):
 class Contact(models.Model):
     STAGE_CHOICES = [
         ('NEW', 'New Lead'),
+        ('QUALIFIED', 'Qualified Lead'),
+        ('HOT_LEAD', '🔥 Hot Lead'),
         ('FOLLOWUP', 'Follow Up'),
         ('NEGOTIATION', 'Negotiation'),
         ('WON', 'Closed Won'),
@@ -459,6 +481,53 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.name or self.platform_id} ({self.client.business_name})"
+
+
+class ContactFollowUp(models.Model):
+    """
+    Industrial CRM Follow-Up Task per Contact.
+    Tracks scheduled calls, meetings, messages, etc. with full lifecycle.
+    """
+    FOLLOW_UP_TYPES = [
+        ('CALL', 'Phone Call'),
+        ('MESSAGE', 'WhatsApp / Message'),
+        ('MEETING', 'Meeting'),
+        ('EMAIL', 'Email'),
+        ('OTHER', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('DONE', 'Done'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+
+    contact = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name='follow_ups')
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='contact_follow_ups')
+    created_by = models.ForeignKey(
+        'User', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_follow_ups'
+    )
+
+    follow_up_type = models.CharField(max_length=20, choices=FOLLOW_UP_TYPES, default='CALL')
+    title = models.CharField(max_length=255)
+    note = models.TextField(null=True, blank=True)
+    scheduled_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['scheduled_at']
+
+    def __str__(self):
+        return f"[{self.follow_up_type}] {self.title} for {self.contact} @ {self.scheduled_at}"
+
+    @property
+    def is_overdue(self):
+        from django.utils import timezone
+        return self.status == 'PENDING' and self.scheduled_at < timezone.now()
+
 
 class Template(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='templates')
@@ -2168,14 +2237,23 @@ class QrAuthSession(models.Model):
     ]
 
     session_id = models.CharField(max_length=64, unique=True, db_index=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='qr_auth_sessions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='qr_auth_sessions')
     client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='qr_auth_sessions')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='CREATED')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='WAITING')
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(null=True, blank=True)
+    device_name = models.CharField(max_length=150, blank=True, null=True)
+    browser = models.CharField(max_length=100, blank=True, null=True)
+    operating_system = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     expires_at = models.DateTimeField(db_index=True)
+    scanned_at = models.DateTimeField(null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     consumed_at = models.DateTimeField(null=True, blank=True)
+    auth_token = models.TextField(null=True, blank=True)
+    refresh_token = models.TextField(null=True, blank=True)
+    user_data = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -2191,7 +2269,31 @@ class QrAuthSession(models.Model):
         return True
 
     def __str__(self):
-        return f"QrAuthSession {self.session_id[:8]}... ({self.user.username} - {self.status})"
+        username = self.user.username if self.user else "Anonymous"
+        return f"QrAuthSession {self.session_id[:8]}... ({username} - {self.status})"
+
+
+class LinkedDevice(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='linked_devices')
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='linked_devices')
+    device_name = models.CharField(max_length=150)
+    browser = models.CharField(max_length=100, blank=True)
+    operating_system = models.CharField(max_length=100, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    session_id = models.CharField(max_length=64, db_index=True)
+    token_hash = models.CharField(max_length=64, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    linked_at = models.DateTimeField(auto_now_add=True)
+    last_active_at = models.DateTimeField(auto_now=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-linked_at']
+
+    def __str__(self):
+        return f"{self.device_name} ({self.user.username}) - {'Active' if self.is_active else 'Revoked'}"
+
 
 
 

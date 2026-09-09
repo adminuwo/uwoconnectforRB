@@ -23,7 +23,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from ..serializers import RegisterSerializer, UserSerializer, ClientSerializer, AutomationSerializer, WorkflowSerializer, ContactSerializer, TemplateSerializer, CampaignSerializer, SupportMessageSerializer, AuditLogSerializer, TeamInviteSerializer, ProductSerializer, OrderSerializer
-from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, Conversation, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order
+from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, ContactFollowUp, Conversation, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order
 import requests
 import logging
 logger = logging.getLogger(__name__)
@@ -41,7 +41,14 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except (Client.DoesNotExist, ValueError):
                 pass
-        return None
+        # Fallback to user's client if present
+        if getattr(request.user, 'client', None):
+            return request.user.client
+        # Fallback to first available client
+        try:
+            return ClientRepository.get_all_clients().first()
+        except Exception:
+            return None
     return request.user.client
 
 class ClientViewSet(viewsets.ModelViewSet):
@@ -444,6 +451,78 @@ class ContactViewSet(viewsets.ModelViewSet):
         from ..services.contact_service import ContactService
         return ContactService.export_contacts_to_csv(client)
 
+    @action(detail=True, methods=['get'])
+    def follow_ups(self, request, pk=None):
+        """List all follow-up tasks for a specific contact."""
+        contact = self.get_object()
+        client = get_tenant_client(request)
+        qs = ContactFollowUp.objects.filter(contact=contact, client=client).order_by('scheduled_at')
+        from ..serializers import ContactFollowUpSerializer
+        serializer = ContactFollowUpSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='follow_ups/create')
+    def create_follow_up(self, request, pk=None):
+        """Schedule a new follow-up task for a contact."""
+        contact = self.get_object()
+        client = get_tenant_client(request)
+        from ..serializers import ContactFollowUpSerializer
+        serializer = ContactFollowUpSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(contact=contact, client=client, created_by=request.user)
+            # Auto-advance stage to FOLLOWUP if still NEW or QUALIFIED
+            if contact.stage in ('NEW', 'QUALIFIED'):
+                contact.stage = 'FOLLOWUP'
+                contact.save(update_fields=['stage'])
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['patch'], url_path='follow_ups/(?P<fid>[^/.]+)/update')
+    def update_follow_up(self, request, pk=None, fid=None):
+        """Mark a follow-up as DONE or CANCELLED."""
+        client = get_tenant_client(request)
+        try:
+            fu = ContactFollowUp.objects.get(pk=fid, client=client)
+        except ContactFollowUp.DoesNotExist:
+            return Response({'detail': 'Follow-up not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from django.utils import timezone
+        new_status = request.data.get('status')
+        if new_status == 'DONE':
+            fu.completed_at = timezone.now()
+        fu.status = new_status or fu.status
+        note = request.data.get('note')
+        if note is not None:
+            fu.note = note
+        fu.save()
+        from ..serializers import ContactFollowUpSerializer
+        return Response(ContactFollowUpSerializer(fu).data)
+
+    @action(detail=False, methods=['get'])
+    def upcoming_followups(self, request):
+        """Return today's and overdue pending follow-ups — used by Home screen widget."""
+        from django.utils import timezone
+        from datetime import timedelta
+        client = get_tenant_client(request)
+        if not client:
+            return Response([], status=200)
+        now = timezone.now()
+        window_end = now + timedelta(days=7)  # Next 7 days
+        qs = ContactFollowUp.objects.filter(
+            client=client,
+            status='PENDING',
+            scheduled_at__lte=window_end,
+        ).select_related('contact').order_by('scheduled_at')[:20]
+        from ..serializers import ContactFollowUpSerializer
+        serializer = ContactFollowUpSerializer(qs, many=True)
+        # Enrich with contact info
+        data = serializer.data
+        for item, fu_obj in zip(data, qs):
+            item['contact_name'] = fu_obj.contact.name or fu_obj.contact.phone_number or 'Unknown'
+            item['contact_phone'] = fu_obj.contact.phone_number or ''
+            item['contact_stage'] = fu_obj.contact.stage
+        return Response(data)
+
 
 class ClientStatsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -675,18 +754,30 @@ class ClientMessagesView(APIView):
                 if m_time and (latest_incoming_time is None or m_time > latest_incoming_time):
                     latest_incoming_time = m_time
 
-        # Automatically mark incoming messages as READ on agent viewing & trigger Meta WhatsApp read receipt
+        # Automatically mark incoming messages as READ on agent viewing & trigger Meta WhatsApp read receipt asynchronously
         if contact_id and client:
             try:
-                from ..services.meta_webhook_service import MetaWebhookService
+                import threading
                 unread_incomings = [m for m in msg_list if m.message_type == 'INCOMING' and (m.status or '').upper() != 'READ']
-                for u_msg in unread_incomings[:10]:
-                    u_msg.status = 'READ'
-                    u_msg.save()
-                    if getattr(u_msg, 'whatsapp_message_id', None):
-                        MetaWebhookService.mark_whatsapp_message_as_read(client, u_msg.whatsapp_message_id)
+                if unread_incomings:
+                    for u_msg in unread_incomings[:10]:
+                        u_msg.status = 'READ'
+                        u_msg.save()
+
+                    def async_mark_read(c_target, msgs_to_mark):
+                        from ..services.meta_webhook_service import MetaWebhookService
+                        for m in msgs_to_mark:
+                            wa_id = getattr(m, 'whatsapp_message_id', None)
+                            if wa_id:
+                                try:
+                                    MetaWebhookService.mark_whatsapp_message_as_read(c_target, wa_id)
+                                except Exception:
+                                    pass
+
+                    threading.Thread(target=async_mark_read, args=(client, unread_incomings[:10]), daemon=True).start()
             except Exception:
                 pass
+
 
         data = []
         for msg in msg_list:

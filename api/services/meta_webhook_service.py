@@ -499,6 +499,15 @@ class MetaWebhookService:
                         break
         incoming_lower = incoming_text.lower().strip()
 
+        # Automated Industrial Lead Qualification (Product & Pricing Intent Detection)
+        from .lead_qualification_service import LeadQualificationService
+        qualification = LeadQualificationService.qualify_and_update_contact(client, to_number, incoming_text)
+        if qualification and qualification.get('matched_product') and qualification.get('intent') == 'PRICING':
+            pricing_reply = LeadQualificationService.generate_pricing_reply(client, qualification['matched_product'])
+            if pricing_reply:
+                MetaWebhookService.send_whatsapp_message(client, to_number, pricing_reply, phone_number_id)
+                return
+
         # Check for Buy Now action
         buy_keywords = ['buy now', '🛒 buy now', 'order now', 'buy product', 'purchase']
         if any(kw in incoming_lower for kw in buy_keywords):
@@ -598,6 +607,15 @@ class MetaWebhookService:
                         match_found = True
                         break
         incoming_lower = incoming_text.lower().strip()
+
+        # Automated Industrial Lead Qualification (Product & Pricing Intent Detection)
+        from .lead_qualification_service import LeadQualificationService
+        qualification = LeadQualificationService.qualify_and_update_contact(client, sender_id, incoming_text)
+        if qualification and qualification.get('matched_product') and qualification.get('intent') == 'PRICING':
+            pricing_reply = LeadQualificationService.generate_pricing_reply(client, qualification['matched_product'])
+            if pricing_reply:
+                MetaWebhookService.send_fb_ig_message(client, platform, sender_id, pricing_reply)
+                return
 
         # Check for Buy Now action
         buy_keywords = ['buy now', '🛒 buy now', 'order now', 'buy product', 'purchase']
