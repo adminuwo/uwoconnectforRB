@@ -35,25 +35,25 @@ class WhiteLabelConfigView(APIView):
                     Q(settings__custom_domain__iexact=clean_domain)
                 ).first()
 
-        if not is_default_domain and not client and client_id:
+        if not client and client_id:
             try:
                 client = Client.objects.filter(id=client_id).first()
             except Exception:
                 client = None
 
-        if client and (client.white_label_name or client.white_label_logo or client.white_label_domain or client.company_logo_url):
+        if client and (client.white_label_name or client.white_label_logo or client.white_label_domain or client.company_logo_url or client.business_name):
             client_settings = client.settings if isinstance(client.settings, dict) else {}
             logo_url = client.white_label_logo or client.company_logo_url or "/download (3).gif"
             favicon_url = client_settings.get('favicon_url') or logo_url
             primary_color = client_settings.get('primary_color') or '#059669'
             accent_color = client_settings.get('accent_color') or '#10B981'
             support_email = client_settings.get('support_email') or client.phone_number or 'support@uwoconnect.com'
-            brand_name = client.white_label_name or client.business_name or 'UwoConnect'
+            brand_name = client.white_label_name or client.business_name or 'Workspace'
             tagline = client_settings.get('tagline') or 'Multi-channel automation platform'
             copyright_text = client_settings.get('copyright_text') or f"© {brand_name}. All rights reserved."
 
             return Response({
-                "is_whitelabel": True,
+                "is_whitelabel": bool(client.white_label_name or client.white_label_logo or client.white_label_domain),
                 "client_id": str(client.id),
                 "brand_name": brand_name,
                 "tagline": tagline,

@@ -769,7 +769,7 @@ class SalesAnalyticsView(APIView):
             if client_id:
                 client = Client.objects.filter(id=client_id).first()
             if not client:
-                client = Client.objects.filter(users=request.user).first() or Client.objects.first()
+                client = Client.objects.filter(users=request.user).first()
 
         if not client:
             return Response({'error': 'Client workspace not found.'}, status=400)

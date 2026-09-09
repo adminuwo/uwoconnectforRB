@@ -64,18 +64,16 @@ def parse_google_news_xml(xml_content):
 def get_tenant_client(request):
     if not request.user or not request.user.is_authenticated:
         return None
-    client = getattr(request.user, 'client_workspace', None) or getattr(request.user, 'client', None)
-    if not client and getattr(request.user, 'role', '') == 'ADMIN':
-        client_id = request.query_params.get('client_id') or request.data.get('client_id')
+    if getattr(request.user, 'role', '') == 'ADMIN':
+        client_id = request.query_params.get('client_id') or (request.data.get('client_id') if isinstance(getattr(request, 'data', None), dict) else None)
         if client_id:
             try:
                 from ..models import Client
                 return Client.objects.get(id=client_id)
             except Exception:
                 pass
-        from ..models import Client
-        return Client.objects.first()
-    return client
+        return getattr(request.user, 'client_workspace', None) or getattr(request.user, 'client', None)
+    return getattr(request.user, 'client_workspace', None) or getattr(request.user, 'client', None)
 
 
 class GoogleNewsSettingsView(APIView):

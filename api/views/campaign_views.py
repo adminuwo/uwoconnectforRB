@@ -34,8 +34,8 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except Exception:
                 pass
-        return getattr(request.user, 'client', None) or Client.objects.first()
-    return getattr(request.user, 'client', None) or Client.objects.first()
+        return getattr(request.user, 'client', None)
+    return getattr(request.user, 'client', None)
 
 class TemplateViewSet(viewsets.ModelViewSet):
     serializer_class = TemplateSerializer

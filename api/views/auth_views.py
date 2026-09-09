@@ -226,7 +226,7 @@ class ProfileView(APIView):
         else:
             # Super Admin or staff user without a direct client tenant
             client_data = {
-                "business_name": "Unified Web Options Super Admin",
+                "business_name": "Platform Super Admin",
                 "email": request.user.email,
                 "plan_name": "Super Admin",
                 "status": "ACTIVE"
