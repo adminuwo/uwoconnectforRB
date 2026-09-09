@@ -251,6 +251,7 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         # Fetch live details from Meta Graph API
         live_profile = dict(cached_profile)
+        force_meta = request.query_params.get('force_meta') == 'true'
         try:
             url = f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v20.0')}/{client.whatsapp_phone_number_id}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical"
             headers = {"Authorization": f"Bearer {client.whatsapp_access_token}"}
@@ -259,18 +260,16 @@ class ClientViewSet(viewsets.ModelViewSet):
                 data_list = res.json().get('data', [])
                 if data_list and isinstance(data_list, list) and len(data_list) > 0:
                     meta_data = data_list[0]
-                    if meta_data.get('address'):
-                        live_profile['address'] = meta_data['address']
-                    if meta_data.get('description'):
-                        live_profile['description'] = meta_data['description']
-                    if meta_data.get('about'):
-                        live_profile['about'] = meta_data['about']
-                    if meta_data.get('email'):
-                        live_profile['email'] = meta_data['email']
-                    if meta_data.get('websites'):
-                        live_profile['websites'] = meta_data['websites']
-                    if meta_data.get('vertical'):
-                        live_profile['vertical'] = meta_data['vertical']
+                    for field in ['address', 'description', 'about', 'email', 'vertical']:
+                        meta_val = meta_data.get(field)
+                        if meta_val and str(meta_val).strip():
+                            # If force_meta is True or field wasn't set by user, apply Meta's value
+                            if force_meta or not cached_profile.get(field):
+                                live_profile[field] = str(meta_val).strip()
+                    if meta_data.get('websites') and isinstance(meta_data['websites'], list):
+                        valid_sites = [str(w).strip() for w in meta_data['websites'] if str(w).strip()]
+                        if valid_sites and (force_meta or not cached_profile.get('websites')):
+                            live_profile['websites'] = valid_sites
                     if meta_data.get('profile_picture_url'):
                         live_profile['profile_picture_url'] = meta_data['profile_picture_url']
                         settings_dict['whatsapp_profile_picture_url'] = meta_data['profile_picture_url']
@@ -300,48 +299,7 @@ class ClientViewSet(viewsets.ModelViewSet):
         profile_data = request.data.get('profile', {})
         business_hours = request.data.get('business_hours', {})
 
-        # Prepare Meta payload
-        meta_payload = {
-            "messaging_product": "whatsapp"
-        }
-        
-        if 'address' in profile_data:
-            meta_payload['address'] = str(profile_data['address']).strip()[:256]
-        if 'description' in profile_data:
-            meta_payload['description'] = str(profile_data['description']).strip()[:512]
-        if 'about' in profile_data:
-            meta_payload['about'] = str(profile_data['about']).strip()[:139]
-        if 'email' in profile_data:
-            meta_payload['email'] = str(profile_data['email']).strip()[:128]
-        if 'vertical' in profile_data and profile_data['vertical']:
-            meta_payload['vertical'] = str(profile_data['vertical']).strip()
-        if 'websites' in profile_data:
-            ws = profile_data['websites']
-            if isinstance(ws, list):
-                meta_payload['websites'] = [str(w).strip() for w in ws if str(w).strip()][:2]
-            elif isinstance(ws, str) and ws.strip():
-                meta_payload['websites'] = [ws.strip()]
-
-        # Call Meta Graph API
-        meta_url = f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v20.0')}/{client.whatsapp_phone_number_id}/whatsapp_business_profile"
-        headers = {
-            "Authorization": f"Bearer {client.whatsapp_access_token}",
-            "Content-Type": "application/json"
-        }
-
-        meta_error = None
-        try:
-            meta_res = requests.post(meta_url, headers=headers, json=meta_payload, timeout=12)
-            meta_json = meta_res.json()
-            if meta_res.status_code != 200 or not meta_json.get('success'):
-                meta_error = meta_json.get('error', {}).get('message') or str(meta_json)
-        except Exception as ex:
-            meta_error = str(ex)
-
-        if meta_error:
-            return Response({"error": f"Meta API Error: {meta_error}"}, status=400)
-
-        # Save to client settings
+        # 1. Always persist to client settings first so user changes are never lost
         settings_dict = client.settings or {}
         current_profile = settings_dict.get('whatsapp_business_profile', {})
         current_profile.update(profile_data)
@@ -353,12 +311,59 @@ class ClientViewSet(viewsets.ModelViewSet):
         client.settings = settings_dict
         client.save(update_fields=['settings'])
 
+        # 2. Prepare clean Meta payload (Meta Cloud API strictly rejects empty strings with #131000)
+        meta_payload = {
+            "messaging_product": "whatsapp"
+        }
+        
+        if profile_data.get('address') and str(profile_data['address']).strip():
+            meta_payload['address'] = str(profile_data['address']).strip()[:256]
+        if profile_data.get('description') and str(profile_data['description']).strip():
+            meta_payload['description'] = str(profile_data['description']).strip()[:512]
+        if profile_data.get('about') and str(profile_data['about']).strip():
+            meta_payload['about'] = str(profile_data['about']).strip()[:139]
+        if profile_data.get('email') and str(profile_data['email']).strip():
+            meta_payload['email'] = str(profile_data['email']).strip()[:128]
+        if profile_data.get('vertical') and str(profile_data['vertical']).strip():
+            meta_payload['vertical'] = str(profile_data['vertical']).strip()
+        if profile_data.get('websites'):
+            ws = profile_data['websites']
+            if isinstance(ws, list):
+                clean_ws = [str(w).strip() for w in ws if str(w).strip()]
+                if clean_ws:
+                    meta_payload['websites'] = clean_ws[:2]
+            elif isinstance(ws, str) and ws.strip():
+                meta_payload['websites'] = [ws.strip()]
+
+        # 3. Call Meta Graph API if attributes are provided
+        meta_synced = False
+        meta_error = None
+        if len(meta_payload) > 1:
+            meta_url = f"https://graph.facebook.com/{os.getenv('WHATSAPP_API_VERSION', 'v20.0')}/{client.whatsapp_phone_number_id}/whatsapp_business_profile"
+            headers = {
+                "Authorization": f"Bearer {client.whatsapp_access_token}",
+                "Content-Type": "application/json"
+            }
+            try:
+                meta_res = requests.post(meta_url, headers=headers, json=meta_payload, timeout=12)
+                meta_json = meta_res.json()
+                if meta_res.status_code == 200 and meta_json.get('success'):
+                    meta_synced = True
+                else:
+                    meta_error = meta_json.get('error', {}).get('message') or str(meta_json)
+                    logger.warning(f"Meta Cloud API business profile update response: {meta_json}")
+            except Exception as ex:
+                meta_error = str(ex)
+                logger.warning(f"Meta Cloud API update exception: {ex}")
+
         return Response({
             "status": "success",
-            "message": "WhatsApp Business Profile updated successfully on WhatsApp!",
+            "meta_synced": meta_synced,
+            "meta_warning": meta_error if not meta_synced else None,
+            "message": "WhatsApp Business Profile & Operating Hours updated successfully!",
             "profile": current_profile,
             "business_hours": settings_dict.get('whatsapp_business_hours', {})
-        })
+        }, status=200)
 
 
 class ContactViewSet(viewsets.ModelViewSet):
