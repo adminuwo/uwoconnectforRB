@@ -25,15 +25,17 @@ from rest_framework.permissions import BasePermission
 def get_tenant_client(request):
     if not request.user or not request.user.is_authenticated:
         return None
-    if request.user.role == 'ADMIN':
-        client_id = request.query_params.get('client_id') or request.data.get('client_id')
+    if getattr(request.user, 'role', '') == 'ADMIN':
+        client_id = request.query_params.get('client_id') if hasattr(request, 'query_params') else None
+        if not client_id and isinstance(getattr(request, 'data', None), dict):
+            client_id = request.data.get('client_id')
         if client_id:
             try:
                 return ClientRepository.get_client(id=client_id)
-            except (Client.DoesNotExist, ValueError):
+            except Exception:
                 pass
-        return None
-    return request.user.client
+        return getattr(request.user, 'client', None)
+    return getattr(request.user, 'client', None)
 
 class TemplateViewSet(viewsets.ModelViewSet):
     serializer_class = TemplateSerializer

@@ -29,7 +29,14 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except (Client.DoesNotExist, ValueError):
                 pass
-        return None
+        # Fallback to user's client if present
+        if getattr(request.user, 'client', None):
+            return request.user.client
+        # Fallback to first available client
+        try:
+            return ClientRepository.get_all_clients().first()
+        except Exception:
+            return None
     return request.user.client
 
 class AdminStatsView(APIView):

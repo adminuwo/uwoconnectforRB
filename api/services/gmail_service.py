@@ -5,9 +5,9 @@ from googleapiclient.discovery import build
 import os
 from api.models import Message, Contact, EmailMessage, EmailAccount
 
-def send_gmail_message(client, to_address, body, subject="New Message"):
+def send_gmail_message(client, to_address, body, subject="New Message", cc=None, bcc=None):
     """
-    Sends an email using the Gmail API on behalf of the client.
+    Sends an email using the Gmail API on behalf of the client. Supports CC and BCC headers.
     """
     if not client.gmail_enabled or not client.gmail_config:
         raise Exception("Gmail is not enabled or configured for this client.")
@@ -44,6 +44,10 @@ def send_gmail_message(client, to_address, body, subject="New Message"):
         message['To'] = to_address
         message['From'] = config.get('email_address', '')
         message['Subject'] = subject
+        if cc:
+            message['Cc'] = cc
+        if bcc:
+            message['Bcc'] = bcc
 
         # Encode the message
         encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()

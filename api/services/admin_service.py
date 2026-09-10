@@ -26,7 +26,7 @@ class AdminService:
             
             ip_addr = request.META.get('REMOTE_ADDR')
             
-            SystemRepository.create_auditlog(
+            SystemRepository.create_audit_log(
                 admin_name=impersonator_username,
                 client_name=client_name,
                 module=module,

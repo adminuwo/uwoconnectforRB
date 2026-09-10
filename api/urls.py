@@ -1,7 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    RegisterView, LoginView, GoogleLoginView, GoogleClientIdView, FirebaseLoginView, UWOLoginView, ClientViewSet, AutomationViewSet, WorkflowViewSet, QrAuthCreateView, QrAuthStatusView, QrAuthConsumeView, 
+    RegisterView, LoginView, GoogleLoginView, GoogleClientIdView, FirebaseLoginView, UWOLoginView, ClientViewSet, AutomationViewSet, WorkflowViewSet, 
+    QrAuthCreateView, QrAuthStatusView, QrAuthScanView, QrAuthApproveView, QrAuthRejectView,
+    LinkedDeviceListView, LinkedDeviceRevokeView, LinkedDeviceRevokeAllView, 
 
     ContactViewSet, AdminStatsView, ClientStatsView, AdminAutomationsView, AdminMessagesView, 
     WhatsAppWebhookView, FacebookInstagramWebhookView, AdminUsersView, ProfileView, ClientMessagesView, MediaProxyView,
@@ -46,7 +48,8 @@ from .views import (
     AdminGlobalConnectorsView,
     AdminChannelAccessMatrixView, AdminClientChannelAccessDetailView,
     AdminBulkChannelAccessView, AdminChannelAuditLogsView, AdminChannelAuditLogView,
-    EffectiveConnectorsView, GlobalConnectorsStatusView
+    EffectiveConnectorsView, GlobalConnectorsStatusView,
+    UserPreferenceView
 )
 from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
 from .views.agency_views import (
@@ -150,13 +153,23 @@ urlpatterns = [
     path('auth/firebase-login', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/uwo-login', UWOLoginView.as_view(), name='uwo-login'),
 
-    # QR Code Based Authentication & Device Handoff
+    # WhatsApp Web-Style QR Code Based Authentication & Device Linking
     path('auth/qr/create', QrAuthCreateView.as_view(), name='qr-auth-create'),
     path('auth/qr/create/', QrAuthCreateView.as_view()),
     path('auth/qr/status/<str:session_id>', QrAuthStatusView.as_view(), name='qr-auth-status'),
     path('auth/qr/status/<str:session_id>/', QrAuthStatusView.as_view()),
-    path('auth/qr/consume', QrAuthConsumeView.as_view(), name='qr-auth-consume'),
-    path('auth/qr/consume/', QrAuthConsumeView.as_view()),
+    path('auth/qr/scan', QrAuthScanView.as_view(), name='qr-auth-scan'),
+    path('auth/qr/scan/', QrAuthScanView.as_view()),
+    path('auth/qr/approve', QrAuthApproveView.as_view(), name='qr-auth-approve'),
+    path('auth/qr/approve/', QrAuthApproveView.as_view()),
+    path('auth/qr/reject', QrAuthRejectView.as_view(), name='qr-auth-reject'),
+    path('auth/qr/reject/', QrAuthRejectView.as_view()),
+    path('auth/linked-devices', LinkedDeviceListView.as_view(), name='linked-devices-list'),
+    path('auth/linked-devices/', LinkedDeviceListView.as_view()),
+    path('auth/linked-devices/<str:pk>/revoke', LinkedDeviceRevokeView.as_view(), name='linked-device-revoke'),
+    path('auth/linked-devices/<str:pk>/revoke/', LinkedDeviceRevokeView.as_view()),
+    path('auth/linked-devices/revoke-all', LinkedDeviceRevokeAllView.as_view(), name='linked-device-revoke-all'),
+    path('auth/linked-devices/revoke-all/', LinkedDeviceRevokeAllView.as_view()),
 
     path('auth/forgot-password/send-otp', ForgotPasswordSendOTPView.as_view(), name='forgot-password-send-otp'),
     path('auth/forgot-password/verify-otp', ForgotPasswordVerifyOTPView.as_view(), name='forgot-password-verify-otp'),
@@ -565,4 +578,8 @@ urlpatterns = [
     path('agency/plans', AgencyCustomPlansView.as_view()),
     path('admin/whitelabel/revenue/', SuperAdminWhiteLabelRevenueView.as_view(), name='admin-whitelabel-revenue'),
     path('admin/whitelabel/revenue', SuperAdminWhiteLabelRevenueView.as_view()),
+
+    # ── User Preferences Endpoints ──
+    path('user/preferences/', UserPreferenceView.as_view(), name='user-preferences'),
+    path('user/preferences', UserPreferenceView.as_view()),
 ]

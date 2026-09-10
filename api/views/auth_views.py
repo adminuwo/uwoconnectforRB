@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from ..serializers import RegisterSerializer, UserSerializer, ClientSerializer, AutomationSerializer, WorkflowSerializer, ContactSerializer, TemplateSerializer, CampaignSerializer, SupportMessageSerializer, AuditLogSerializer, TeamInviteSerializer, ProductSerializer, OrderSerializer
 from ..repositories.client_repository import ClientRepository
-from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order, QrAuthSession
+from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocument, KnowledgeChunk, Contact, Template, Campaign, SupportMessage, AuditLog, TeamInvite, Product, Order, QrAuthSession, LinkedDevice
 import requests
 import os
 import json
@@ -29,7 +29,14 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except (Client.DoesNotExist, ValueError):
                 pass
-        return None
+        # Fallback to user's client if present
+        if getattr(request.user, 'client', None):
+            return request.user.client
+        # Fallback to first available client
+        try:
+            return ClientRepository.get_all_clients().first()
+        except Exception:
+            return None
     return request.user.client
 
 class RegisterView(views.APIView):
@@ -219,7 +226,7 @@ class ProfileView(APIView):
         else:
             # Super Admin or staff user without a direct client tenant
             client_data = {
-                "business_name": "Unified Web Options Super Admin",
+                "business_name": "Platform Super Admin",
                 "email": request.user.email,
                 "plan_name": "Super Admin",
                 "status": "ACTIVE"
@@ -834,25 +841,83 @@ class InstagramOAuthCallbackView(APIView):
 
 
 # ============================================================================
-# QR CODE BASED WEB <-> MOBILE AUTHENTICATION / DEVICE HANDOFF VIEWS
+# QR CODE BASED WEB <-> MOBILE AUTHENTICATION / DEVICE LINKING VIEWS
 # ============================================================================
 import secrets
 import datetime
+import hashlib
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
+
+def parse_user_agent(ua_string):
+    """Extract human-readable Browser, OS, and Device Name from User-Agent."""
+    if not ua_string:
+        return "Unknown Browser", "Unknown OS", "Desktop Device"
+
+    ua = ua_string.lower()
+
+    # Determine Browser
+    if "edg" in ua:
+        browser = "Microsoft Edge"
+    elif "chrome" in ua and "safari" in ua and "edg" not in ua and "opr" not in ua:
+        browser = "Google Chrome"
+    elif "safari" in ua and "chrome" not in ua:
+        browser = "Apple Safari"
+    elif "firefox" in ua:
+        browser = "Mozilla Firefox"
+    elif "opr" in ua or "opera" in ua:
+        browser = "Opera"
+    elif "brave" in ua:
+        browser = "Brave"
+    else:
+        browser = "Web Browser"
+
+    # Determine OS
+    if "windows" in ua or "win32" in ua or "win64" in ua:
+        os_name = "Windows"
+    elif "macintosh" in ua or "mac os x" in ua:
+        os_name = "macOS"
+    elif "linux" in ua and "android" not in ua:
+        os_name = "Linux"
+    elif "android" in ua:
+        os_name = "Android"
+    elif "iphone" in ua or "ipad" in ua or "ipod" in ua:
+        os_name = "iOS"
+    else:
+        os_name = "Desktop"
+
+    device_name = f"{browser} on {os_name}"
+    return browser, os_name, device_name
+
+
+def broadcast_qr_status(session_id, data):
+    """Broadcast state updates to Desktop WebSocket group immediately."""
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"qr_auth_{session_id}",
+                {
+                    "type": "qr_status_update",
+                    "data": data,
+                }
+            )
+    except Exception:
+        pass
+
 
 class QrAuthCreateView(views.APIView):
     """
-    Web user requests a short-lived (120s) single-use QR auth session.
-    Returns session_id, expires_at, and qr_url.
+    Desktop web browser requests a short-lived (120s) single-use QR auth session.
+    No login required.
+    Returns session_id, expires_at, and qr_url / qr_payload.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        user = request.user
-        from .client_views import get_tenant_client
-        client = get_tenant_client(request) or getattr(user, 'client', None)
-
         session_id = secrets.token_hex(32)
         now = timezone.now()
         expires_at = now + datetime.timedelta(seconds=120)
@@ -861,32 +926,40 @@ class QrAuthCreateView(views.APIView):
         ip_address = x_forwarded.split(',')[0].strip() if x_forwarded else request.META.get('REMOTE_ADDR')
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
+        browser, os_name, device_name = parse_user_agent(user_agent)
+
         qr_session = QrAuthSession.objects.create(
             session_id=session_id,
-            user=user,
-            client=client,
             status='WAITING',
             ip_address=ip_address,
             user_agent=user_agent,
+            browser=browser,
+            operating_system=os_name,
+            device_name=device_name,
             expires_at=expires_at,
         )
 
         qr_url = f"uwoconnect://auth/qr?session_id={session_id}"
-        web_fallback_url = f"https://uwoconnect.aisa24.com/auth/qr?session_id={session_id}"
+        web_fallback_url = f"https://uwoconnect.com/auth/qr?session_id={session_id}"
 
         return Response({
             "session_id": session_id,
             "status": qr_session.status,
             "expires_at": expires_at.isoformat(),
             "expires_in_seconds": 120,
+            "qr_payload": session_id,
             "qr_url": qr_url,
             "web_fallback_url": web_fallback_url,
+            "device_name": device_name,
+            "browser": browser,
+            "operating_system": os_name,
         }, status=status.HTTP_201_CREATED)
 
 
 class QrAuthStatusView(views.APIView):
     """
-    Polls current status of a QR auth session.
+    Status endpoint for QR session. Used by desktop web for polling or verification.
+    When status is APPROVED / AUTHENTICATED, returns the web JWT token and user profile once.
     """
     permission_classes = [AllowAny]
 
@@ -896,7 +969,7 @@ class QrAuthStatusView(views.APIView):
         except QrAuthSession.DoesNotExist:
             return Response({"error": "QR Session not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not qr_session.is_valid() and qr_session.status != 'CONSUMED':
+        if not qr_session.is_valid() and qr_session.status not in ['CONSUMED', 'APPROVED', 'AUTHENTICATED']:
             return Response({
                 "session_id": session_id,
                 "status": "EXPIRED",
@@ -906,19 +979,33 @@ class QrAuthStatusView(views.APIView):
         now = timezone.now()
         rem_seconds = max(0, int((qr_session.expires_at - now).total_seconds()))
 
-        return Response({
+        resp_data = {
             "session_id": session_id,
             "status": qr_session.status,
             "expires_in_seconds": rem_seconds,
-        }, status=200)
+            "scanned_at": qr_session.scanned_at.isoformat() if qr_session.scanned_at else None,
+            "approved_at": qr_session.approved_at.isoformat() if qr_session.approved_at else None,
+            "device_name": qr_session.device_name,
+            "browser": qr_session.browser,
+            "operating_system": qr_session.operating_system,
+        }
+
+        # If approved, return token and user profile
+        if qr_session.status in ['APPROVED', 'AUTHENTICATED']:
+            resp_data["token"] = qr_session.auth_token
+            resp_data["refresh_token"] = qr_session.refresh_token
+            resp_data["user"] = qr_session.user_data
+
+        return Response(resp_data, status=200)
 
 
-class QrAuthConsumeView(views.APIView):
+class QrAuthScanView(views.APIView):
     """
-    Consumes a valid, unexpired QR auth session and issues a fresh mobile JWT token.
-    Enforces atomic single-use consumption to prevent replay attacks.
+    Authenticated mobile app user scans the QR code.
+    Transitions session from WAITING to SCANNED, saves mobile user reference,
+    and returns desktop browser/device metadata to the mobile app for user approval prompt.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         session_id = request.data.get('session_id', '').strip()
@@ -926,43 +1013,233 @@ class QrAuthConsumeView(views.APIView):
             return Response({"error": "session_id is required"}, status=400)
 
         try:
-            qr_session = QrAuthSession.objects.select_related('user', 'client').get(session_id=session_id)
+            qr_session = QrAuthSession.objects.get(session_id=session_id)
         except QrAuthSession.DoesNotExist:
-            return Response({"error": "Invalid or non-existent QR authentication session"}, status=404)
+            return Response({"error": "Invalid or non-existent QR code"}, status=404)
 
-        if qr_session.status == 'CONSUMED':
-            return Response({"error": "This QR code has already been consumed (replay protection)"}, status=400)
+        if qr_session.status in ['CONSUMED', 'APPROVED', 'AUTHENTICATED']:
+            return Response({"error": "This QR code has already been approved"}, status=400)
 
         if not qr_session.is_valid():
-            return Response({"error": "This QR code has expired or is no longer valid"}, status=400)
+            return Response({"error": "This QR code has expired. Please refresh on desktop."}, status=400)
 
-        qr_session.status = 'CONSUMED'
-        qr_session.consumed_at = timezone.now()
-        qr_session.save(update_fields=['status', 'consumed_at'])
+        # Associate scanning mobile user and advance status
+        qr_session.user = request.user
+        qr_session.client = getattr(request.user, 'client', None)
+        qr_session.status = 'SCANNED'
+        qr_session.scanned_at = timezone.now()
+        qr_session.save(update_fields=['user', 'client', 'status', 'scanned_at'])
 
-        user = qr_session.user
-        user.is_online = True
-        user.last_active_at = timezone.now()
-        user.save(update_fields=['is_online', 'last_active_at'])
+        # Notify desktop via WebSocket that phone scanned the QR
+        broadcast_qr_status(session_id, {
+            "type": "qr_status_update",
+            "session_id": session_id,
+            "status": "SCANNED",
+            "user_name": getattr(request.user, 'name', '') or request.user.username,
+        })
 
+        return Response({
+            "session_id": session_id,
+            "status": "SCANNED",
+            "device_name": qr_session.device_name or f"{qr_session.browser} on {qr_session.operating_system}",
+            "browser": qr_session.browser or "Web Browser",
+            "operating_system": qr_session.operating_system or "Desktop",
+            "ip_address": qr_session.ip_address or "Unknown",
+            "scanned_at": qr_session.scanned_at.isoformat(),
+        }, status=200)
+
+
+class QrAuthApproveView(views.APIView):
+    """
+    Authenticated mobile app user taps 'Link Device' to approve login.
+    Generates new JWT tokens for the desktop web session, registers a LinkedDevice record,
+    and broadcasts instant approval to the web client.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        session_id = request.data.get('session_id', '').strip()
+        if not session_id:
+            return Response({"error": "session_id is required"}, status=400)
+
+        try:
+            qr_session = QrAuthSession.objects.get(session_id=session_id)
+        except QrAuthSession.DoesNotExist:
+            return Response({"error": "Invalid or non-existent QR code"}, status=404)
+
+        if qr_session.status in ['CONSUMED', 'APPROVED', 'AUTHENTICATED']:
+            return Response({"error": "This QR code has already been approved"}, status=400)
+
+        if not qr_session.is_valid():
+            return Response({"error": "This QR code has expired. Please refresh on desktop."}, status=400)
+
+        from ..services.auth_service import AuthService
+        user = request.user
+        client = getattr(user, 'client', None)
+
+        # Generate fresh JWT token pair for the linked web session
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        token_hash = hashlib.sha256(access_token.encode()).hexdigest()
+
+        # Create or update LinkedDevice record
+        device_name = qr_session.device_name or f"{qr_session.browser} on {qr_session.operating_system}"
+        linked_device = LinkedDevice.objects.create(
+            user=user,
+            client=client,
+            device_name=device_name,
+            browser=qr_session.browser or "Web Browser",
+            operating_system=qr_session.operating_system or "Desktop",
+            ip_address=qr_session.ip_address,
+            user_agent=qr_session.user_agent or "",
+            session_id=session_id,
+            token_hash=token_hash,
+            is_active=True,
+        )
+
+        serialized_user = AuthService._serialize_user(user)
+
+        qr_session.user = user
+        qr_session.client = client
+        qr_session.status = 'APPROVED'
+        qr_session.approved_at = timezone.now()
+        qr_session.auth_token = access_token
+        qr_session.refresh_token = str(refresh)
+        qr_session.user_data = serialized_user
+        qr_session.save(update_fields=['user', 'client', 'status', 'approved_at', 'auth_token', 'refresh_token', 'user_data'])
+
+        # Create audit log
         try:
             AuditLog.objects.create(
                 admin_name=user.username,
-                client_name=user.client.business_name if user.client else "Platform",
+                client_name=client.business_name if client else "Platform",
                 module="Authentication",
-                action="QR_DEVICE_HANDOFF",
+                action="QR_DEVICE_LINKED",
                 before_value=f"Session: {session_id[:8]}...",
-                after_value=f"User {user.username} authenticated via QR Code handoff",
+                after_value=f"Linked web session: {device_name} (IP: {qr_session.ip_address})",
                 ip_address=request.META.get('REMOTE_ADDR')
             )
         except Exception:
             pass
 
-        from ..services.auth_service import AuthService
-        refresh = RefreshToken.for_user(user)
+        # Broadcast approval immediately to Desktop WebSocket
+        broadcast_qr_status(session_id, {
+            "type": "qr_status_update",
+            "session_id": session_id,
+            "status": "APPROVED",
+            "token": access_token,
+            "refresh_token": str(refresh),
+            "user": serialized_user,
+        })
 
         return Response({
-            "user": AuthService._serialize_user(user),
-            "token": str(refresh.access_token)
+            "message": "Device linked successfully",
+            "device_id": str(linked_device.id),
+            "device_name": device_name,
         }, status=200)
+
+
+class QrAuthRejectView(views.APIView):
+    """
+    Authenticated mobile app user taps 'Cancel' to reject linking.
+    Sets status to CANCELLED and broadcasts rejection to the web client.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        session_id = request.data.get('session_id', '').strip()
+        if not session_id:
+            return Response({"error": "session_id is required"}, status=400)
+
+        try:
+            qr_session = QrAuthSession.objects.get(session_id=session_id)
+        except QrAuthSession.DoesNotExist:
+            return Response({"error": "Invalid or non-existent QR code"}, status=404)
+
+        qr_session.status = 'CANCELLED'
+        qr_session.rejected_at = timezone.now()
+        qr_session.save(update_fields=['status', 'rejected_at'])
+
+        broadcast_qr_status(session_id, {
+            "type": "qr_status_update",
+            "session_id": session_id,
+            "status": "CANCELLED",
+        })
+
+        return Response({"message": "Device linking cancelled"}, status=200)
+
+
+class LinkedDeviceListView(views.APIView):
+    """
+    Lists all active linked web/desktop devices for the authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        devices = LinkedDevice.objects.filter(user=request.user, is_active=True).order_by('-linked_at')
+        data = []
+        for d in devices:
+            data.append({
+                "id": str(d.id),
+                "device_name": d.device_name,
+                "browser": d.browser,
+                "operating_system": d.operating_system,
+                "ip_address": d.ip_address,
+                "linked_at": d.linked_at.isoformat() if d.linked_at else None,
+                "last_active_at": d.last_active_at.isoformat() if d.last_active_at else None,
+                "is_active": d.is_active,
+            })
+        return Response(data, status=200)
+
+
+class LinkedDeviceRevokeView(views.APIView):
+    """
+    Revokes a specific linked device.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            device = LinkedDevice.objects.get(id=pk, user=request.user, is_active=True)
+        except LinkedDevice.DoesNotExist:
+            return Response({"error": "Device not found or already logged out"}, status=404)
+
+        device.is_active = False
+        device.revoked_at = timezone.now()
+        device.save(update_fields=['is_active', 'revoked_at'])
+
+        # Notify any active WebSocket session for this device
+        if device.session_id:
+            broadcast_qr_status(device.session_id, {
+                "type": "qr_status_update",
+                "session_id": device.session_id,
+                "status": "REVOKED",
+            })
+
+        return Response({"message": f"{device.device_name} has been logged out successfully"}, status=200)
+
+
+class LinkedDeviceRevokeAllView(views.APIView):
+    """
+    Revokes ALL active linked devices for the user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        active_devices = LinkedDevice.objects.filter(user=request.user, is_active=True)
+        count = active_devices.count()
+        now = timezone.now()
+
+        for d in active_devices:
+            if d.session_id:
+                broadcast_qr_status(d.session_id, {
+                    "type": "qr_status_update",
+                    "session_id": d.session_id,
+                    "status": "REVOKED",
+                })
+
+        active_devices.update(is_active=False, revoked_at=now)
+
+        return Response({"message": f"All {count} linked devices logged out successfully"}, status=200)
+
 

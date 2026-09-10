@@ -59,7 +59,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(contact_platform_id__icontains=search) | queryset.filter(last_message_summary__icontains=search)
             
-        return queryset.order_by('-last_message_at', '-updated_at')
+        return queryset.select_related('contact', 'assigned_to', 'locked_by').order_by('-last_message_at', '-updated_at')
 
     def get_object(self):
         pk = self.kwargs.get('pk')
@@ -567,15 +567,12 @@ class HealthCheckView(APIView):
         db_status = "connected"
         db_latency_ms = None
         try:
-            connection.ensure_connection()
-            if connection.connection is not None:
-                start_t = time.time()
-                with connection.cursor() as cursor:
-                    cursor.execute("SELECT 1;")
-                    cursor.fetchone()
-                db_latency_ms = round((time.time() - start_t) * 1000, 2)
-            else:
-                db_status = "not_initialized"
+            start_t = time.time()
+            # Compatible with MongoDB / Djongo and SQL backends
+            from ..models import User
+            User.objects.filter(id__isnull=False).exists()
+            db_latency_ms = round((time.time() - start_t) * 1000, 2)
+            db_status = "connected"
         except Exception as e:
             db_status = f"unconnected: {str(e)}"
 

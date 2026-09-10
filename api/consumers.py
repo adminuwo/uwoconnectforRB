@@ -52,6 +52,9 @@ class InboxConsumer(AsyncWebsocketConsumer):
             }))
 
         except Exception as e:
+            import traceback
+            print(f"[InboxConsumer] Connection failed: {e}")
+            traceback.print_exc()
             await self.close()
 
     @sync_to_async
@@ -269,3 +272,37 @@ class WebRTCConsumer(AsyncWebsocketConsumer):
     async def webrtc_message(self, event):
         message = event['message']
         await self.send(text_data=json.dumps(message))
+
+
+class QrAuthConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for WhatsApp Web-style QR code login.
+    Desktop browser joins group 'qr_auth_<session_id>' and receives instant status updates:
+    - SCANNED (when mobile scans QR)
+    - APPROVED (with web access token & user profile)
+    - CANCELLED (if user rejects login on phone)
+    - EXPIRED (when session timer hits 0)
+    """
+    async def connect(self):
+        self.session_id = self.scope['url_route']['kwargs'].get('session_id')
+        if not self.session_id:
+            await self.close()
+            return
+
+        self.room_group_name = f'qr_auth_{self.session_id}'
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'room_group_name'):
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+
+    async def qr_status_update(self, event):
+        await self.send(text_data=json.dumps(event['data']))
+

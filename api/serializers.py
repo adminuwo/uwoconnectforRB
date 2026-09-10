@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice
+from django.utils import timezone
+from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice
 from .repositories.contact_repository import ContactRepository
 from .repositories.workflow_repository import WorkflowRepository
 from .repositories.automation_repository import AutomationRepository
@@ -286,22 +287,71 @@ class GlobalSettingSerializer(serializers.ModelSerializer):
         model = GlobalSetting
         fields = '__all__'
 
+class ContactFollowUpSerializer(serializers.ModelSerializer):
+    """Serializer for industrial CRM follow-up tasks per contact."""
+    id = ObjectIdField(read_only=True)
+    contact = ObjectIdField(read_only=True)
+    client = ObjectIdField(read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    is_overdue = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ContactFollowUp
+        fields = (
+            'id', 'contact', 'client', 'created_by', 'created_by_name',
+            'follow_up_type', 'title', 'note',
+            'scheduled_at', 'completed_at', 'status', 'is_overdue',
+            'created_at', 'updated_at',
+        )
+        read_only_fields = ('contact', 'client', 'created_by', 'completed_at', 'created_at', 'updated_at')
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.full_name or obj.created_by.email or 'Unknown'
+        return None
+
+
 class ContactSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
+    platform_id = serializers.CharField(required=False)
+    follow_ups_count = serializers.SerializerMethodField()
+    next_followup_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Contact
         fields = '__all__'
         read_only_fields = ('client', 'created_at', 'updated_at')
 
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, 'copy') else dict(data)
+        if 'phone' in data and not data.get('phone_number'):
+            data['phone_number'] = data.pop('phone')
+        if not data.get('platform_id'):
+            data['platform_id'] = data.get('phone_number') or data.get('email') or f"contact_{timezone.now().strftime('%Y%m%d%H%M%S')}"
+        return super().to_internal_value(data)
+
+    def get_follow_ups_count(self, obj):
+        return obj.follow_ups.filter(status='PENDING').count()
+
+    def get_next_followup_at(self, obj):
+        nxt = obj.follow_ups.filter(status='PENDING').order_by('scheduled_at').first()
+        return nxt.scheduled_at.isoformat() if nxt else None
+
+
 class ContactListSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     preferred_channel = serializers.SerializerMethodField()
+    follow_ups_count = serializers.SerializerMethodField()
+    next_followup_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Contact
-        fields = ('id', 'name', 'phone_number', 'email', 'platform_id', 'stage', 'tags', 'bot_paused', 'is_archived', 'updated_at', 'created_at', 'preferred_channel')
+        fields = (
+            'id', 'name', 'phone_number', 'email', 'platform_id', 'stage',
+            'tags', 'bot_paused', 'is_archived', 'updated_at', 'created_at',
+            'preferred_channel', 'follow_ups_count', 'next_followup_at',
+        )
 
     def get_preferred_channel(self, obj):
         name = (obj.name or '').upper()
@@ -315,6 +365,13 @@ class ContactListSerializer(serializers.ModelSerializer):
             return 'GMAIL'
         else:
             return 'WHATSAPP'
+
+    def get_follow_ups_count(self, obj):
+        return obj.follow_ups.filter(status='PENDING').count()
+
+    def get_next_followup_at(self, obj):
+        nxt = obj.follow_ups.filter(status='PENDING').order_by('scheduled_at').first()
+        return nxt.scheduled_at.isoformat() if nxt else None
 
 class TemplateSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
@@ -606,16 +663,12 @@ class ConversationSerializer(serializers.ModelSerializer):
     def get_bot_paused(self, obj):
         if obj.contact:
             return bool(obj.contact.bot_paused)
-        from django.db.models import Q
+        if not obj.contact_platform_id:
+            return False
         from .models import Contact
-        formatted_number = str(obj.contact_platform_id).replace('+', '').strip()
-        c = Contact.objects.filter(
-            Q(client=obj.client) & (
-                Q(platform_id=obj.contact_platform_id) | 
-                Q(phone_number__icontains=formatted_number)
-            )
-        ).first()
+        c = Contact.objects.filter(client=obj.client, platform_id=obj.contact_platform_id).first()
         return bool(c.bot_paused) if c else False
+
 
 
 class ConversationAuditLogSerializer(serializers.ModelSerializer):
@@ -775,12 +828,27 @@ class SalesDocumentActivitySerializer(serializers.ModelSerializer):
 class SalesDocumentSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
+    document_date = serializers.DateField(required=False, default=timezone.now().date)
+    issue_date = serializers.DateField(source='document_date', required=False)
+    total_amount = serializers.DecimalField(source='grand_total', max_digits=12, decimal_places=2, required=False)
     items = SalesDocumentItemSerializer(many=True, read_only=True)
     activities = SalesDocumentActivitySerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     salesperson_name = serializers.CharField(source='salesperson.username', read_only=True)
     customer_details = serializers.SerializerMethodField(read_only=True)
     client_details = serializers.SerializerMethodField(read_only=True)
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        if 'notes' in data and not ret.get('customer_notes'):
+            ret['customer_notes'] = data['notes']
+        if 'total_amount' in data and not ret.get('grand_total'):
+            ret['grand_total'] = data['total_amount']
+        if 'total_tax' in data and not ret.get('tax_amount'):
+            ret['tax_amount'] = data['total_tax']
+        if 'document_date' not in ret or not ret.get('document_date'):
+            ret['document_date'] = timezone.now().date()
+        return ret
 
     class Meta:
         model = SalesDocument
