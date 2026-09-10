@@ -355,17 +355,25 @@ class ProfileView(APIView):
                 access_token = instagram_config.get('access_token')
                 if access_token:
                     try:
-                        # Find Page ID associated with the Instagram access token / Page Access Token
-                        me_res = requests.get(f"https://graph.facebook.com/v20.0/me?fields=id,name&access_token={access_token}", timeout=10)
-                        if me_res.status_code == 200:
-                            page_id = me_res.json().get('id')
-                            if page_id:
-                                sub_url = f"https://graph.facebook.com/v20.0/{page_id}/subscribed_apps"
-                                sub_payload = {
-                                    "subscribed_fields": "messages,messaging_postbacks,messaging_optins,message_deliveries",
-                                    "access_token": access_token
-                                }
-                                res = requests.post(sub_url, data=sub_payload, timeout=10)
+                        if access_token.startswith('IG'):
+                            sub_url = f"https://graph.instagram.com/v20.0/me/subscribed_apps"
+                            sub_payload = {
+                                "subscribed_fields": "messages,messaging_postbacks,messaging_optins,messaging_seen,message_reactions",
+                                "access_token": access_token
+                            }
+                            res = requests.post(sub_url, data=sub_payload, timeout=10)
+                        else:
+                            # Find Page ID associated with the Instagram access token / Page Access Token
+                            me_res = requests.get(f"https://graph.facebook.com/v20.0/me?fields=id,name&access_token={access_token}", timeout=10)
+                            if me_res.status_code == 200:
+                                page_id = me_res.json().get('id')
+                                if page_id:
+                                    sub_url = f"https://graph.facebook.com/v20.0/{page_id}/subscribed_apps"
+                                    sub_payload = {
+                                        "subscribed_fields": "messages,messaging_postbacks,messaging_optins,message_deliveries",
+                                        "access_token": access_token
+                                    }
+                                    res = requests.post(sub_url, data=sub_payload, timeout=10)
                     except Exception as e:
                          print(f"Error subscribing Instagram linked page: {str(e)}")
                          
