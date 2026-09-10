@@ -391,26 +391,55 @@ class MetaWebhookService:
                     
                     contact_name = f"{platform} User"
                     access_token = None
-                    if platform == 'INSTAGRAM' and client.instagram_config:
-                        access_token = client.instagram_config.get('access_token')
-                    elif platform == 'FACEBOOK' and client.facebook_config:
-                        access_token = client.facebook_config.get('access_token')
+                    if platform == 'INSTAGRAM':
+                        access_token = (client.instagram_config or {}).get('access_token') or (client.facebook_config or {}).get('access_token')
+                    elif platform == 'FACEBOOK':
+                        access_token = (client.facebook_config or {}).get('access_token') or (client.instagram_config or {}).get('access_token')
 
+                    profile_pic_url = None
                     if access_token:
                         try:
                             import requests
                             if platform == 'INSTAGRAM':
-                                url = f"https://graph.facebook.com/v20.0/{sender_id}?fields=name,username,profile_pic&access_token={access_token}"
+                                # 1st attempt: username, name, profile_pic
+                                url = f"https://graph.facebook.com/v20.0/{sender_id}?fields=username,name,profile_pic&access_token={access_token}"
                                 res = requests.get(url, timeout=5)
                                 if res.status_code == 200:
-                                    data = res.json()
-                                    contact_name = data.get('username') or data.get('name') or contact_name
+                                    u_data = res.json()
+                                    username = u_data.get('username')
+                                    real_name = u_data.get('name')
+                                    profile_pic_url = u_data.get('profile_pic')
+                                    if username and real_name and username.lower() != real_name.lower():
+                                        contact_name = f"{real_name} (@{username})"
+                                    elif username:
+                                        contact_name = f"@{username}"
+                                    elif real_name:
+                                        contact_name = real_name
+                                else:
+                                    # Fallback 2nd attempt: only username (succeeds even if name is restricted by user privacy)
+                                    url_user = f"https://graph.facebook.com/v20.0/{sender_id}?fields=username&access_token={access_token}"
+                                    res_user = requests.get(url_user, timeout=5)
+                                    if res_user.status_code == 200:
+                                        u_data = res_user.json()
+                                        if u_data.get('username'):
+                                            contact_name = f"@{u_data.get('username')}"
                             elif platform == 'FACEBOOK':
+                                # 1st attempt: first_name, last_name, name, profile_pic
                                 url = f"https://graph.facebook.com/v20.0/{sender_id}?fields=first_name,last_name,name,profile_pic&access_token={access_token}"
                                 res = requests.get(url, timeout=5)
                                 if res.status_code == 200:
-                                    data = res.json()
-                                    contact_name = data.get('name') or f"{data.get('first_name', '')} {data.get('last_name', '')}".strip() or contact_name
+                                    f_data = res.json()
+                                    profile_pic_url = f_data.get('profile_pic')
+                                    first_last = f"{f_data.get('first_name', '')} {f_data.get('last_name', '')}".strip()
+                                    contact_name = f_data.get('name') or first_last or contact_name
+                                else:
+                                    # Fallback 2nd attempt: name only
+                                    url_name = f"https://graph.facebook.com/v20.0/{sender_id}?fields=name&access_token={access_token}"
+                                    res_name = requests.get(url_name, timeout=5)
+                                    if res_name.status_code == 200:
+                                        f_data = res_name.json()
+                                        if f_data.get('name'):
+                                            contact_name = f_data.get('name')
                         except Exception as ex:
                             logger.error(f"Failed to fetch {platform} user profile for {sender_id}: {str(ex)}")
 
@@ -424,9 +453,37 @@ class MetaWebhookService:
                         }
                     )
                     
-                    if not created and contact.name in ['INSTAGRAM User', 'FACEBOOK User'] and contact_name not in ['INSTAGRAM User', 'FACEBOOK User']:
-                        contact.name = contact_name
-                        contact.save()
+                    is_generic_name = lambda n: not n or n.upper().strip() in ['INSTAGRAM USER', 'FACEBOOK USER', 'UNKNOWN', 'USER']
+                    if not created:
+                        if is_generic_name(contact.name) and not is_generic_name(contact_name):
+                            contact.name = contact_name
+                            contact.save()
+                        elif contact_name and not is_generic_name(contact_name) and contact.name != contact_name:
+                            contact.name = contact_name
+                            contact.save()
+
+                    # Keep Conversation record fresh for unified Live Inbox display
+                    try:
+                        from django.utils import timezone
+                        from ..models import Conversation
+                        convo = Conversation.objects.filter(client=client, contact_platform_id=sender_id).first()
+                        if not convo:
+                            Conversation.objects.create(
+                                client=client,
+                                contact=contact,
+                                contact_platform_id=sender_id,
+                                channel=platform,
+                                last_message_summary=body or f'Incoming {platform} Message',
+                                last_message_at=timezone.now()
+                            )
+                        else:
+                            convo.last_message_summary = body or f'Incoming {platform} Message'
+                            convo.last_message_at = timezone.now()
+                            if not convo.contact:
+                                convo.contact = contact
+                            convo.save()
+                    except Exception as _c_err:
+                        logger.warning("Error saving %s conversation: %s", platform, _c_err)
 
                     MessageRepository.create_message(
                         client=client,

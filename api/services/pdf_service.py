@@ -43,7 +43,9 @@ class NumberedCanvas(canvas.Canvas):
         self.setStrokeColor(colors.HexColor('#E2E8F0'))
         self.setLineWidth(0.5)
         self.line(54, 750, 558, 750)
-        self.drawString(54, 755, "UWOConnect Enterprise Sales Document")
+        # White-label: use brand name injected by on_first_page/on_later_pages hook
+        brand_name = getattr(self, '_brand_name', 'Enterprise Sales Document')
+        self.drawString(54, 755, brand_name)
         
         # Running Footer
         self.line(54, 55, 558, 55)
@@ -433,11 +435,25 @@ class SalesDocumentPDFService:
                 bottom_table
             ]))
 
+        # Resolve white-label brand name (no UWO footprint for agency sub-clients)
+        _client = document.client if document.client else None
+        _agency = getattr(_client, 'parent_agency', None) if _client else None
+        if _agency and getattr(_agency, 'white_label_name', None):
+            _brand_label = f"{_agency.white_label_name} — Official Sales Document"
+        elif _client and getattr(_client, 'white_label_name', None):
+            _brand_label = f"{_client.white_label_name} — Official Sales Document"
+        elif _client and getattr(_client, 'business_name', None):
+            _brand_label = f"{_client.business_name} — Official Sales Document"
+        else:
+            _brand_label = "Official Sales Document"
+
         def on_first_page(canvas, doc):
             canvas._is_proposal = is_proposal
+            canvas._brand_name = _brand_label
 
         def on_later_pages(canvas, doc):
             canvas._is_proposal = is_proposal
+            canvas._brand_name = _brand_label
 
         doc.build(story, canvasmaker=NumberedCanvas, onFirstPage=on_first_page, onLaterPages=on_later_pages)
         buffer.seek(0)
