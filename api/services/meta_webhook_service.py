@@ -311,10 +311,17 @@ class MetaWebhookService:
                     for c in all_clients:
                         ic = c.instagram_config or {}
                         fc = c.facebook_config or {}
-                        ig_id = str(ic.get('instagram_business_id', ''))
-                        ig_page_id = str(ic.get('page_id', ''))
-                        fb_page_id = str(fc.get('page_id', ''))
-                        if str(recipient_id) in [ig_id, ig_page_id, fb_page_id] and (ig_id or ig_page_id or fb_page_id):
+                        ig_candidates = [
+                            str(ic.get('instagram_business_id', '')),
+                            str(ic.get('account_id', '')),
+                            str(ic.get('page_id', '')),
+                            str(ic.get('username', '')),
+                            str(fc.get('page_id', ''))
+                        ]
+                        for extra_id in (ic.get('instagram_business_ids') or []):
+                            ig_candidates.append(str(extra_id))
+                        valid_ids = [i for i in ig_candidates if i and i != 'None']
+                        if str(recipient_id) in valid_ids:
                             client = c
                             break
                     platform = 'INSTAGRAM'

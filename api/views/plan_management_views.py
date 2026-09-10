@@ -21,10 +21,40 @@ class FeatureViewSet(viewsets.ModelViewSet):
 
 
 class PlanViewSet(viewsets.ModelViewSet):
-    """CRUD operations for Plan model."""
+    """CRUD operations for Plan model with flexible lookup by ObjectId, slug, or name."""
     queryset = Plan.objects.all()
     serializer_class = PlanSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_val = self.kwargs.get(lookup_url_kwarg)
+
+        # 1. Try finding by primary key (ObjectId)
+        try:
+            return Plan.objects.get(pk=lookup_val)
+        except Exception:
+            pass
+
+        # 2. Try finding by slug (e.g. 'starter', 'growth', 'advanced', 'enterprise')
+        plan = Plan.objects.filter(slug__iexact=lookup_val).first()
+        if plan:
+            return plan
+
+        # 3. Try finding by name
+        plan = Plan.objects.filter(name__iexact=lookup_val).first()
+        if plan:
+            return plan
+
+        # 4. Handle "plan-starter", "plan-pro", "plan-enterprise" prefixes
+        clean_slug = str(lookup_val).replace('plan-', '').lower()
+        if clean_slug == 'pro':
+            clean_slug = 'growth'
+        plan = Plan.objects.filter(slug__iexact=clean_slug).first()
+        if plan:
+            return plan
+
+        return super().get_object()
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def public_plans(self, request):
