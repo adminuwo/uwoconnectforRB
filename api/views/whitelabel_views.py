@@ -70,14 +70,14 @@ class WhiteLabelConfigView(APIView):
         return Response({
             "is_whitelabel": False,
             "client_id": None,
-            "brand_name": "UwoConnect",
+            "brand_name": "UWO Connect",
             "tagline": "Multi-channel automation platform",
             "logo_url": "/download (3).gif",
             "favicon_url": "/download (3).gif",
             "primary_color": "#059669",
             "accent_color": "#10B981",
             "support_email": "support@uwoconnect.com",
-            "copyright_text": "© UwoConnect Automation. All rights reserved.",
+            "copyright_text": "© UWO Connect Automation. All rights reserved.",
             "custom_domain": ""
         })
 

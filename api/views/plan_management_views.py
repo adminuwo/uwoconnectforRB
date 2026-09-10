@@ -135,6 +135,9 @@ class PlanViewSet(viewsets.ModelViewSet):
                 metadata['monthly_price'] = monthly_config['price']
             if 'selected_feature_keys' in monthly_config:
                 metadata['monthly_feature_keys'] = monthly_config['selected_feature_keys']
+            if 'channel_details' in monthly_config:
+                metadata['monthly_channel_details'] = monthly_config['channel_details']
+                plan.channel_details = monthly_config['channel_details']
         plan.metadata = metadata
         plan.save()
         serializer = self.get_serializer(plan)
@@ -155,6 +158,8 @@ class PlanViewSet(viewsets.ModelViewSet):
                     pass
             if 'selected_feature_keys' in yearly_config:
                 metadata['yearly_feature_keys'] = yearly_config['selected_feature_keys']
+            if 'channel_details' in yearly_config:
+                metadata['yearly_channel_details'] = yearly_config['channel_details']
         plan.metadata = metadata
         plan.save()
         serializer = self.get_serializer(plan)
