@@ -2237,6 +2237,7 @@ class QrAuthSession(models.Model):
     ]
 
     session_id = models.CharField(max_length=64, unique=True, db_index=True)
+    short_code = models.CharField(max_length=4, unique=True, db_index=True, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='qr_auth_sessions')
     client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='qr_auth_sessions')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='WAITING')

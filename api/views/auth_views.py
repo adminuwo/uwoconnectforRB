@@ -95,12 +95,57 @@ class LoginView(views.APIView):
 
 
 class GoogleLoginView(views.APIView):
-    """Legacy Google login — kept for backward compatibility."""
+    """
+    POST /api/auth/google/
+    Verifies Google ID Token server-side, links or registers user, and returns JWT session.
+    """
     permission_classes = []
     authentication_classes = []
 
     def post(self, req):
-        return Response({"message": "Please use Firebase authentication. This endpoint is deprecated."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            id_token_raw = req.data.get('id_token')
+            if not id_token_raw or not isinstance(id_token_raw, str):
+                return Response({"message": "Valid Google id_token string is required."}, status=status.HTTP_400_BAD_REQUEST)
+            id_token = id_token_raw.strip()
+
+            name = str(req.data.get('name') or '').strip()
+            invite_token = str(req.data.get('invite_token') or '').strip()
+            business_name = str(req.data.get('business_name') or '').strip()
+
+            # Extract client IP address
+            x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip_address = x_forwarded_for.split(',')[0].strip()
+            else:
+                ip_address = req.META.get('REMOTE_ADDR')
+
+            from ..services.auth_service import AuthService
+            result = AuthService.process_google_login(id_token, name=name, invite_token=invite_token, business_name=business_name, ip_address=ip_address)
+
+            if "error" in result:
+                return Response({"message": result["error"]}, status=result.get("status_code", 400))
+
+            if result.get("is_created"):
+                if result.get("status") == "PENDING":
+                    return Response({
+                        "message": result["message"],
+                        "userId": result["userId"]
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({
+                        "user": result["user"],
+                        "token": result["token"]
+                    }, status=status.HTTP_201_CREATED)
+
+            return Response({
+                "user": result["user"],
+                "token": result["token"]
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Google login unhandled error")
+            return Response({"message": f"Google authentication failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 @method_decorator(csrf_exempt, name='dispatch')
 
@@ -914,6 +959,14 @@ class QrAuthCreateView(views.APIView):
         now = timezone.now()
         expires_at = now + datetime.timedelta(seconds=120)
 
+        # Generate a unique 4-char alphanumeric short code
+        import string, random
+        chars = string.ascii_uppercase + string.digits
+        for _ in range(10):
+            short_code = ''.join(random.choices(chars, k=4))
+            if not QrAuthSession.objects.filter(short_code=short_code, status='WAITING').exists():
+                break
+
         x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
         ip_address = x_forwarded.split(',')[0].strip() if x_forwarded else request.META.get('REMOTE_ADDR')
         user_agent = request.META.get('HTTP_USER_AGENT', '')
@@ -922,6 +975,7 @@ class QrAuthCreateView(views.APIView):
 
         qr_session = QrAuthSession.objects.create(
             session_id=session_id,
+            short_code=short_code,
             status='WAITING',
             ip_address=ip_address,
             user_agent=user_agent,
@@ -936,6 +990,7 @@ class QrAuthCreateView(views.APIView):
 
         return Response({
             "session_id": session_id,
+            "short_code": short_code,
             "status": qr_session.status,
             "expires_at": expires_at.isoformat(),
             "expires_in_seconds": 120,

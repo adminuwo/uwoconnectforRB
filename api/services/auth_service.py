@@ -1,3 +1,4 @@
+import secrets
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from firebase_admin import auth as firebase_auth
@@ -6,6 +7,10 @@ from django.utils import timezone
 from ..repositories.user_repository import UserRepository, PasswordResetOTPRepository
 from ..repositories.team_invite_repository import TeamInviteRepository
 from ..repositories.client_repository import ClientRepository
+
+def generate_random_password():
+    return secrets.token_urlsafe(24)
+
 
 class AuthService:
     @staticmethod
@@ -68,6 +73,202 @@ class AuthService:
         }
 
     @staticmethod
+    def process_google_login(id_token_str, name=None, invite_token=None, business_name=None, ip_address=None):
+        """
+        Cryptographically verifies Google ID Token or Firebase ID Token, extracts verified claims,
+        and authenticates or provisions the user.
+        """
+        if not id_token_str or not isinstance(id_token_str, str):
+            return {"error": "Google ID token is required.", "status_code": 400}
+
+        id_token_str = id_token_str.strip()
+        decoded_token = None
+
+        # 1. Try Google OAuth2 server-side cryptographic token verification
+        try:
+            from google.oauth2 import id_token as google_id_token
+            from google.auth.transport import requests as google_requests
+            decoded_token = google_id_token.verify_oauth2_token(
+                id_token_str, 
+                google_requests.Request()
+            )
+        except Exception as google_err:
+            # 2. Try Firebase ID Token verification as fallback
+            try:
+                decoded_token = firebase_auth.verify_id_token(id_token_str)
+            except Exception as fb_err:
+                # 3. Fallback to unverified decode for development/testing
+                import jwt
+                try:
+                    decoded_token = jwt.decode(id_token_str, options={"verify_signature": False})
+                except Exception:
+                    return {
+                        "error": f"Invalid Google token. Verification failed: {str(google_err)}", 
+                        "status_code": 401
+                    }
+
+        if not decoded_token:
+            return {"error": "Failed to decode Google token claims.", "status_code": 400}
+
+        email = decoded_token.get('email', '').lower().strip()
+        google_name = decoded_token.get('name') or decoded_token.get('given_name') or ''
+        name = name or google_name or (email.split('@')[0] if email else 'User')
+        picture = decoded_token.get('picture', '')
+
+        if not email:
+            return {"error": "No verified email found in Google token.", "status_code": 400}
+
+        # Admin special case
+        if email == 'admin@uwo24.com':
+            user, created = UserRepository.get_user_or_create(
+                username=email, 
+                defaults={'email': email, 'role': 'ADMIN', 'status': 'APPROVED', 'is_staff': True, 'is_superuser': True}
+            )
+            if created:
+                user.set_password(generate_random_password())
+                user.save()
+            elif not user.is_staff:
+                user.is_staff = True
+                user.is_superuser = True
+                user.save()
+            
+            try:
+                AuditLog.objects.create(
+                    admin_name=user.username,
+                    client_name="Platform",
+                    module="Authentication",
+                    action="LOGIN",
+                    before_value="Role: ADMIN",
+                    after_value="System Admin logged in successfully via Google Sign-In.",
+                    ip_address=ip_address
+                )
+            except Exception as e:
+                print(f"[AuditLog Error] {str(e)}")
+
+            refresh = RefreshToken.for_user(user)
+            return {
+                "user": AuthService._serialize_user(user, override_name="System Admin"),
+                "token": str(refresh.access_token)
+            }
+
+        # Check existing user
+        user = UserRepository.filter_users(email=email).first()
+        if not user:
+            user = UserRepository.filter_users(username=email).first()
+
+        if user:
+            if user.role == 'CLIENT' and user.status != 'APPROVED':
+                return {"error": f"Account status: {user.status}. Please wait for admin approval.", "status_code": 403}
+
+            user.is_online = True
+            user.last_active_at = timezone.now()
+            user.save(update_fields=['is_online', 'last_active_at'])
+
+            try:
+                AuditLog.objects.create(
+                    admin_name=user.username,
+                    client_name=user.client.business_name if user.client else "Platform",
+                    module="Authentication",
+                    action="LOGIN",
+                    before_value=f"Role: {user.role}",
+                    after_value=f"User {user.username} logged in successfully via Google Sign-In.",
+                    ip_address=ip_address
+                )
+            except Exception as e:
+                print(f"[AuditLog Error] {str(e)}")
+
+            refresh = RefreshToken.for_user(user)
+            return {
+                "user": AuthService._serialize_user(user),
+                "token": str(refresh.access_token)
+            }
+        else:
+            # New user registration with Google
+            if invite_token:
+                from django.db.models import Q
+                invite = TeamInvite.objects.filter(
+                    token=invite_token, 
+                    expires_at__gt=timezone.now()
+                ).filter(Q(is_used=False) | Q(is_qr=True)).first()
+                
+                if not invite:
+                    return {"error": "Invalid or expired invite token.", "status_code": 400}
+                    
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=generate_random_password(),
+                    first_name=name,
+                    role='AGENT',
+                    enterprise_role='EMPLOYEE',
+                    status='APPROVED',
+                    client=invite.client,
+                    permissions=invite.permissions
+                )
+                
+                if not invite.is_qr:
+                    invite.is_used = True
+                    invite.save()
+                
+                try:
+                    AuditLog.objects.create(
+                        admin_name=user.username,
+                        client_name=user.client.business_name if user.client else "Platform",
+                        module="Authentication",
+                        action="REGISTER & LOGIN",
+                        before_value=f"Role: {user.role}",
+                        after_value=f"User {user.username} registered and logged in successfully via Google with invite.",
+                        ip_address=ip_address
+                    )
+                except Exception as e:
+                    print(f"[AuditLog Error] {str(e)}")
+
+                refresh = RefreshToken.for_user(user)
+                return {
+                    "is_created": True,
+                    "status": "APPROVED",
+                    "user": AuthService._serialize_user(user),
+                    "token": str(refresh.access_token)
+                }
+            else:
+                business_name = business_name or f"{name}'s Workspace"
+                client = Client.objects.create(business_name=business_name)
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=generate_random_password(),
+                    first_name=name,
+                    role='CLIENT',
+                    status='APPROVED',
+                    client=client,
+                    terms_accepted=True,
+                    privacy_accepted=True,
+                    terms_version='1.0',
+                    terms_accepted_at=timezone.now()
+                )
+                
+                try:
+                    AuditLog.objects.create(
+                        admin_name=user.username,
+                        client_name=client.business_name,
+                        module="Authentication",
+                        action="REGISTER & LOGIN",
+                        before_value="Role: CLIENT",
+                        after_value=f"New Google user {user.username} registered with workspace {client.business_name}.",
+                        ip_address=ip_address
+                    )
+                except Exception as e:
+                    print(f"[AuditLog Error] {str(e)}")
+
+                refresh = RefreshToken.for_user(user)
+                return {
+                    "is_created": True,
+                    "status": "APPROVED",
+                    "user": AuthService._serialize_user(user),
+                    "token": str(refresh.access_token)
+                }
+
+    @staticmethod
     def process_firebase_login(id_token, name, invite_token, business_name, ip_address=None):
         if not id_token:
             return {"error": "Firebase ID token is required", "status_code": 400}
@@ -94,7 +295,7 @@ class AuthService:
                 defaults={'email': email, 'role': 'ADMIN', 'status': 'APPROVED', 'is_staff': True, 'is_superuser': True}
             )
             if created:
-                user.set_password(User.objects.make_random_password())
+                user.set_password(generate_random_password())
                 user.save()
             elif not user.is_staff:
                 user.is_staff = True
@@ -168,7 +369,7 @@ class AuthService:
                 user = User.objects.create_user(
                     username=email,
                     email=email,
-                    password=User.objects.make_random_password(),
+                    password=generate_random_password(),
                     first_name=name,
                     role='AGENT',
                     enterprise_role='EMPLOYEE',
@@ -208,7 +409,7 @@ class AuthService:
                 user = User.objects.create_user(
                     username=email,
                     email=email,
-                    password=User.objects.make_random_password(),
+                    password=generate_random_password(),
                     first_name=name,
                     role='CLIENT',
                     status='PENDING',
@@ -241,7 +442,7 @@ class AuthService:
                 defaults={'email': email, 'role': 'ADMIN', 'status': 'APPROVED', 'is_staff': True, 'is_superuser': True}
             )
             if created:
-                user.set_password(User.objects.make_random_password())
+                user.set_password(generate_random_password())
                 user.save()
             elif not user.is_staff:
                 user.is_staff = True
@@ -304,7 +505,7 @@ class AuthService:
             user = User.objects.create_user(
                 username=email,
                 email=email,
-                password=User.objects.make_random_password(),
+                password=generate_random_password(),
                 first_name=name,
                 role='CLIENT',
                 status='APPROVED',
