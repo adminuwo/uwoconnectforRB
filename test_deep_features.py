@@ -227,11 +227,13 @@ except Exception as e:
 # ─────────────────────────────────────────────────────────────
 print("\n👥 [4/8] TESTING CRM & CONTACT ENGINE...")
 try:
+    import time
+    unique_pid = f"wa_test_{int(time.time())}"
     contact_payload = {
         "name": "Audit Test Contact",
-        "phone_number": "+919988776655",
-        "platform_id": "whatsapp",
-        "email": "audit-contact@test.com",
+        "phone_number": f"+919988{int(time.time())%1000000:06d}",
+        "platform_id": unique_pid,
+        "email": f"audit-{int(time.time())}@test.com",
         "company": "Audit Tech",
         "tags": ["AutomatedTest", "VIP"]
     }
