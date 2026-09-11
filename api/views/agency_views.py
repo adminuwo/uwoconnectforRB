@@ -1,7 +1,7 @@
 from rest_framework import status, views
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from ..models import User, Client
+from ..models import User, Client, Message, Contact, Product, KnowledgeDocument
 from ..serializers import ClientSerializer, UserSerializer
 from ..repositories.client_repository import ClientRepository
 import logging
@@ -78,6 +78,11 @@ class AgencySubClientsListView(views.APIView):
         results = []
         for sc in sub_clients:
             primary_user = User.objects.filter(client=sc).first()
+            # Usage stats for quota monitoring
+            msg_count = Message.objects.filter(client=sc).count()
+            contact_count = Contact.objects.filter(client=sc).count()
+            product_count = Product.objects.filter(client=sc).count()
+            knowledge_count = KnowledgeDocument.objects.filter(client=sc).count()
             results.append({
                 "id": str(sc.id),
                 "business_name": sc.business_name,
@@ -88,7 +93,14 @@ class AgencySubClientsListView(views.APIView):
                 "status": primary_user.status if primary_user else "PENDING",
                 "user_id": str(primary_user.id) if primary_user else None,
                 "created_at": sc.created_at.strftime("%Y-%m-%d %H:%M") if sc.created_at else "",
-                "logo_url": sc.company_logo_url or sc.white_label_logo or ""
+                "logo_url": sc.company_logo_url or sc.white_label_logo or "",
+                # Quota & usage tracking
+                "usage": {
+                    "messages": msg_count,
+                    "contacts": contact_count,
+                    "products": product_count,
+                    "knowledge_docs": knowledge_count,
+                }
             })
 
         return Response(results)

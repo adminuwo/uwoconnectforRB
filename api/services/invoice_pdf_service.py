@@ -39,7 +39,9 @@ class NumberedCanvas(canvas.Canvas):
         self.setStrokeColor(colors.HexColor('#E2E8F0'))
         self.setLineWidth(0.5)
         self.line(54, 750, 558, 750)
-        self.drawString(54, 755, "UWOConnect Official Business Invoice")
+        # White-label: brand name injected by build hooks
+        brand_name = getattr(self, '_brand_name', 'Official Business Invoice')
+        self.drawString(54, 755, brand_name)
         
         # Footer rule and page info
         self.line(54, 55, 558, 55)
@@ -408,8 +410,26 @@ class InvoicePDFService:
         notes_html = f"<b>Terms & Notes:</b><br/>{default_notes}<br/><i>{terms}</i>"
         story.append(Paragraph(notes_html, styles['Normal']))
 
+        # Resolve white-label brand name (no UWO footprint for agency sub-clients)
+        _client = invoice.client if invoice.client else None
+        _agency = getattr(_client, 'parent_agency', None) if _client else None
+        if _agency and getattr(_agency, 'white_label_name', None):
+            _brand_label = f"{_agency.white_label_name} — Official Business Invoice"
+        elif _client and getattr(_client, 'white_label_name', None):
+            _brand_label = f"{_client.white_label_name} — Official Business Invoice"
+        elif _client and getattr(_client, 'business_name', None):
+            _brand_label = f"{_client.business_name} — Official Business Invoice"
+        else:
+            _brand_label = "Official Business Invoice"
+
+        def _on_first_page(canvas, doc):
+            canvas._brand_name = _brand_label
+
+        def _on_later_pages(canvas, doc):
+            canvas._brand_name = _brand_label
+
         # Build document
-        doc.build(story, canvasmaker=NumberedCanvas)
+        doc.build(story, canvasmaker=NumberedCanvas, onFirstPage=_on_first_page, onLaterPages=_on_later_pages)
         
         buffer.seek(0)
         return buffer
