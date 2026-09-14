@@ -198,6 +198,8 @@ class User(AbstractUser):
     privacy_accepted = models.BooleanField(default=False)
     terms_version = models.CharField(max_length=20, default='1.0', blank=True)
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    privacy_version = models.CharField(max_length=20, default='1.0', blank=True)
+    privacy_accepted_at = models.DateTimeField(null=True, blank=True)
 
     # Meta Portfolio Eligibility Gate (True for new approved signups and existing users)
     meta_portfolio_eligible = models.BooleanField(default=True)
@@ -661,6 +663,45 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"[{self.created_at}] {self.admin_name} -> {self.client_name}: {self.action} on {self.module}"
+
+
+class LegalDocumentVersion(models.Model):
+    DOCUMENT_TYPES = [
+        ('TERMS', 'Terms & Conditions'),
+        ('PRIVACY_POLICY', 'Privacy Policy'),
+    ]
+    document_type = models.CharField(max_length=30, choices=DOCUMENT_TYPES)
+    version = models.CharField(max_length=20, default='1.0')
+    title = models.CharField(max_length=255)
+    effective_date = models.DateTimeField(default=timezone.now)
+    summary = models.TextField(null=True, blank=True)
+    content = models.TextField()
+    is_active = models.BooleanField(default=True)
+    requires_reconsent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-effective_date', '-version']
+        unique_together = ['document_type', 'version']
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} v{self.version} ({'Active' if self.is_active else 'Inactive'})"
+
+
+class UserLegalConsent(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='legal_consents')
+    document_type = models.CharField(max_length=30)
+    document_version = models.CharField(max_length=20)
+    accepted_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.CharField(max_length=100, null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-accepted_at']
+
+    def __str__(self):
+        return f"{self.user.username} accepted {self.document_type} v{self.document_version} at {self.accepted_at}"
 
 
 class Product(models.Model):

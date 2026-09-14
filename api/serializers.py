@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice
+from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion
 from .repositories.contact_repository import ContactRepository
 from .repositories.workflow_repository import WorkflowRepository
 from .repositories.automation_repository import AutomationRepository
@@ -201,7 +201,11 @@ class RegisterSerializer(serializers.Serializer):
     designation = serializers.CharField(required=False, allow_blank=True)
     department = serializers.CharField(required=False, allow_blank=True)
     brand_domain = serializers.CharField(required=False, allow_blank=True)
-    termsAccepted = serializers.BooleanField(required=False, default=True)
+    termsAccepted = serializers.BooleanField(required=False, default=None)
+    terms_accepted = serializers.BooleanField(required=False, default=None)
+    privacy_accepted = serializers.BooleanField(required=False, default=None)
+    terms_version = serializers.CharField(required=False, default='1.0')
+    privacy_version = serializers.CharField(required=False, default='1.0')
     meta_portfolio_eligible = serializers.BooleanField(required=False, default=None)
     metaPortfolioEligible = serializers.BooleanField(required=False, default=None)
     meta_portfolio_name = serializers.CharField(required=False, allow_blank=True)
@@ -215,11 +219,6 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("A user with this email already exists.")
         return email
 
-    def validate_termsAccepted(self, value):
-        if value is False:
-            raise serializers.ValidationError("Please accept the Terms & Conditions and Privacy Policy to continue.")
-        return value
-
     def validate(self, attrs):
         # Resolve name and businessName from alternate field names
         if not attrs.get('name'):
@@ -228,6 +227,19 @@ class RegisterSerializer(serializers.Serializer):
             attrs['name'] = f"{fn} {ln}".strip() or attrs.get('email', '')
         if not attrs.get('businessName') and attrs.get('business_name'):
             attrs['businessName'] = attrs.get('business_name')
+
+        # Enforce explicit Terms & Conditions and Privacy Policy acceptance
+        terms_ok = attrs.get('terms_accepted')
+        if terms_ok is None:
+            terms_ok = attrs.get('termsAccepted')
+        privacy_ok = attrs.get('privacy_accepted')
+        if privacy_ok is None:
+            privacy_ok = terms_ok
+
+        if terms_ok is not True or privacy_ok is not True:
+            raise serializers.ValidationError({
+                "terms_accepted": "You must agree to both the Terms & Conditions and Privacy Policy to register."
+            })
 
         # Resolve Meta Portfolio Name
         portfolio_name = (
@@ -276,6 +288,8 @@ class RegisterSerializer(serializers.Serializer):
             if not invite:
                 raise serializers.ValidationError({"invite_token": "Invalid or expired invite token."})
                 
+            terms_ver = validated_data.get('terms_version') or '1.0'
+            privacy_ver = validated_data.get('privacy_version') or '1.0'
             user = User.objects.create_user(
                 username=email,
                 email=email,
@@ -293,9 +307,24 @@ class RegisterSerializer(serializers.Serializer):
                 permissions=invite.permissions,
                 terms_accepted=True,
                 privacy_accepted=True,
-                terms_version='1.0',
-                terms_accepted_at=now
+                terms_version=terms_ver,
+                terms_accepted_at=now,
+                privacy_version=privacy_ver,
+                privacy_accepted_at=now
             )
+            try:
+                UserLegalConsent.objects.create(
+                    user=user,
+                    document_type='TERMS',
+                    document_version=terms_ver
+                )
+                UserLegalConsent.objects.create(
+                    user=user,
+                    document_type='PRIVACY_POLICY',
+                    document_version=privacy_ver
+                )
+            except Exception:
+                pass
             
             if not invite.is_qr:
                 invite.is_used = True
@@ -323,6 +352,8 @@ class RegisterSerializer(serializers.Serializer):
                 settings=client_settings
             )
     
+            terms_ver = validated_data.get('terms_version') or '1.0'
+            privacy_ver = validated_data.get('privacy_version') or '1.0'
             user = User.objects.create_user(
                 username=email,
                 email=email,
@@ -338,9 +369,24 @@ class RegisterSerializer(serializers.Serializer):
                 client=client,
                 terms_accepted=True,
                 privacy_accepted=True,
-                terms_version='1.0',
-                terms_accepted_at=now
+                terms_version=terms_ver,
+                terms_accepted_at=now,
+                privacy_version=privacy_ver,
+                privacy_accepted_at=now
             )
+            try:
+                UserLegalConsent.objects.create(
+                    user=user,
+                    document_type='TERMS',
+                    document_version=terms_ver
+                )
+                UserLegalConsent.objects.create(
+                    user=user,
+                    document_type='PRIVACY_POLICY',
+                    document_version=privacy_ver
+                )
+            except Exception:
+                pass
             return user
 
 
