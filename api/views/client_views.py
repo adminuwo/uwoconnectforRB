@@ -1056,7 +1056,27 @@ class ClientMessagesView(APIView):
                 "created_at": new_msg.created_at
             })
             
-        return Response({"status": "sent"})
+        fallback_msg = MessageRepository.create_message(
+            client=client,
+            channel=channel or 'WHATSAPP',
+            from_address='SYSTEM',
+            to_address=target_dest,
+            body=body,
+            message_type='OUTGOING',
+            status='SENT'
+        )
+        return Response({
+            "id": str(fallback_msg.id),
+            "from_address": fallback_msg.from_address,
+            "to_address": fallback_msg.to_address,
+            "body": fallback_msg.body,
+            "channel": fallback_msg.channel,
+            "message_type": fallback_msg.message_type,
+            "status": fallback_msg.status,
+            "buttons": [],
+            "metadata": {},
+            "created_at": fallback_msg.created_at
+        })
 # Trusted Meta / WhatsApp CDN domains allowed for media proxying
 ALLOWED_MEDIA_DOMAINS = {
     'graph.facebook.com',

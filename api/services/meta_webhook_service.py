@@ -1001,7 +1001,7 @@ class MetaWebhookService:
                 res_fb = requests.post(fallback_url, json=payload, headers=headers)
                 print(f"{platform} Fallback Send Response:", res_fb.status_code, res_fb.text)
             
-            MessageRepository.create_message(
+            return MessageRepository.create_message(
                 client=client,
                 channel=platform,
                 from_address='SYSTEM',
@@ -1012,6 +1012,7 @@ class MetaWebhookService:
             )
         except Exception as e:
             print(f"Failed to send {platform} message:", str(e))
+            return None
 
     @staticmethod
     def send_catalog_products(client, recipient_id, platform='WHATSAPP', phone_number_id=None):
