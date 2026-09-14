@@ -136,10 +136,39 @@ GLOBAL_AVAILABLE_CHANNELS = ['whatsapp', 'facebook', 'instagram']
 GLOBAL_COMING_SOON_CHANNELS = []
 
 
+_CONNECTORS_ENSURED = False
+_GLOBAL_CONNECTORS_CACHE = {'timestamp': 0.0, 'active_keys': set()}
+_USER_ALLOWED_CHANNELS_CACHE = {}  # key: (user_id_str, client_id_str) -> (timestamp, allowed_list)
+_CACHE_TTL = 60.0  # 60 seconds TTL
+
+
+def clear_channel_permissions_cache(user_id=None, client_id=None):
+    """
+    Clears in-memory caches. If user_id/client_id provided, clears specific entry,
+    otherwise clears all caches.
+    """
+    global _GLOBAL_CONNECTORS_CACHE, _USER_ALLOWED_CHANNELS_CACHE
+    if user_id or client_id:
+        keys_to_delete = [
+            k for k in _USER_ALLOWED_CHANNELS_CACHE.keys()
+            if (user_id and k[0] == str(user_id)) or (client_id and k[1] == str(client_id))
+        ]
+        for k in keys_to_delete:
+            _USER_ALLOWED_CHANNELS_CACHE.pop(k, None)
+    else:
+        _USER_ALLOWED_CHANNELS_CACHE.clear()
+        _GLOBAL_CONNECTORS_CACHE = {'timestamp': 0.0, 'active_keys': set()}
+
+
 def ensure_default_global_connectors():
     """
     Seeds/Ensures all default global connectors exist in the database.
+    Guarded by memory flag to avoid redundant DB queries on every request.
     """
+    global _CONNECTORS_ENSURED
+    if _CONNECTORS_ENSURED:
+        return
+
     try:
         from api.models import GlobalConnector
         existing_keys = set(GlobalConnector.objects.values_list('connector_key', flat=True))
@@ -154,30 +183,51 @@ def ensure_default_global_connectors():
                     is_active=item.get('is_active', True),
                     description=item.get('description', '')
                 )
+        _CONNECTORS_ENSURED = True
     except Exception as e:
         print(f"[GlobalConnector] Error seeding connectors: {e}")
+
+
+def _get_cached_global_active_keys():
+    """
+    Returns set of lowercase connector keys that are globally active, cached for 60s.
+    """
+    global _GLOBAL_CONNECTORS_CACHE
+    import time
+    now = time.time()
+    if now - _GLOBAL_CONNECTORS_CACHE['timestamp'] < _CACHE_TTL and _GLOBAL_CONNECTORS_CACHE['active_keys']:
+        return _GLOBAL_CONNECTORS_CACHE['active_keys']
+
+    try:
+        from api.models import GlobalConnector
+        records = list(GlobalConnector.objects.all().values('connector_key', 'is_active'))
+        if not records:
+            ensure_default_global_connectors()
+            records = list(GlobalConnector.objects.all().values('connector_key', 'is_active'))
+
+        active_keys = {
+            r['connector_key'].lower().strip()
+            for r in records
+            if r.get('is_active', True)
+        }
+        _GLOBAL_CONNECTORS_CACHE = {'timestamp': now, 'active_keys': active_keys}
+        return active_keys
+    except Exception as e:
+        print(f"[_get_cached_global_active_keys] Error: {e}")
+        # Default fallback to all default connectors
+        return {c['key'] for c in DEFAULT_CONNECTORS}
 
 
 def is_connector_globally_active(connector_key):
     """
     LEVEL 1 CHECK: Returns True if connector is globally active.
+    Uses in-memory cached active set (0ms).
     """
     if not connector_key:
         return False
     key = str(connector_key).lower().strip()
-    try:
-        from api.models import GlobalConnector
-        gc = GlobalConnector.objects.filter(connector_key=key).first()
-        if gc is not None:
-            return bool(gc.is_active)
-        # If not seeded yet, seed defaults and check
-        ensure_default_global_connectors()
-        gc = GlobalConnector.objects.filter(connector_key=key).first()
-        if gc is not None:
-            return bool(gc.is_active)
-    except Exception as e:
-        print(f"[is_connector_globally_active] Error checking {key}: {e}")
-    return True # Default open if DB error
+    active_keys = _get_cached_global_active_keys()
+    return key in active_keys
 
 
 def get_client_connector_permission(client, connector_key):
@@ -258,7 +308,11 @@ def check_effective_connector_access(user, connector_key):
         return False, f"{key.capitalize()} is globally disabled by Admin.", 403
 
     # Level 2: Client Access Check
-    client = getattr(user, 'client', None)
+    try:
+        client = getattr(user, 'client', None)
+    except Exception:
+        client = None
+
     if not client:
         return False, "No active client workspace associated with this user.", 403
 
@@ -282,40 +336,156 @@ def validate_channel_access(user, channel_name):
 def get_user_allowed_channels(user, client=None):
     """
     Returns list of uppercase channel names that user is currently permitted to access.
+    Optimized with in-memory TTL caching and single-batch queries instead of 40 individual queries.
     """
     if not user or not user.is_authenticated:
         return []
 
-    target_client = client or getattr(user, 'client', None)
+    target_client = client
+    if not target_client:
+        try:
+            target_client = getattr(user, 'client', None)
+        except Exception:
+            target_client = None
+
     if not target_client:
         return []
 
-    ensure_default_global_connectors()
+    import time
+    now = time.time()
+    cache_key = (str(getattr(user, 'id', '')), str(getattr(target_client, 'id', '')))
+    cached = _USER_ALLOWED_CHANNELS_CACHE.get(cache_key)
+    if cached and (now - cached[0] < _CACHE_TTL):
+        return list(cached[1])
+
+    role = getattr(user, 'role', '').upper()
+    enterprise_role = getattr(user, 'enterprise_role', '').upper()
+    is_admin = role == 'ADMIN' or enterprise_role in ('SUPER_ADMIN', 'ORG_ADMIN') or getattr(user, 'is_staff', False)
+
+    active_keys = _get_cached_global_active_keys()
+
+    if is_admin:
+        allowed = [c['key'].upper() for c in DEFAULT_CONNECTORS if c['key'] in active_keys]
+        _USER_ALLOWED_CHANNELS_CACHE[cache_key] = (now, allowed)
+        return allowed
+
+    # 1. Bulk fetch client connector access in 1 single query
+    client_perms = {}
+    try:
+        from api.models import ClientConnectorAccess
+        for cca in ClientConnectorAccess.objects.filter(client=target_client):
+            client_perms[cca.connector_key.lower().strip()] = bool(cca.is_enabled)
+    except Exception as e:
+        print(f"[get_user_allowed_channels] ClientConnectorAccess query error: {e}")
+
+    # 2. Bulk fetch team member permissions in 1 single query if granular check needed
+    is_owner_or_mgr = role in ('ADMIN', 'CLIENT') or enterprise_role in ('SUPER_ADMIN', 'ORG_ADMIN', 'MANAGER', 'HR')
+    member_perms = None
+    if not is_owner_or_mgr:
+        member_perms = {}
+        try:
+            from api.models import TeamMemberConnectorAccess
+            for tmca in TeamMemberConnectorAccess.objects.filter(client=target_client, team_member=user):
+                member_perms[tmca.connector_key.lower().strip()] = bool(tmca.is_enabled)
+        except Exception as e:
+            print(f"[get_user_allowed_channels] TeamMemberConnectorAccess query error: {e}")
 
     allowed = []
     for item in DEFAULT_CONNECTORS:
         key = item['key']
-        is_allowed, _, _ = check_effective_connector_access(user, key)
-        if is_allowed:
-            allowed.append(key.upper())
+        if key not in active_keys:
+            continue
 
+        # Client level check
+        client_ok = client_perms.get(key)
+        if client_ok is None:
+            if hasattr(target_client, 'has_channel_access'):
+                try:
+                    client_ok = target_client.has_channel_access(key)
+                except Exception:
+                    client_ok = True
+            else:
+                client_ok = True
+        if not client_ok:
+            continue
+
+        # Team member level check
+        if member_perms is not None:
+            member_ok = member_perms.get(key)
+            if member_ok is None:
+                assigned = getattr(user, 'assigned_social_channels', []) or []
+                if assigned:
+                    member_ok = any(key in str(a).lower() or str(a).lower() in key for a in assigned)
+                else:
+                    member_ok = True
+            if not member_ok:
+                continue
+
+        allowed.append(key.upper())
+
+    _USER_ALLOWED_CHANNELS_CACHE[cache_key] = (now, allowed)
     return allowed
 
 
 def get_user_effective_connectors(user, client=None):
     """
     Returns a structured dictionary of all connectors with effective accessibility for the user.
+    Optimized with single-batch lookups.
     """
-    ensure_default_global_connectors()
+    target_client = client
+    if not target_client and user:
+        try:
+            target_client = getattr(user, 'client', None)
+        except Exception:
+            target_client = None
 
-    target_client = client or (getattr(user, 'client', None) if user else None)
+    active_keys = _get_cached_global_active_keys()
+
+    client_perms = {}
+    if target_client:
+        try:
+            from api.models import ClientConnectorAccess
+            for cca in ClientConnectorAccess.objects.filter(client=target_client):
+                client_perms[cca.connector_key.lower().strip()] = bool(cca.is_enabled)
+        except Exception:
+            pass
+
+    member_perms = {}
+    if target_client and user:
+        try:
+            from api.models import TeamMemberConnectorAccess
+            for tmca in TeamMemberConnectorAccess.objects.filter(client=target_client, team_member=user):
+                member_perms[tmca.connector_key.lower().strip()] = bool(tmca.is_enabled)
+        except Exception:
+            pass
+
+    role = getattr(user, 'role', '').upper() if user else ''
+    enterprise_role = getattr(user, 'enterprise_role', '').upper() if user else ''
+    is_owner_or_mgr = role in ('ADMIN', 'CLIENT') or enterprise_role in ('SUPER_ADMIN', 'ORG_ADMIN', 'MANAGER', 'HR')
 
     result = {}
     for item in DEFAULT_CONNECTORS:
         key = item['key']
-        is_global_active = is_connector_globally_active(key)
-        is_client_enabled = get_client_connector_permission(target_client, key) if target_client else True
-        is_member_assigned = get_team_member_connector_permission(target_client, user, key) if (target_client and user) else True
+        is_global_active = key in active_keys
+
+        is_client_enabled = True
+        if target_client:
+            if key in client_perms:
+                is_client_enabled = client_perms[key]
+            elif hasattr(target_client, 'has_channel_access'):
+                try:
+                    is_client_enabled = target_client.has_channel_access(key)
+                except Exception:
+                    is_client_enabled = True
+
+        is_member_assigned = True
+        if target_client and user and not is_owner_or_mgr:
+            if key in member_perms:
+                is_member_assigned = member_perms[key]
+            else:
+                assigned = getattr(user, 'assigned_social_channels', []) or []
+                if assigned:
+                    is_member_assigned = any(key in str(a).lower() or str(a).lower() in key for a in assigned)
 
         effective = is_global_active and is_client_enabled and is_member_assigned
 
@@ -335,8 +505,13 @@ def get_user_effective_connectors(user, client=None):
 
 def log_channel_permission_change(admin_user_identifier, client, channel, action, previous_state, new_state, team_member=None, team_member_name="", notes=""):
     """
-    Records an entry in ChannelAuditLog.
+    Records an entry in ChannelAuditLog and invalidates permission caches.
     """
+    clear_channel_permissions_cache(
+        user_id=getattr(team_member, 'id', None),
+        client_id=getattr(client, 'id', None)
+    )
+
     try:
         from api.models import ChannelAuditLog
         ChannelAuditLog.objects.create(

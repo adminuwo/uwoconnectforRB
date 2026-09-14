@@ -130,21 +130,27 @@ class ConversationViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Conversation.objects.none()
 
+        user_client = None
+        try:
+            user_client = getattr(user, 'client', None)
+        except Exception:
+            user_client = None
+
         if user.role == 'ADMIN':
             client_id = self.request.query_params.get('client_id')
             if client_id:
                 queryset = Conversation.objects.filter(client_id=client_id)
-            elif user.client:
-                queryset = Conversation.objects.filter(client=user.client)
+            elif user_client:
+                queryset = Conversation.objects.filter(client=user_client)
             else:
                 queryset = Conversation.objects.all()
         else:
-            if not user.client:
+            if not user_client:
                 return Conversation.objects.none()
-            allowed_channels = get_user_allowed_channels(user, user.client)
+            allowed_channels = get_user_allowed_channels(user, user_client)
             if not allowed_channels:
                 return Conversation.objects.none()
-            queryset = Conversation.objects.filter(client=user.client)
+            queryset = Conversation.objects.filter(client=user_client)
             queryset = queryset.filter(channel__in=allowed_channels)
 
         channel = self.request.query_params.get('channel')
