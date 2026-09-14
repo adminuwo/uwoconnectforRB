@@ -10,6 +10,9 @@ if BASE_DIR not in sys.path:
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 from api.models import Client, Contact, Conversation, Message, ConversationAuditLog, User
 from api.services.bot_loop_protection_service import BotLoopProtectionService
 from api.repositories.message_repository import MessageRepository

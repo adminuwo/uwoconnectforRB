@@ -146,8 +146,11 @@ class WebRTCActiveCallCheckView(APIView):
         if getattr(request, 'user', None) and request.user.is_authenticated:
             user_email = str(getattr(request.user, 'email', '') or '').lower()
             user_name = str(getattr(request.user, 'username', '') or '').lower()
-            if getattr(request.user, 'client', None):
-                user_client_id = str(request.user.client.id)
+            try:
+                if getattr(request.user, 'client_id', None) and request.user.client:
+                    user_client_id = str(request.user.client.id)
+            except Exception:
+                user_client_id = None
             user_id_str = str(request.user.id)
         else:
             return Response({"active_call": False}, status=status.HTTP_200_OK)

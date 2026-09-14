@@ -8,6 +8,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 from django.core import mail
 from api.models import User, Client
 from api.services.welcome_email_service import WelcomeEmailService
@@ -70,7 +73,9 @@ def run_tests():
         "email": test_email,
         "password": "SecurePassword@123",
         "business_name": "Welcome Test Enterprise",
-        "phone_number": "+919999988888"
+        "phone_number": "+919999988888",
+        "meta_portfolio_eligible": True,
+        "meta_portfolio_name": "Welcome Test Portfolio"
     }
 
     serializer = RegisterSerializer(data=reg_data)

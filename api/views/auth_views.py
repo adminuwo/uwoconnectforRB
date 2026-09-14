@@ -16,7 +16,7 @@ import requests
 import os
 import json
 from ..services.ai_service import get_ai_response, get_platform_assistance, get_rag_response, get_embedding, chunk_text, find_relevant_chunks
-from ..utils.channel_permissions import validate_channel_access
+from ..utils.channel_permissions import validate_channel_access, safe_get_client
 from rest_framework.permissions import BasePermission
 
 def get_tenant_client(request):
@@ -30,14 +30,15 @@ def get_tenant_client(request):
             except (Client.DoesNotExist, ValueError):
                 pass
         # Fallback to user's client if present
-        if getattr(request.user, 'client', None):
-            return request.user.client
+        c = safe_get_client(request.user)
+        if c:
+            return c
         # Fallback to first available client
         try:
             return ClientRepository.get_all_clients().first()
         except Exception:
             return None
-    return request.user.client
+    return safe_get_client(request.user)
 
 class RegisterView(views.APIView):
     permission_classes = []
@@ -513,7 +514,7 @@ class WhatsAppEmbeddedSignupView(APIView):
         if not client_id or not client_secret:
             return Response({"error": "Facebook App credentials not configured on server."}, status=500)
 
-        client = getattr(request.user, 'client', None)
+        client = safe_get_client(request.user)
 
         # 1. Exchange code for access token if supplied
         if not access_token and code:
@@ -582,7 +583,7 @@ class WhatsAppEmbeddedSignupView(APIView):
         display_phone_number = ''
 
         # 2. Get shared WABA info if not provided
-        client = getattr(request.user, 'client', None)
+        client = safe_get_client(request.user)
         claimed_wabas = set(
             Client.objects.filter(whatsapp_waba_id__isnull=False)
             .exclude(id=client.id if client else None)
@@ -655,7 +656,7 @@ class WhatsAppEmbeddedSignupView(APIView):
                 logger.warning(f"[WhatsAppEmbeddedSignup] Could not subscribe WABA {waba_id}: {e}")
         
         # 5. Save to Client
-        client = getattr(request.user, 'client', None)
+        client = safe_get_client(request.user)
         if not client:
             return Response({"error": "No client workspace associated with this user account."}, status=400)
             
@@ -741,7 +742,7 @@ class InstagramEmbeddedSignupView(APIView):
         if not ig_account:
             return Response({"error": "No linked Instagram Business Account found on your Facebook Pages. Please link your Instagram account to your Facebook Page first."}, status=400)
 
-        client = getattr(request.user, 'client', None)
+        client = safe_get_client(request.user)
         if not client:
             return Response({"error": "No client workspace associated with this user account."}, status=400)
         
@@ -839,7 +840,7 @@ class FacebookEmbeddedSignupView(APIView):
         page_access_token = page.get('access_token', long_lived_token)
         
         import datetime
-        client = getattr(request.user, 'client', None)
+        client = safe_get_client(request.user)
         if not client:
             return Response({"error": "No client workspace associated with this user account."}, status=400)
             

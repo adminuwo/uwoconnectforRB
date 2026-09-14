@@ -8,6 +8,15 @@ Level 3: TEAM MEMBER CONNECTOR ASSIGNMENT
 
 from django.utils import timezone
 
+def safe_get_client(user):
+    if not user:
+        return None
+    try:
+        return getattr(user, 'client', None)
+    except Exception:
+        return None
+
+
 DEFAULT_CONNECTORS = [
     # Core Channels
     {
@@ -258,7 +267,7 @@ def check_effective_connector_access(user, connector_key):
         return False, f"{key.capitalize()} is globally disabled by Admin.", 403
 
     # Level 2: Client Access Check
-    client = getattr(user, 'client', None)
+    client = safe_get_client(user)
     if not client:
         return False, "No active client workspace associated with this user.", 403
 
@@ -286,7 +295,7 @@ def get_user_allowed_channels(user, client=None):
     if not user or not user.is_authenticated:
         return []
 
-    target_client = client or getattr(user, 'client', None)
+    target_client = client or safe_get_client(user)
     if not target_client:
         return []
 
@@ -308,7 +317,7 @@ def get_user_effective_connectors(user, client=None):
     """
     ensure_default_global_connectors()
 
-    target_client = client or (getattr(user, 'client', None) if user else None)
+    target_client = client or safe_get_client(user)
 
     result = {}
     for item in DEFAULT_CONNECTORS:
