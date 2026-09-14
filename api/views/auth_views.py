@@ -17,6 +17,9 @@ import os
 import json
 from ..services.ai_service import get_ai_response, get_platform_assistance, get_rag_response, get_embedding, chunk_text, find_relevant_chunks
 from ..utils.channel_permissions import validate_channel_access, safe_get_client
+import logging
+logger = logging.getLogger(__name__)
+from django.utils import timezone
 from rest_framework.permissions import BasePermission
 
 def get_tenant_client(request):
