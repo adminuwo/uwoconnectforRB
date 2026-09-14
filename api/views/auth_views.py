@@ -958,11 +958,157 @@ class InstagramOAuthCallbackView(APIView):
             client.instagram_enabled = True
             client.save()
 
+            # 1. Programmatically subscribe Instagram Account to Webhooks on Meta
+            try:
+                sub_url = "https://graph.instagram.com/v20.0/me/subscribed_apps"
+                sub_res = requests.post(
+                    sub_url,
+                    data={
+                        "subscribed_fields": "messages,messaging_postbacks,messaging_optins,messaging_seen,message_reactions",
+                        "access_token": long_lived_token
+                    },
+                    timeout=10
+                )
+                logger.info("Auto-subscribed Instagram to webhooks: status=%s resp=%s", sub_res.status_code, sub_res.text)
+            except Exception as _e_sub:
+                logger.warning("Could not auto-subscribe Instagram webhooks: %s", _e_sub)
+
+            # 2. Trigger automatic background sync for past/current conversations immediately
+            import threading
+            def _bg_sync():
+                try:
+                    sync_client_instagram_data(client)
+                except Exception as _e_sync:
+                    logger.warning("Background IG sync error: %s", _e_sync)
+            threading.Thread(target=_bg_sync, daemon=True).start()
+
             return Response({
                 "message": "Instagram Business Account connected successfully",
                 "instagram_config": client.instagram_config,
             })
         return Response({"error": "No active client workspace found for user."}, status=404)
+
+
+def sync_client_instagram_data(client):
+    """
+    Fetch up-to-date Instagram conversations and messages from Meta Graph API
+    and persist them into Contact, Conversation, and Message models.
+    """
+    from ..models import Contact, Conversation, Message
+    from django.utils import timezone
+    from datetime import datetime
+    import requests
+
+    def parse_dt(dt_str):
+        if not dt_str:
+            return timezone.now()
+        try:
+            return datetime.fromisoformat(dt_str.replace('+0000', '+00:00'))
+        except Exception:
+            return timezone.now()
+
+    cfg = client.instagram_config or {}
+    token = cfg.get('access_token')
+    biz_id = cfg.get('instagram_business_id')
+    scoped_id = cfg.get('instagram_user_id')
+
+    if not token or not biz_id:
+        return 0, 0
+
+    conv_url = f"https://graph.instagram.com/v20.0/{biz_id}/conversations"
+    res = requests.get(conv_url, params={"fields": "id,updated_time,participants", "limit": 25, "access_token": token}, timeout=10)
+    if res.status_code != 200:
+        logger.warning("Meta Graph API returned status %s: %s", res.status_code, res.text)
+        return 0, 0
+
+    conv_data = res.json().get('data', [])
+    synced_convs = 0
+    synced_msgs = 0
+
+    for conv_item in conv_data:
+        conv_id = conv_item.get('id')
+        updated_dt = parse_dt(conv_item.get('updated_time'))
+        participants = conv_item.get('participants', {}).get('data', [])
+
+        other_p = None
+        for p in participants:
+            if str(p.get('id')) not in [str(biz_id), str(scoped_id)] and p.get('username') != cfg.get('username'):
+                other_p = p
+                break
+        if not other_p and participants:
+            other_p = participants[0]
+        if not other_p:
+            continue
+
+        customer_ig_id = str(other_p.get('id'))
+        customer_username = other_p.get('username') or f"ig_{customer_ig_id}"
+        cname = f"@{customer_username}" if not customer_username.startswith('@') else customer_username
+
+        contact, _ = Contact.objects.get_or_create(
+            client=client,
+            platform_id=customer_ig_id,
+            defaults={'phone_number': customer_ig_id, 'name': cname, 'stage': 'NEW'}
+        )
+        if contact.name != cname and not contact.name.startswith('@'):
+            contact.name = cname
+            contact.save()
+
+        m_res = requests.get(
+            f"https://graph.instagram.com/v20.0/{conv_id}/messages",
+            params={"fields": "id,message,created_time,from,to,attachments", "limit": 25, "access_token": token},
+            timeout=10
+        )
+        messages_list = m_res.json().get('data', []) if m_res.status_code == 200 else []
+        last_body = "Incoming Instagram Message"
+
+        for m in reversed(messages_list):
+            m_id = m.get('id')
+            m_body = m.get('message', '') or ''
+            m_dt = parse_dt(m.get('created_time'))
+            sender_id = str(m.get('from', {}).get('id', ''))
+            is_incoming = (sender_id == customer_ig_id)
+            from_addr = customer_ig_id if is_incoming else biz_id
+            to_addr = biz_id if is_incoming else customer_ig_id
+
+            if not m_body:
+                m_body = "📷 [Photo / Video / Reel]" if m.get('attachments') else "📎 [Instagram Media / Share]"
+            last_body = m_body
+
+            if not Message.objects.filter(client=client, meta_message_id=m_id).exists():
+                new_msg = Message.objects.create(
+                    client=client,
+                    channel='INSTAGRAM',
+                    from_address=from_addr,
+                    to_address=to_addr,
+                    body=m_body,
+                    message_type='INCOMING' if is_incoming else 'OUTGOING',
+                    status='RECEIVED' if is_incoming else 'DELIVERED',
+                    meta_message_id=m_id,
+                    metadata=m
+                )
+                Message.objects.filter(id=new_msg.id).update(created_at=m_dt)
+                synced_msgs += 1
+
+        convo = Conversation.objects.filter(client=client, contact_platform_id=customer_ig_id).first()
+        if not convo:
+            convo = Conversation.objects.create(
+                client=client,
+                contact=contact,
+                contact_platform_id=customer_ig_id,
+                channel='INSTAGRAM',
+                last_message_summary=last_body,
+                last_message_at=updated_dt
+            )
+        else:
+            convo.channel = 'INSTAGRAM'
+            convo.contact = contact
+            convo.last_message_summary = last_body
+            convo.last_message_at = updated_dt
+            convo.save()
+        Conversation.objects.filter(id=convo.id).update(last_message_at=updated_dt, updated_at=updated_dt)
+        synced_convs += 1
+
+    return synced_convs, synced_msgs
 
 
 class InstagramSyncMessagesView(APIView):
@@ -976,119 +1122,8 @@ class InstagramSyncMessagesView(APIView):
         if not client:
             return Response({"error": "No workspace found."}, status=404)
 
-        cfg = client.instagram_config or {}
-        token = cfg.get('access_token')
-        biz_id = cfg.get('instagram_business_id') or '17841478503676945'
-        scoped_id = cfg.get('instagram_user_id') or '28172606925699321'
-
-        if not token:
-            return Response({"error": "Instagram is not connected for this workspace."}, status=400)
-
         try:
-            from ..models import Contact, Conversation, Message
-            import requests
-            from datetime import datetime
-
-            def parse_dt(dt_str):
-                if not dt_str:
-                    return timezone.now()
-                try:
-                    return datetime.fromisoformat(dt_str.replace('+0000', '+00:00'))
-                except Exception:
-                    return timezone.now()
-
-            conv_url = f"https://graph.instagram.com/v20.0/{biz_id}/conversations"
-            res = requests.get(conv_url, params={"fields": "id,updated_time,participants", "limit": 20, "access_token": token}, timeout=10)
-            if res.status_code != 200:
-                return Response({"error": f"Graph API returned {res.status_code}", "details": res.text}, status=400)
-
-            conv_data = res.json().get('data', [])
-            synced_convs = 0
-            synced_msgs = 0
-
-            for conv_item in conv_data:
-                conv_id = conv_item.get('id')
-                updated_dt = parse_dt(conv_item.get('updated_time'))
-                participants = conv_item.get('participants', {}).get('data', [])
-
-                other_p = None
-                for p in participants:
-                    if str(p.get('id')) not in [str(biz_id), str(scoped_id)] and p.get('username') != cfg.get('username'):
-                        other_p = p
-                        break
-                if not other_p and participants:
-                    other_p = participants[0]
-                if not other_p:
-                    continue
-
-                customer_ig_id = str(other_p.get('id'))
-                customer_username = other_p.get('username') or f"ig_{customer_ig_id}"
-                cname = f"@{customer_username}" if not customer_username.startswith('@') else customer_username
-
-                contact, _ = Contact.objects.get_or_create(
-                    client=client,
-                    platform_id=customer_ig_id,
-                    defaults={'phone_number': customer_ig_id, 'name': cname, 'stage': 'NEW'}
-                )
-                if contact.name != cname and not contact.name.startswith('@'):
-                    contact.name = cname
-                    contact.save()
-
-                m_res = requests.get(
-                    f"https://graph.instagram.com/v20.0/{conv_id}/messages",
-                    params={"fields": "id,message,created_time,from,to,attachments", "limit": 25, "access_token": token},
-                    timeout=10
-                )
-                messages_list = m_res.json().get('data', []) if m_res.status_code == 200 else []
-                last_body = "Incoming Instagram Message"
-
-                for m in reversed(messages_list):
-                    m_id = m.get('id')
-                    m_body = m.get('message', '') or ''
-                    m_dt = parse_dt(m.get('created_time'))
-                    sender_id = str(m.get('from', {}).get('id', ''))
-                    is_incoming = (sender_id == customer_ig_id)
-                    from_addr = customer_ig_id if is_incoming else biz_id
-                    to_addr = biz_id if is_incoming else customer_ig_id
-
-                    if not m_body:
-                        m_body = "📷 [Photo / Video / Reel]" if m.get('attachments') else "📎 [Instagram Media / Share]"
-                    last_body = m_body
-
-                    if not Message.objects.filter(client=client, meta_message_id=m_id).exists():
-                        new_msg = Message.objects.create(
-                            client=client,
-                            channel='INSTAGRAM',
-                            from_address=from_addr,
-                            to_address=to_addr,
-                            body=m_body,
-                            message_type='INCOMING' if is_incoming else 'OUTGOING',
-                            status='RECEIVED' if is_incoming else 'DELIVERED',
-                            meta_message_id=m_id,
-                            metadata=m
-                        )
-                        Message.objects.filter(id=new_msg.id).update(created_at=m_dt)
-                        synced_msgs += 1
-
-                convo = Conversation.objects.filter(client=client, contact_platform_id=customer_ig_id).first()
-                if not convo:
-                    convo = Conversation.objects.create(
-                        client=client,
-                        contact=contact,
-                        contact_platform_id=customer_ig_id,
-                        channel='INSTAGRAM',
-                        last_message_summary=last_body,
-                        last_message_at=updated_dt
-                    )
-                else:
-                    convo.channel = 'INSTAGRAM'
-                    convo.contact = contact
-                    convo.last_message_summary = last_body
-                    convo.last_message_at = updated_dt
-                    convo.save()
-                Conversation.objects.filter(id=convo.id).update(last_message_at=updated_dt, updated_at=updated_dt)
-                synced_convs += 1
-
+            synced_convs, synced_msgs = sync_client_instagram_data(client)
             return Response({
                 "success": True,
                 "synced_conversations": synced_convs,
