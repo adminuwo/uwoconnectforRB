@@ -306,26 +306,49 @@ class MetaWebhookService:
         try:
             for entry in data.get('entry') or []:
                 entry = entry or {}
-                recipient_id = entry.get('id')
+                entry_id = entry.get('id')
+                messaging = entry.get('messaging', []) or []
                 
+                # Collect all possible recipient candidate IDs (from entry.id or messaging recipient.id)
+                recipient_candidates = [str(entry_id)] if entry_id else []
+                for event in messaging:
+                    rec_id = event.get('recipient', {}).get('id')
+                    if rec_id and str(rec_id) not in recipient_candidates:
+                        recipient_candidates.append(str(rec_id))
+
                 client = None
                 platform = None
+                recipient_id = entry_id or (recipient_candidates[0] if recipient_candidates else None)
+                all_clients = ClientRepository.get_all_clients()
                 
                 if data.get('object') == 'page':
-                    all_clients = ClientRepository.get_all_clients()
+                    platform = 'FACEBOOK'
                     for c in all_clients:
                         fc = c.facebook_config or {}
-                        if str(fc.get('page_id', '')) == str(recipient_id):
+                        ic = c.instagram_config or {}
+                        fb_candidates = [
+                            str(fc.get('page_id', '')),
+                            str(fc.get('account_id', '')),
+                            str(ic.get('page_id', ''))
+                        ]
+                        for extra_id in (fc.get('facebook_page_ids') or []):
+                            fb_candidates.append(str(extra_id))
+                        valid_ids = [i for i in fb_candidates if i and i != 'None']
+                        if any(rc in valid_ids for rc in recipient_candidates):
                             client = c
                             break
-                    platform = 'FACEBOOK'
+                    if not client:
+                        fb_clients = [c for c in all_clients if c.facebook_enabled or (c.facebook_config and c.facebook_config.get('access_token'))]
+                        if len(fb_clients) == 1:
+                            client = fb_clients[0]
                 elif data.get('object') == 'instagram':
-                    all_clients = ClientRepository.get_all_clients()
+                    platform = 'INSTAGRAM'
                     for c in all_clients:
                         ic = c.instagram_config or {}
                         fc = c.facebook_config or {}
                         ig_candidates = [
                             str(ic.get('instagram_business_id', '')),
+                            str(ic.get('instagram_user_id', '')),
                             str(ic.get('account_id', '')),
                             str(ic.get('page_id', '')),
                             str(ic.get('username', '')),
@@ -334,13 +357,27 @@ class MetaWebhookService:
                         for extra_id in (ic.get('instagram_business_ids') or []):
                             ig_candidates.append(str(extra_id))
                         valid_ids = [i for i in ig_candidates if i and i != 'None']
-                        if str(recipient_id) in valid_ids:
+                        if any(rc in valid_ids for rc in recipient_candidates):
                             client = c
                             break
-                    platform = 'INSTAGRAM'
+                    if not client:
+                        ig_clients = [c for c in all_clients if c.instagram_enabled or (c.instagram_config and c.instagram_config.get('access_token'))]
+                        if len(ig_clients) == 1:
+                            client = ig_clients[0]
+                            # Auto-learn the incoming business ID so subsequent lookups match immediately
+                            try:
+                                cfg = client.instagram_config or {}
+                                extra_ids = list(set((cfg.get('instagram_business_ids') or []) + recipient_candidates))
+                                cfg['instagram_business_ids'] = extra_ids
+                                if recipient_candidates and not cfg.get('instagram_business_id'):
+                                    cfg['instagram_business_id'] = recipient_candidates[0]
+                                client.instagram_config = cfg
+                                client.save(update_fields=['instagram_config'])
+                            except Exception as _cfg_err:
+                                logger.warning("Could not auto-update client IG IDs: %s", _cfg_err)
                 
                 if not client:
-                    logger.warning(f"No client found for {platform} recipient ID: {recipient_id}")
+                    logger.warning(f"No client found for {platform} recipient IDs: {recipient_candidates}")
                     continue
 
                 # NOTE: Always store incoming messages regardless of automation_enabled.
