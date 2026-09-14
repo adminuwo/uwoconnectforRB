@@ -16,19 +16,22 @@ class AuthService:
     @staticmethod
     def register_user(serializer):
         user = serializer.save()
-        if user.status == 'APPROVED':
-            refresh = RefreshToken.for_user(user)
-            return {
-                "status": "APPROVED",
-                "user": AuthService._serialize_user(user),
-                "token": str(refresh.access_token)
-            }
-        else:
-            return {
-                "status": "PENDING",
-                "message": "User registered successfully. Waiting for admin approval.",
-                "userId": str(user.id)
-            }
+        try:
+            from .welcome_email_service import WelcomeEmailService
+            WelcomeEmailService.send_welcome_email(user)
+        except Exception as e:
+            print(f"[WelcomeEmail Error] {e}")
+
+        if user.status != 'APPROVED':
+            user.status = 'APPROVED'
+            user.save(update_fields=['status'])
+
+        refresh = RefreshToken.for_user(user)
+        return {
+            "status": "APPROVED",
+            "user": AuthService._serialize_user(user),
+            "token": str(refresh.access_token)
+        }
 
     @staticmethod
     def login_user(email, password, ip_address=None):
@@ -45,8 +48,10 @@ class AuthService:
         if not user:
             return {"error": "Invalid email or password.", "status_code": 401}
 
-        if user.role == 'CLIENT' and user.status != 'APPROVED':
-            return {"error": f"Account status: {user.status}. Please wait for admin approval.", "status_code": 403}
+        if user.status in ['SUSPENDED', 'REJECTED']:
+            return {"error": "Your account has been deactivated. Please contact support.", "status_code": 403}
+        if not user.is_active:
+            return {"error": "This account is inactive.", "status_code": 403}
 
         user.is_online = True
         user.last_active_at = timezone.now()
@@ -54,9 +59,10 @@ class AuthService:
 
         # Create AuditLog for LOGIN
         try:
+            client = AuthService._safe_get_client(user)
             AuditLog.objects.create(
                 admin_name=user.username,
-                client_name=user.client.business_name if user.client else "Platform",
+                client_name=client.business_name if client else "Platform",
                 module="Authentication",
                 action="LOGIN",
                 before_value=f"Role: {user.role}",
@@ -223,6 +229,12 @@ class AuthService:
                 except Exception as e:
                     print(f"[AuditLog Error] {str(e)}")
 
+                try:
+                    from .welcome_email_service import WelcomeEmailService
+                    WelcomeEmailService.send_welcome_email(user)
+                except Exception as e:
+                    print(f"[WelcomeEmail Error] {e}")
+
                 refresh = RefreshToken.for_user(user)
                 return {
                     "is_created": True,
@@ -260,6 +272,12 @@ class AuthService:
                 except Exception as e:
                     print(f"[AuditLog Error] {str(e)}")
 
+                try:
+                    from .welcome_email_service import WelcomeEmailService
+                    WelcomeEmailService.send_welcome_email(user)
+                except Exception as e:
+                    print(f"[WelcomeEmail Error] {e}")
+
                 refresh = RefreshToken.for_user(user)
                 return {
                     "is_created": True,
@@ -269,7 +287,7 @@ class AuthService:
                 }
 
     @staticmethod
-    def process_firebase_login(id_token, name, invite_token, business_name, ip_address=None):
+    def process_firebase_login(id_token, name, invite_token, business_name, ip_address=None, meta_portfolio_name=None):
         if not id_token:
             return {"error": "Firebase ID token is required", "status_code": 400}
 
@@ -396,6 +414,12 @@ class AuthService:
                 except Exception as e:
                     print(f"[AuditLog Error] {str(e)}")
 
+                try:
+                    from .welcome_email_service import WelcomeEmailService
+                    WelcomeEmailService.send_welcome_email(user)
+                except Exception as e:
+                    print(f"[WelcomeEmail Error] {e}")
+
                 refresh = RefreshToken.for_user(user)
                 return {
                     "is_created": True,
@@ -405,25 +429,43 @@ class AuthService:
                 }
             else:
                 business_name = business_name or f"{name}'s Business"
-                client = Client.objects.create(business_name=business_name)
+                client_settings = {}
+                if meta_portfolio_name:
+                    client_settings["meta_portfolio_name"] = meta_portfolio_name
+                    client_settings["business_portfolio_name"] = meta_portfolio_name
+
+                client = Client.objects.create(
+                    business_name=business_name,
+                    meta_portfolio_name=meta_portfolio_name,
+                    settings=client_settings
+                )
                 user = User.objects.create_user(
                     username=email,
                     email=email,
                     password=generate_random_password(),
                     first_name=name,
                     role='CLIENT',
-                    status='PENDING',
+                    status='APPROVED',
+                    meta_portfolio_eligible=True,
+                    meta_portfolio_name=meta_portfolio_name,
                     client=client,
                     terms_accepted=True,
                     privacy_accepted=True,
                     terms_version='1.0',
                     terms_accepted_at=timezone.now()
                 )
+                try:
+                    from .welcome_email_service import WelcomeEmailService
+                    WelcomeEmailService.send_welcome_email(user)
+                except Exception as e:
+                    print(f"[WelcomeEmail Error] {e}")
+
+                refresh = RefreshToken.for_user(user)
                 return {
                     "is_created": True,
-                    "status": "PENDING",
-                    "message": "User registered successfully. Waiting for admin approval.",
-                    "userId": str(user.id)
+                    "status": "APPROVED",
+                    "user": AuthService._serialize_user(user),
+                    "token": str(refresh.access_token)
                 }
 
     @staticmethod
@@ -535,9 +577,20 @@ class AuthService:
             }
 
     @staticmethod
+    def _safe_get_client(user):
+        if not user:
+            return None
+        try:
+            return user.client
+        except Exception:
+            return None
+
+    @staticmethod
     def _serialize_user(user, override_name=None):
-        client_plan = user.client.plan if (user and hasattr(user, 'client') and user.client and user.client.plan) else 'ADVANCED'
-        is_agency = bool(user.client and (user.client.is_agency or client_plan == 'AGENCY' or user.client.white_label_domain)) if (user and hasattr(user, 'client') and user.client) else False
+        client = AuthService._safe_get_client(user)
+        client_plan = client.plan if (client and hasattr(client, 'plan') and client.plan) else 'ADVANCED'
+        is_agency = bool(client and (client.is_agency or client_plan == 'AGENCY' or client.white_label_domain))
+        meta_portfolio_name = getattr(user, 'meta_portfolio_name', None) or (getattr(client, 'meta_portfolio_name', '') if client else "")
         return {
             "id": str(user.id),
             "_id": str(user.id),
@@ -547,15 +600,18 @@ class AuthService:
             "plan": client_plan,
             "client_plan": client_plan,
             "is_agency": is_agency,
+            "meta_portfolio_eligible": getattr(user, 'meta_portfolio_eligible', True),
+            "meta_portfolio_name": meta_portfolio_name or '',
             "client": {
-                "id": str(user.client.id),
-                "business_name": user.client.business_name,
+                "id": str(client.id),
+                "business_name": client.business_name,
                 "plan": client_plan,
                 "is_agency": is_agency,
-                "white_label_domain": user.client.white_label_domain or '',
-                "white_label_name": user.client.white_label_name or ''
-            } if (user and hasattr(user, 'client') and user.client) else None,
-            "clientId": str(user.client.id) if (user and hasattr(user, 'client') and user.client) else None
+                "meta_portfolio_name": getattr(client, 'meta_portfolio_name', '') or meta_portfolio_name or '',
+                "white_label_domain": client.white_label_domain or '',
+                "white_label_name": client.white_label_name or ''
+            } if client else None,
+            "clientId": str(client.id) if client else None
         }
 
     @staticmethod
@@ -618,9 +674,30 @@ class AuthService:
                 recipient_list=[email],
                 html_message=html_body
             )
-            # Secure message: OTP is NEVER returned in the HTTP response payload
-            return {"message": "A 6-digit OTP code has been sent to your registered email.", "status_code": 200}
+            resp = {
+                "message": "A 6-digit OTP code has been sent to your registered email.",
+                "status_code": 200,
+                "email": email
+            }
+            if getattr(settings, 'DEBUG', False):
+                resp["otp_debug"] = otp
+                print(f"\n" + "=" * 55)
+                print(f"🔑 [DEV MODE] PASSWORD RESET OTP FOR {email}: {otp}")
+                print("=" * 55 + "\n")
+            return resp
         except Exception as e:
+            # In debug mode without active SMTP, still provide OTP for development
+            if getattr(settings, 'DEBUG', False):
+                print(f"\n" + "=" * 55)
+                print(f"🔑 [DEV MODE - SMTP FALLBACK] OTP FOR {email}: {otp}")
+                print(f"   (Mail send error: {e})")
+                print("=" * 55 + "\n")
+                return {
+                    "message": "A 6-digit OTP code has been generated (Dev Mode).",
+                    "status_code": 200,
+                    "otp_debug": otp,
+                    "email": email
+                }
             return {"message": f"Failed to send email: {str(e)}", "status_code": 500}
 
     @staticmethod

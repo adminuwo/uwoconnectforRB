@@ -7,7 +7,7 @@ class IsApprovedUser(BasePermission):
         if request.user.role == 'CLIENT':
             if request.user.client and request.user.client.status != 'ACTIVE':
                 return False
-            return request.user.status == 'APPROVED'
+            return request.user.status not in ['SUSPENDED', 'REJECTED']
         return True
 
 

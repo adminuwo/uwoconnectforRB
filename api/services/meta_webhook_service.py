@@ -170,7 +170,7 @@ class MetaWebhookService:
                                 logger.warning("Error creating contact: %s", _ct_err)
 
                             # Always store the message — dashboard must show all messages
-                            MessageRepository.create_message(
+                            incoming_msg_obj = MessageRepository.create_message(
                                 client=client,
                                 channel='WHATSAPP',
                                 from_address=from_number,
@@ -227,7 +227,20 @@ class MetaWebhookService:
                             # Only run AI bot automation if enabled AND bot not paused for this contact
                             if body and client.automation_enabled:
                                 if not contact.bot_paused:
-                                    MetaWebhookService.handle_automations_whatsapp(client, from_number, body, phone_number_id)
+                                    # Bot Loop Prevention & Repeated Message Protection check
+                                    from .bot_loop_protection_service import BotLoopProtectionService
+                                    if BotLoopProtectionService.check_and_protect(
+                                        client=client,
+                                        contact_platform_id=from_number,
+                                        incoming_text=body,
+                                        channel='WHATSAPP',
+                                        contact=contact,
+                                        conversation=convo,
+                                        current_message=incoming_msg_obj
+                                    ):
+                                        logger.warning(f"Bot loop protection triggered for WhatsApp contact {from_number}. Automated responses halted.")
+                                    else:
+                                        MetaWebhookService.handle_automations_whatsapp(client, from_number, body, phone_number_id)
                                 else:
                                     print(f"Bot paused for contact {from_number}. No automated response.")
 
@@ -485,7 +498,7 @@ class MetaWebhookService:
                     except Exception as _c_err:
                         logger.warning("Error saving %s conversation: %s", platform, _c_err)
 
-                    MessageRepository.create_message(
+                    incoming_msg_obj = MessageRepository.create_message(
                         client=client,
                         channel=platform,
                         from_address=sender_id,
@@ -507,7 +520,20 @@ class MetaWebhookService:
                     # Only run AI bot automation if enabled AND bot not paused for this contact
                     if body and client.automation_enabled:
                         if not contact.bot_paused:
-                            MetaWebhookService.handle_automations_fb_ig(client, platform, sender_id, body)
+                            # Bot Loop Prevention & Repeated Message Protection check
+                            from .bot_loop_protection_service import BotLoopProtectionService
+                            if BotLoopProtectionService.check_and_protect(
+                                client=client,
+                                contact_platform_id=sender_id,
+                                incoming_text=body,
+                                channel=platform,
+                                contact=contact,
+                                conversation=convo if 'convo' in locals() else None,
+                                current_message=incoming_msg_obj
+                            ):
+                                logger.warning(f"Bot loop protection triggered for {platform} contact {sender_id}. Automated responses halted.")
+                            else:
+                                MetaWebhookService.handle_automations_fb_ig(client, platform, sender_id, body)
                         else:
                             print(f"Bot paused for {platform} contact {sender_id}. No automated response.")
 
@@ -518,6 +544,15 @@ class MetaWebhookService:
 
     @staticmethod
     def handle_automations_whatsapp(client, to_number, incoming_text, phone_number_id):
+        # Quick safety check: if contact bot is paused, do not proceed
+        if client:
+            from ..models import Contact
+            from django.db.models import Q
+            _contact = Contact.objects.filter(Q(client=client) & (Q(platform_id=to_number) | Q(phone_number=to_number))).first()
+            if _contact and _contact.bot_paused:
+                logger.info(f"Bot paused for WhatsApp contact {to_number}. Bypassing automations.")
+                return
+
         # 1st Time Incoming Message check for Greeting Message
         msg_count = MessageRepository.filter_messages(client=client, channel='WHATSAPP', from_address=to_number, message_type='INCOMING').count()
         if (msg_count <= 1 and client.greeting_enabled) or (client.greeting_enabled and client.greeting_message and incoming_text.lower().strip() in ['hi', 'hello', 'hey', 'start']):
@@ -557,7 +592,7 @@ class MetaWebhookService:
             if auto.keywords:
                 for keyword in auto.keywords:
                     kw = keyword.lower().strip()
-                    if kw and (kw == incoming_text_lower or kw in incoming_text_lower):
+                    if kw in ['*', 'all', 'any', 'anything'] or (kw and (kw == incoming_text_lower or kw in incoming_text_lower)):
                         MetaWebhookService.send_whatsapp_message(client, to_number, auto.response, phone_number_id, auto.buttons)
                         match_found = True
                         break
@@ -626,6 +661,14 @@ class MetaWebhookService:
 
     @staticmethod
     def handle_automations_fb_ig(client, platform, sender_id, incoming_text):
+        # Quick safety check: if contact bot is paused, do not proceed
+        if client:
+            from ..models import Contact
+            _contact = Contact.objects.filter(client=client, platform_id=sender_id).first()
+            if _contact and _contact.bot_paused:
+                logger.info(f"Bot paused for {platform} contact {sender_id}. Bypassing automations.")
+                return
+
         msg_count = MessageRepository.filter_messages(client=client, channel=platform, from_address=sender_id, message_type='INCOMING').count()
         if (msg_count <= 1 and client.greeting_enabled) or (client.greeting_enabled and client.greeting_message and incoming_text.lower().strip() in ['hi', 'hello', 'hey', 'start']):
             greeting_text = client.greeting_message or f"Hello! Welcome to {client.business_name}. Thank you for contacting us! How can we assist you today?"
@@ -666,7 +709,7 @@ class MetaWebhookService:
             if auto.keywords:
                 for keyword in auto.keywords:
                     kw = keyword.lower().strip()
-                    if kw and (kw == incoming_text_lower or kw in incoming_text_lower):
+                    if kw in ['*', 'all', 'any', 'anything'] or (kw and (kw == incoming_text_lower or kw in incoming_text_lower)):
                         MetaWebhookService.send_fb_ig_message(client, platform, sender_id, auto.response, auto.buttons)
                         match_found = True
                         break

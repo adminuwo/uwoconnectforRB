@@ -397,7 +397,54 @@ class EntitlementService:
 
         plan_str = (client.plan or '').strip().lower()
         
-        # 1. Match client.plan string directly against DEFAULT_PLANS_CONFIG
+        # 1. Check assigned_plan ForeignKey or active database Plan first
+        plan_obj = None
+        if client.assigned_plan and getattr(client.assigned_plan, 'status', 'ACTIVE') == 'ACTIVE':
+            plan_obj = client.assigned_plan
+        elif plan_str:
+            try:
+                from api.models import Plan
+                plan_obj = Plan.objects.filter(name__iexact=plan_str, status='ACTIVE').first() or Plan.objects.filter(slug__iexact=plan_str, status='ACTIVE').first()
+            except Exception:
+                plan_obj = None
+
+        if plan_obj:
+            plan = plan_obj
+            meta = plan.metadata or {}
+            slug = plan.slug.lower() if plan.slug else plan.name.lower()
+            
+            monthly_cfg = meta.get('monthlyConfig') or meta.get('monthly_config') or {}
+            yearly_cfg = meta.get('yearlyConfig') or meta.get('yearly_config') or {}
+
+            monthly_price = monthly_cfg.get('price') or meta.get('monthly_price', float(plan.price))
+            yearly_price = yearly_cfg.get('price') or meta.get('yearly_price', round(float(monthly_price) * 12 * 0.8, 2))
+
+            feat_keys = meta.get('allowed_features') or meta.get('feature_keys') or []
+            if not feat_keys:
+                feat_keys = ['auto_replies', 'crm', 'feature_workflow', 'feature_proposal', 'feature_invoice']
+                if 'advanced' in slug or 'enterprise' in slug:
+                    feat_keys += ['feature_voice_call', 'feature_ai_kb', 'feature_broadcast']
+
+            return {
+                'id': str(plan.id),
+                'name': plan.name,
+                'slug': slug,
+                'monthly_price': monthly_price,
+                'yearly_price': yearly_price,
+                'monthlyConfig': monthly_cfg,
+                'yearlyConfig': yearly_cfg,
+                'yearly_discount_percent': meta.get('yearly_discount_percent', 20.0),
+                'max_channels': meta.get('max_channels', 3 if ('advanced' in slug or 'enterprise' in slug) else 2 if 'growth' in slug else 1),
+                'allowed_channels': meta.get('allowed_channels', ['whatsapp', 'facebook', 'instagram']),
+                'allowed_connectors': meta.get('allowed_connectors', ['whatsapp', 'facebook', 'instagram', 'gmail', 'outlook']),
+                'allowed_features': feat_keys,
+                'limits': meta.get('limits', {}),
+                'message_costs': meta.get('message_costs', []),
+                'additional_benefits': meta.get('additional_benefits', []),
+                'channel_details': meta.get('channel_details', {})
+            }
+
+        # 2. Fall back to DEFAULT_PLANS_CONFIG if no database plan exists
         if plan_str in DEFAULT_PLANS_CONFIG:
             return DEFAULT_PLANS_CONFIG[plan_str]
         
@@ -410,37 +457,6 @@ class EntitlementService:
             return DEFAULT_PLANS_CONFIG['starter']
         elif 'free' in plan_str or 'none' in plan_str or plan_str == '' or plan_str == 'no_plan':
             return DEFAULT_PLANS_CONFIG['free']
-
-        # 2. Check assigned_plan ForeignKey if active
-        if client.assigned_plan and client.assigned_plan.status == 'ACTIVE':
-            plan = client.assigned_plan
-            meta = plan.metadata or {}
-            slug = plan.slug.lower() if plan.slug else plan.name.lower()
-            
-            monthly_cfg = meta.get('monthlyConfig') or meta.get('monthly_config') or {}
-            yearly_cfg = meta.get('yearlyConfig') or meta.get('yearly_config') or {}
-
-            monthly_price = monthly_cfg.get('price') or meta.get('monthly_price', float(plan.price))
-            yearly_price = yearly_cfg.get('price') or meta.get('yearly_price', round(float(monthly_price) * 12 * 0.8, 2))
-
-            return {
-                'id': str(plan.id),
-                'name': plan.name,
-                'slug': slug,
-                'monthly_price': monthly_price,
-                'yearly_price': yearly_price,
-                'monthlyConfig': monthly_cfg,
-                'yearlyConfig': yearly_cfg,
-                'yearly_discount_percent': meta.get('yearly_discount_percent', 20.0),
-                'max_channels': meta.get('max_channels', 3 if 'advanced' in slug else 2 if 'growth' in slug else 1),
-                'allowed_channels': meta.get('allowed_channels', ['whatsapp', 'facebook', 'instagram']),
-                'allowed_connectors': meta.get('allowed_connectors', ['whatsapp', 'facebook', 'instagram', 'gmail', 'outlook']),
-                'allowed_features': meta.get('allowed_features', ['auto_replies', 'crm', 'feature_workflow', 'feature_proposal', 'feature_invoice']),
-                'limits': meta.get('limits', {}),
-                'message_costs': meta.get('message_costs', []),
-                'additional_benefits': meta.get('additional_benefits', []),
-                'channel_details': meta.get('channel_details', {})
-            }
 
         return DEFAULT_PLANS_CONFIG['free']
 

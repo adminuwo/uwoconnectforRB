@@ -137,13 +137,16 @@ class AdminMessagesView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        messages = MessageRepository.get_all_messages().select_related('client').order_by('-created_at')[:100]
+        messages = list(MessageRepository.get_all_messages().order_by('-created_at')[:100])
+        client_ids = {msg.client_id for msg in messages if getattr(msg, 'client_id', None)}
+        clients_map = {str(c.id): c.business_name for c in Client.objects.filter(id__in=client_ids)}
         data = []
         for msg in messages:
+            cid = str(msg.client_id) if getattr(msg, 'client_id', None) else None
             data.append({
                 "id": str(msg.id),
                 "_id": str(msg.id),
-                "clientName": msg.client.business_name if msg.client else "Unknown",
+                "clientName": clients_map.get(cid, "Unknown") if cid else "Unknown",
                 "from_address": msg.from_address,
                 "to_address": msg.to_address,
                 "body": msg.body,

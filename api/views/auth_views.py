@@ -183,8 +183,12 @@ class FirebaseLoginView(views.APIView):
             else:
                 ip_address = req.META.get('REMOTE_ADDR')
 
+            meta_portfolio_name = str(req.data.get('meta_portfolio_name') or req.data.get('portfolio_name') or req.data.get('portfolioName') or '').strip()
+
             from ..services.auth_service import AuthService
-            result = AuthService.process_firebase_login(id_token, name, invite_token, business_name, ip_address=ip_address)
+            result = AuthService.process_firebase_login(
+                id_token, name, invite_token, business_name, ip_address=ip_address, meta_portfolio_name=meta_portfolio_name
+            )
 
             if "error" in result:
                 return Response({"message": result["error"]}, status=result["status_code"])
@@ -273,12 +277,24 @@ class ProfileView(APIView):
             client_data = {
                 "business_name": "Platform Super Admin",
                 "email": request.user.email,
+                "plan": "Super Admin",
                 "plan_name": "Super Admin",
                 "status": "ACTIVE"
             }
 
+        client_plan = client_data.get('plan') or ('Super Admin' if request.user.role == 'ADMIN' else 'ADVANCED')
+        is_agency = bool(client_data.get('is_agency') or client_plan == 'AGENCY' or client_data.get('white_label_domain'))
+
+        user_data['plan'] = client_plan
+        user_data['client_plan'] = client_plan
+        user_data['is_agency'] = is_agency
+        user_data['client'] = client_data
+
         return Response({
             **user_data,
+            "plan": client_plan,
+            "client_plan": client_plan,
+            "is_agency": is_agency,
             "client": client_data,
             "user": user_data,
             "global_connectors": global_map,
@@ -289,16 +305,38 @@ class ProfileView(APIView):
         return self.patch(request)
 
     def patch(self, request):
-        # Update User fields if provided
         user = request.user
-        if 'name' in request.data:
-            name_parts = str(request.data['name']).strip().split(' ', 1)
+        raw_data = dict(request.data) if isinstance(request.data, dict) else {}
+        user_dict = raw_data.get('user', {}) if isinstance(raw_data.get('user'), dict) else {}
+        client_dict = raw_data.get('client', {}) if isinstance(raw_data.get('client'), dict) else {}
+
+        # Merge for user
+        name = raw_data.get('name') or user_dict.get('name')
+        first_name = raw_data.get('first_name') or user_dict.get('first_name')
+        last_name = raw_data.get('last_name') or user_dict.get('last_name')
+        phone_number = raw_data.get('phone_number') or user_dict.get('phone_number') or client_dict.get('phone_number')
+        meta_portfolio_name = raw_data.get('meta_portfolio_name') or user_dict.get('meta_portfolio_name') or client_dict.get('meta_portfolio_name')
+
+        if name:
+            name_parts = str(name).strip().split(' ', 1)
             user.first_name = name_parts[0]
             user.last_name = name_parts[1] if len(name_parts) > 1 else ''
             user.save()
 
-        if 'phone_number' in request.data:
-            user.phone_number = request.data['phone_number']
+        if first_name:
+            user.first_name = str(first_name).strip()
+            user.save()
+
+        if last_name:
+            user.last_name = str(last_name).strip()
+            user.save()
+
+        if phone_number:
+            user.phone_number = str(phone_number).strip()
+            user.save()
+
+        if meta_portfolio_name:
+            user.meta_portfolio_name = str(meta_portfolio_name).strip()
             user.save()
 
         if not getattr(request.user, 'client', None):
@@ -310,25 +348,33 @@ class ProfileView(APIView):
             })
 
         # Validate channel permissions if channel configurations are being updated
-        if any(k in request.data for k in ['whatsapp_access_token', 'whatsapp_phone_number_id', 'whatsapp_waba_id', 'whatsapp_config']):
+        if any(k in raw_data for k in ['whatsapp_access_token', 'whatsapp_phone_number_id', 'whatsapp_waba_id', 'whatsapp_config']):
             is_allowed, reason, status_code = validate_channel_access(request.user, 'whatsapp')
             if not is_allowed:
                 return Response({"error": reason or "You do not have access to this channel."}, status=status_code)
 
-        if 'facebook_config' in request.data:
+        if 'facebook_config' in raw_data:
             is_allowed, reason, status_code = validate_channel_access(request.user, 'facebook')
             if not is_allowed:
                 return Response({"error": reason or "You do not have access to this channel."}, status=status_code)
 
-        if 'instagram_config' in request.data:
+        if 'instagram_config' in raw_data:
             is_allowed, reason, status_code = validate_channel_access(request.user, 'instagram')
             if not is_allowed:
                 return Response({"error": reason or "You do not have access to this channel."}, status=status_code)
 
+        # Merge root data and client nested data
+        merged_client_data = {**raw_data, **client_dict}
+        merged_client_data.pop('user', None)
+        merged_client_data.pop('client', None)
+
         # Update Client fields
-        serializer = ClientSerializer(request.user.client, data=request.data, partial=True)
+        serializer = ClientSerializer(request.user.client, data=merged_client_data, partial=True)
         if serializer.is_valid():
             client_instance = serializer.save()
+            if 'meta_portfolio_name' in request.data and client_instance:
+                client_instance.meta_portfolio_name = str(request.data['meta_portfolio_name']).strip()
+                client_instance.save()
             
             # --- Programmatic Webhook Auto-Subscription to Meta App ---
             import requests
@@ -380,11 +426,17 @@ class ProfileView(APIView):
             user_serializer = UserSerializer(request.user)
             user_data = user_serializer.data
             client_data = dict(serializer.data)
+            active_plan = getattr(request.user.client, 'plan', 'ADVANCED')
+            user_data['plan'] = active_plan
+            user_data['client_plan'] = active_plan
+            user_data['client'] = client_data
             return Response({
                 **user_data,
                 "message": "Profile updated successfully",
                 "client": client_data,
                 "user": user_data,
+                "plan": active_plan,
+                "client_plan": active_plan,
                 **client_data,
             })
         print("Profile validation errors:", serializer.errors)
@@ -396,18 +448,20 @@ from ..serializers import RegisterSerializer, UserSerializer, ClientSerializer, 
 
 class ForgotPasswordSendOTPView(views.APIView):
     permission_classes = []
+    authentication_classes = []
 
     def post(self, req):
         email = req.data.get('email', '').lower().strip()
         from ..services.auth_service import AuthService
         result = AuthService.forgot_password_send_otp(email)
-        return Response({"message": result.get("message")}, status=result.get("status_code", 200))
+        return Response(result, status=result.get("status_code", 200))
 
 @method_decorator(csrf_exempt, name='dispatch')
 
 
 class ForgotPasswordVerifyOTPView(views.APIView):
     permission_classes = []
+    authentication_classes = []
 
     def post(self, req):
         email = req.data.get('email', '').lower().strip()
@@ -415,13 +469,14 @@ class ForgotPasswordVerifyOTPView(views.APIView):
         
         from ..services.auth_service import AuthService
         result = AuthService.forgot_password_verify_otp(email, otp)
-        return Response({"message": result.get("message")}, status=result.get("status_code", 200))
+        return Response(result, status=result.get("status_code", 200))
 
 @method_decorator(csrf_exempt, name='dispatch')
 
 
 class ForgotPasswordResetView(views.APIView):
     permission_classes = []
+    authentication_classes = []
 
     def post(self, req):
         email = req.data.get('email', '').lower().strip()
@@ -429,7 +484,7 @@ class ForgotPasswordResetView(views.APIView):
         
         from ..services.auth_service import AuthService
         result = AuthService.forgot_password_reset(email, password)
-        return Response({"message": result.get("message")}, status=result.get("status_code", 200))
+        return Response(result, status=result.get("status_code", 200))
 
 class WhatsAppEmbeddedSignupView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1054,29 +1109,48 @@ class QrAuthStatusView(views.APIView):
         return Response(resp_data, status=200)
 
 
+def find_qr_session(code):
+    if not code:
+        return None
+    code = str(code).strip()
+    if 'session_id=' in code:
+        import re
+        m = re.search(r'session_id=([a-zA-Z0-9_-]+)', code)
+        if m:
+            code = m.group(1)
+    
+    # 1. Match exact session_id
+    qs = QrAuthSession.objects.filter(session_id=code).first()
+    if qs:
+        return qs
+    # 2. Match short_code (case-insensitive)
+    qs = QrAuthSession.objects.filter(short_code__iexact=code).first()
+    if qs:
+        return qs
+    return None
+
+
 class QrAuthScanView(views.APIView):
     """
-    Authenticated mobile app user scans the QR code.
+    Authenticated mobile app user scans the QR code or submits short code.
     Transitions session from WAITING to SCANNED, saves mobile user reference,
     and returns desktop browser/device metadata to the mobile app for user approval prompt.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        session_id = request.data.get('session_id', '').strip()
-        if not session_id:
-            return Response({"error": "session_id is required"}, status=400)
-
-        try:
-            qr_session = QrAuthSession.objects.get(session_id=session_id)
-        except QrAuthSession.DoesNotExist:
-            return Response({"error": "Invalid or non-existent QR code"}, status=404)
+        raw_code = request.data.get('session_id', '') or request.data.get('code', '') or request.data.get('short_code', '')
+        qr_session = find_qr_session(raw_code)
+        if not qr_session:
+            return Response({"error": "Invalid or non-existent QR session code. Please check the code and try again."}, status=404)
 
         if qr_session.status in ['CONSUMED', 'APPROVED', 'AUTHENTICATED']:
             return Response({"error": "This QR code has already been approved"}, status=400)
 
         if not qr_session.is_valid():
             return Response({"error": "This QR code has expired. Please refresh on desktop."}, status=400)
+
+        session_id = qr_session.session_id
 
         # Associate scanning mobile user and advance status
         qr_session.user = request.user
@@ -1113,13 +1187,9 @@ class QrAuthApproveView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        session_id = request.data.get('session_id', '').strip()
-        if not session_id:
-            return Response({"error": "session_id is required"}, status=400)
-
-        try:
-            qr_session = QrAuthSession.objects.get(session_id=session_id)
-        except QrAuthSession.DoesNotExist:
+        raw_code = request.data.get('session_id', '') or request.data.get('code', '') or request.data.get('short_code', '')
+        qr_session = find_qr_session(raw_code)
+        if not qr_session:
             return Response({"error": "Invalid or non-existent QR code"}, status=404)
 
         if qr_session.status in ['CONSUMED', 'APPROVED', 'AUTHENTICATED']:
@@ -1128,6 +1198,7 @@ class QrAuthApproveView(views.APIView):
         if not qr_session.is_valid():
             return Response({"error": "This QR code has expired. Please refresh on desktop."}, status=400)
 
+        session_id = qr_session.session_id
         from ..services.auth_service import AuthService
         user = request.user
         client = getattr(user, 'client', None)
@@ -1202,15 +1273,12 @@ class QrAuthRejectView(views.APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        session_id = request.data.get('session_id', '').strip()
-        if not session_id:
-            return Response({"error": "session_id is required"}, status=400)
-
-        try:
-            qr_session = QrAuthSession.objects.get(session_id=session_id)
-        except QrAuthSession.DoesNotExist:
+        raw_code = request.data.get('session_id', '') or request.data.get('code', '') or request.data.get('short_code', '')
+        qr_session = find_qr_session(raw_code)
+        if not qr_session:
             return Response({"error": "Invalid or non-existent QR code"}, status=404)
 
+        session_id = qr_session.session_id
         qr_session.status = 'CANCELLED'
         qr_session.rejected_at = timezone.now()
         qr_session.save(update_fields=['status', 'rejected_at'])

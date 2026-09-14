@@ -54,16 +54,17 @@ class WorkflowEngine:
                 continue
 
             # Catch-all trigger: any incoming message
-            if wf.trigger_type == 'ALL' or (isinstance(wf.trigger_value, list) and '*' in wf.trigger_value) or (isinstance(wf.trigger_value, str) and wf.trigger_value.strip() == '*'):
+            catch_all_tokens = {'*', 'all', 'any', 'anything'}
+            if wf.trigger_type in ['ALL', 'ANY', 'ANYTHING']:
                 return WorkflowEngine._start_workflow(client, phone_number, wf)
 
             if isinstance(wf.trigger_value, list):
                 trigger_keywords = [t.lower().strip() for t in wf.trigger_value if isinstance(t, str)]
-                if '*' in trigger_keywords or any(kw and (kw == incoming_text_lower or kw in incoming_text_lower) for kw in trigger_keywords):
+                if any(t in catch_all_tokens for t in trigger_keywords) or any(kw and (kw == incoming_text_lower or kw in incoming_text_lower) for kw in trigger_keywords):
                     return WorkflowEngine._start_workflow(client, phone_number, wf)
             elif isinstance(wf.trigger_value, str):
                 kw = wf.trigger_value.lower().strip()
-                if kw == '*' or (kw and (kw == incoming_text_lower or kw in incoming_text_lower)):
+                if kw in catch_all_tokens or (kw and (kw == incoming_text_lower or kw in incoming_text_lower)):
                     return WorkflowEngine._start_workflow(client, phone_number, wf)
 
         return None

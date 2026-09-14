@@ -405,7 +405,11 @@ class ContactViewSet(viewsets.ModelViewSet):
         elif self.request.user.role != 'ADMIN' and set(allowed_channels) < {'WHATSAPP', 'FACEBOOK', 'INSTAGRAM'}:
             pass
 
-        return qs.order_by('-updated_at')
+        from django.db.models import Prefetch
+        from ..models import ContactFollowUp
+        return qs.prefetch_related(
+            Prefetch('follow_ups', queryset=ContactFollowUp.objects.filter(status='PENDING').order_by('scheduled_at'), to_attr='pending_followups')
+        ).order_by('-updated_at')
 
     def perform_create(self, serializer):
         client = get_tenant_client(self.request)

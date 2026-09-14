@@ -15,6 +15,7 @@ class Client(models.Model):
         ('TRIAL', 'Trial'),
     ]
     business_name = models.CharField(max_length=255)
+    meta_portfolio_name = models.CharField(max_length=255, null=True, blank=True)
     phone_number = models.CharField(max_length=50, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     automation_enabled = models.BooleanField(default=True)
@@ -197,6 +198,10 @@ class User(AbstractUser):
     privacy_accepted = models.BooleanField(default=False)
     terms_version = models.CharField(max_length=20, default='1.0', blank=True)
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
+
+    # Meta Portfolio Eligibility Gate (True for new approved signups and existing users)
+    meta_portfolio_eligible = models.BooleanField(default=True)
+    meta_portfolio_name = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.enterprise_role or self.role})"

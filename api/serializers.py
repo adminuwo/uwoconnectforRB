@@ -44,7 +44,7 @@ class ClientSerializer(serializers.ModelSerializer):
         if email:
             email_clean = email.lower().strip()
             if not User.objects.filter(username=email_clean).exists() and not User.objects.filter(email=email_clean).exists():
-                User.objects.create_user(
+                user = User.objects.create_user(
                     username=email_clean,
                     email=email_clean,
                     password="UwoConnect@123",
@@ -53,6 +53,11 @@ class ClientSerializer(serializers.ModelSerializer):
                     status='PENDING',
                     client=client
                 )
+                try:
+                    from .services.welcome_email_service import WelcomeEmailService
+                    WelcomeEmailService.send_welcome_email(user, temp_password="UwoConnect@123")
+                except Exception as e:
+                    print(f"[WelcomeEmail Error] {e}")
         return client
 
     def get__id(self, obj):
@@ -133,18 +138,23 @@ class ClientSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
-    name = serializers.CharField(source='first_name', required=False)
+    name = serializers.SerializerMethodField()
     reporting_manager_name = serializers.ReadOnlyField(source='reporting_manager.username')
+
+    def get_name(self, obj):
+        full = f"{obj.first_name or ''} {obj.last_name or ''}".strip()
+        return full or obj.first_name or obj.username or obj.email or ''
 
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'email', 'name', 'first_name', 'role', 'enterprise_role', 'department',
+            'id', 'username', 'email', 'name', 'first_name', 'last_name', 'role', 'enterprise_role', 'department',
             'designation', 'phone_number', 'reporting_manager', 'reporting_manager_name', 'status', 'client',
             'permissions', 'assigned_platforms', 'assigned_social_channels', 'permission_matrix',
             'employee_id', 'joining_date', 'working_hours', 'salary_visibility', 'skills',
             'availability_status', 'is_online', 'last_active_at', 'timezone', 'language',
-            'current_page', 'last_login_ip', 'last_login_browser', 'last_login_os', 'login_history'
+            'current_page', 'last_login_ip', 'last_login_browser', 'last_login_os', 'login_history',
+            'meta_portfolio_eligible', 'meta_portfolio_name'
         )
         extra_kwargs = {'password': {'write_only': True}}
 
@@ -181,7 +191,10 @@ class WorkflowSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
-    name = serializers.CharField()
+    name = serializers.CharField(required=False, allow_blank=True)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+    business_name = serializers.CharField(required=False, allow_blank=True)
     businessName = serializers.CharField(required=False, allow_blank=True)
     invite_token = serializers.CharField(required=False, allow_blank=True)
     phone_number = serializers.CharField(required=False, allow_blank=True)
@@ -189,6 +202,12 @@ class RegisterSerializer(serializers.Serializer):
     department = serializers.CharField(required=False, allow_blank=True)
     brand_domain = serializers.CharField(required=False, allow_blank=True)
     termsAccepted = serializers.BooleanField(required=False, default=True)
+    meta_portfolio_eligible = serializers.BooleanField(required=False, default=None)
+    metaPortfolioEligible = serializers.BooleanField(required=False, default=None)
+    meta_portfolio_name = serializers.CharField(required=False, allow_blank=True)
+    metaPortfolioName = serializers.CharField(required=False, allow_blank=True)
+    portfolio_name = serializers.CharField(required=False, allow_blank=True)
+    portfolioName = serializers.CharField(required=False, allow_blank=True)
 
     def validate_email(self, value):
         email = value.lower().strip()
@@ -200,6 +219,41 @@ class RegisterSerializer(serializers.Serializer):
         if value is False:
             raise serializers.ValidationError("Please accept the Terms & Conditions and Privacy Policy to continue.")
         return value
+
+    def validate(self, attrs):
+        # Resolve name and businessName from alternate field names
+        if not attrs.get('name'):
+            fn = attrs.get('first_name', '').strip()
+            ln = attrs.get('last_name', '').strip()
+            attrs['name'] = f"{fn} {ln}".strip() or attrs.get('email', '')
+        if not attrs.get('businessName') and attrs.get('business_name'):
+            attrs['businessName'] = attrs.get('business_name')
+
+        # Resolve Meta Portfolio Name
+        portfolio_name = (
+            attrs.get('meta_portfolio_name') or 
+            attrs.get('metaPortfolioName') or 
+            attrs.get('portfolio_name') or 
+            attrs.get('portfolioName') or ''
+        ).strip()
+        attrs['meta_portfolio_name'] = portfolio_name
+
+        # Enforce Meta Portfolio Eligibility Gate for new registrations (anti-bypass)
+        is_eligible = attrs.get('meta_portfolio_eligible')
+        if is_eligible is None:
+            is_eligible = attrs.get('metaPortfolioEligible')
+
+        if is_eligible is not True:
+            raise serializers.ValidationError({
+                "meta_portfolio_eligible": "Meta Portfolio is required to register for Uwo Connect."
+            })
+
+        # Require Meta Portfolio Name for new account signups (exempt invitees)
+        if not attrs.get('invite_token') and not portfolio_name:
+            raise serializers.ValidationError({
+                "meta_portfolio_name": "Meta Portfolio name is required."
+            })
+        return attrs
 
     def create(self, validated_data):
         from django.utils import timezone
@@ -234,6 +288,7 @@ class RegisterSerializer(serializers.Serializer):
                 role='AGENT',
                 enterprise_role='EMPLOYEE',
                 status='APPROVED',
+                meta_portfolio_eligible=True,
                 client=invite.client,
                 permissions=invite.permissions,
                 terms_accepted=True,
@@ -251,14 +306,21 @@ class RegisterSerializer(serializers.Serializer):
             if brand_domain:
                 parent_agency = Client.objects.filter(white_label_domain__iexact=brand_domain).first()
 
+            meta_portfolio_name = validated_data.get('meta_portfolio_name', '').strip()
+            client_settings = {
+                "registered_domain": brand_domain,
+                "parent_agency_id": str(parent_agency.id) if parent_agency else None
+            } if parent_agency else {}
+            if meta_portfolio_name:
+                client_settings["meta_portfolio_name"] = meta_portfolio_name
+                client_settings["business_portfolio_name"] = meta_portfolio_name
+
             client = Client.objects.create(
                 business_name=business_name,
+                meta_portfolio_name=meta_portfolio_name,
                 phone_number=phone_number,
                 parent_agency=parent_agency,
-                settings={
-                    "registered_domain": brand_domain,
-                    "parent_agency_id": str(parent_agency.id) if parent_agency else None
-                } if parent_agency else {}
+                settings=client_settings
             )
     
             user = User.objects.create_user(
@@ -270,7 +332,9 @@ class RegisterSerializer(serializers.Serializer):
                 designation=designation,
                 department=department,
                 role='CLIENT',
-                status='PENDING',
+                status='APPROVED',
+                meta_portfolio_eligible=True,
+                meta_portfolio_name=meta_portfolio_name,
                 client=client,
                 terms_accepted=True,
                 privacy_accepted=True,
@@ -367,9 +431,14 @@ class ContactListSerializer(serializers.ModelSerializer):
             return 'WHATSAPP'
 
     def get_follow_ups_count(self, obj):
+        if hasattr(obj, 'pending_followups'):
+            return len(obj.pending_followups)
         return obj.follow_ups.filter(status='PENDING').count()
 
     def get_next_followup_at(self, obj):
+        if hasattr(obj, 'pending_followups'):
+            nxt = obj.pending_followups[0] if obj.pending_followups else None
+            return nxt.scheduled_at.isoformat() if nxt else None
         nxt = obj.follow_ups.filter(status='PENDING').order_by('scheduled_at').first()
         return nxt.scheduled_at.isoformat() if nxt else None
 
@@ -620,7 +689,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
-    client = ObjectIdField(read_only=True)
+    client = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
     assigned_to_avatar = serializers.SerializerMethodField()
     locked_by_name = serializers.SerializerMethodField()
@@ -628,16 +697,26 @@ class ConversationSerializer(serializers.ModelSerializer):
     contact_phone = serializers.SerializerMethodField()
     bot_paused = serializers.SerializerMethodField()
 
+    def get_client(self, obj):
+        fields_cache = getattr(getattr(obj, '_state', None), 'fields_cache', {})
+        if 'client' in fields_cache:
+            client_obj = fields_cache['client']
+            return str(client_obj) if client_obj else None
+        client_id = getattr(obj, 'client_id', None)
+        return str(client_id) if client_id else None
+
     def get_assigned_to_name(self, obj):
-        if obj.assigned_to:
-            full = f"{getattr(obj.assigned_to, 'first_name', '') or ''} {getattr(obj.assigned_to, 'last_name', '') or ''}".strip()
-            return full or getattr(obj.assigned_to, 'username', None) or getattr(obj.assigned_to, 'email', None)
+        user = getattr(obj, 'assigned_to', None) if getattr(obj, 'assigned_to_id', None) else None
+        if user:
+            full = f"{getattr(user, 'first_name', '') or ''} {getattr(user, 'last_name', '') or ''}".strip()
+            return full or getattr(user, 'username', None) or getattr(user, 'email', None)
         return None
 
     def get_locked_by_name(self, obj):
-        if obj.locked_by:
-            full = f"{getattr(obj.locked_by, 'first_name', '') or ''} {getattr(obj.locked_by, 'last_name', '') or ''}".strip()
-            return full or getattr(obj.locked_by, 'username', None) or getattr(obj.locked_by, 'email', None)
+        user = getattr(obj, 'locked_by', None) if getattr(obj, 'locked_by_id', None) else None
+        if user:
+            full = f"{getattr(user, 'first_name', '') or ''} {getattr(user, 'last_name', '') or ''}".strip()
+            return full or getattr(user, 'username', None) or getattr(user, 'email', None)
         return None
 
     class Meta:
@@ -646,28 +725,28 @@ class ConversationSerializer(serializers.ModelSerializer):
         read_only_fields = ('client', 'created_at', 'updated_at')
 
     def get_assigned_to_avatar(self, obj):
-        if obj.assigned_to and hasattr(obj.assigned_to, 'username'):
-            return f"https://api.dicebear.com/7.x/avataaars/svg?seed={obj.assigned_to.username}"
+        user = getattr(obj, 'assigned_to', None) if getattr(obj, 'assigned_to_id', None) else None
+        if user and hasattr(user, 'username'):
+            return f"https://api.dicebear.com/7.x/avataaars/svg?seed={user.username}"
         return None
 
     def get_contact_name(self, obj):
-        if obj.contact:
-            return obj.contact.name or obj.contact.phone_number or obj.contact_platform_id
+        contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None
+        if contact:
+            return contact.name or contact.phone_number or obj.contact_platform_id
         return obj.contact_platform_id
 
     def get_contact_phone(self, obj):
-        if obj.contact:
-            return obj.contact.phone_number
+        contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None
+        if contact:
+            return contact.phone_number
         return None
 
     def get_bot_paused(self, obj):
-        if obj.contact:
-            return bool(obj.contact.bot_paused)
-        if not obj.contact_platform_id:
-            return False
-        from .models import Contact
-        c = Contact.objects.filter(client=obj.client, platform_id=obj.contact_platform_id).first()
-        return bool(c.bot_paused) if c else False
+        contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None
+        if contact:
+            return bool(contact.bot_paused)
+        return False
 
 
 

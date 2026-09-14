@@ -8,13 +8,122 @@ from django.db.models import Q
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from ..models import Conversation, ConversationAuditLog, Message, User, Contact
+from ..models import Conversation, ConversationAuditLog, Message, User, Contact, Client
 from ..serializers import ConversationSerializer, ConversationAuditLogSerializer, MessageSerializer
 from ..utils.channel_permissions import get_user_allowed_channels
 
 class ConversationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ConversationSerializer
+
+    @classmethod
+    def _prefetch_mongodb_relations(cls, convos, default_client=None):
+        if not convos:
+            return
+
+        contact_ids = set()
+        user_ids = set()
+        client_ids = set()
+        platform_ids = set()
+
+        for c in convos:
+            cid = getattr(c, 'contact_id', None)
+            if cid:
+                contact_ids.add(cid)
+            elif getattr(c, 'contact_platform_id', None):
+                platform_ids.add(c.contact_platform_id)
+
+            uid = getattr(c, 'assigned_to_id', None)
+            if uid:
+                user_ids.add(uid)
+            lid = getattr(c, 'locked_by_id', None)
+            if lid:
+                user_ids.add(lid)
+            clid = getattr(c, 'client_id', None)
+            if clid:
+                client_ids.add(clid)
+
+        contacts_by_id = {}
+        if contact_ids:
+            try:
+                for ct in Contact.objects.filter(id__in=list(contact_ids)).only('id', 'name', 'phone_number', 'platform_id', 'bot_paused'):
+                    contacts_by_id[str(ct.id)] = ct
+            except Exception:
+                for ct in Contact.objects.filter(id__in=list(contact_ids)):
+                    contacts_by_id[str(ct.id)] = ct
+
+        contacts_by_platform = {}
+        if platform_ids:
+            try:
+                for ct in Contact.objects.filter(platform_id__in=list(platform_ids)).only('id', 'name', 'phone_number', 'platform_id', 'bot_paused'):
+                    contacts_by_platform[ct.platform_id] = ct
+            except Exception:
+                for ct in Contact.objects.filter(platform_id__in=list(platform_ids)):
+                    contacts_by_platform[ct.platform_id] = ct
+
+        users_map = {}
+        if user_ids:
+            try:
+                for u in User.objects.filter(id__in=list(user_ids)).only('id', 'first_name', 'last_name', 'username', 'email'):
+                    users_map[str(u.id)] = u
+            except Exception:
+                for u in User.objects.filter(id__in=list(user_ids)):
+                    users_map[str(u.id)] = u
+
+        clients_map = {}
+        if default_client and getattr(default_client, 'id', None):
+            clients_map[str(default_client.id)] = default_client
+        missing_clients = [cid for cid in client_ids if str(cid) not in clients_map]
+        if missing_clients:
+            try:
+                for cl in Client.objects.filter(id__in=missing_clients):
+                    clients_map[str(cl.id)] = cl
+            except Exception:
+                pass
+
+        for c in convos:
+            if not hasattr(c, '_state'):
+                continue
+            if not hasattr(c._state, 'fields_cache'):
+                c._state.fields_cache = {}
+
+            cid = getattr(c, 'contact_id', None)
+            if cid and str(cid) in contacts_by_id:
+                c._state.fields_cache['contact'] = contacts_by_id[str(cid)]
+            elif getattr(c, 'contact_platform_id', None) and c.contact_platform_id in contacts_by_platform:
+                c._state.fields_cache['contact'] = contacts_by_platform[c.contact_platform_id]
+            else:
+                c._state.fields_cache['contact'] = None
+
+            uid = getattr(c, 'assigned_to_id', None)
+            c._state.fields_cache['assigned_to'] = users_map.get(str(uid)) if uid else None
+
+            lid = getattr(c, 'locked_by_id', None)
+            c._state.fields_cache['locked_by'] = users_map.get(str(lid)) if lid else None
+
+            clid = getattr(c, 'client_id', None)
+            c._state.fields_cache['client'] = clients_map.get(str(clid)) if clid else None
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        default_client = getattr(request.user, 'client', None)
+
+        if page is not None:
+            self._prefetch_mongodb_relations(page, default_client=default_client)
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        items = list(queryset)
+        self._prefetch_mongodb_relations(items, default_client=default_client)
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self._prefetch_mongodb_relations([instance], default_client=getattr(request.user, 'client', None))
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def get_queryset(self):
         user = self.request.user
@@ -59,7 +168,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         if search:
             queryset = queryset.filter(contact_platform_id__icontains=search) | queryset.filter(last_message_summary__icontains=search)
             
-        return queryset.select_related('contact', 'assigned_to', 'locked_by').order_by('-last_message_at', '-updated_at')
+        return queryset.order_by('-last_message_at', '-updated_at')
 
     def get_object(self):
         pk = self.kwargs.get('pk')
@@ -410,9 +519,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         if not conversation and client:
             clean_digits = re.sub(r'\D', '', target_str)
-            q = Q(client=client) & (Q(contact_platform_id=target_str) | Q(contact_phone=target_str))
+            q = Q(client=client) & (Q(contact_platform_id=target_str) | Q(contact__phone_number=target_str))
             if clean_digits:
-                q |= Q(client=client) & (Q(contact_platform_id__icontains=clean_digits) | Q(contact_phone__icontains=clean_digits))
+                q |= Q(client=client) & (Q(contact_platform_id__icontains=clean_digits) | Q(contact__phone_number__icontains=clean_digits))
             conversation = Conversation.objects.filter(q).first()
 
         if conversation:
@@ -426,8 +535,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
         if conversation:
             if conversation.contact_platform_id:
                 search_addresses.add(str(conversation.contact_platform_id))
-            if conversation.contact_phone:
-                search_addresses.add(str(conversation.contact_phone))
+            contact_phone = getattr(conversation, 'contact_phone', None) or (conversation.contact.phone_number if getattr(conversation, 'contact', None) else None)
+            if contact_phone:
+                search_addresses.add(str(contact_phone))
 
         clean_d = re.sub(r'\D', '', target_str)
         if clean_d:
