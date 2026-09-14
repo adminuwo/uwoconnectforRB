@@ -11,6 +11,64 @@ from typing import Dict, Any, List
 from django.core.exceptions import PermissionDenied
 from api.models import Client, Plan, GlobalConnector, Feature
 
+FEATURE_ALIASES = {
+    'feature_autoreply': ['auto_replies', 'autoreply', 'automations', 'feature_autoreply'],
+    'auto_replies': ['auto_replies', 'autoreply', 'automations', 'feature_autoreply'],
+    'autoreply': ['auto_replies', 'autoreply', 'automations', 'feature_autoreply'],
+    'automations': ['auto_replies', 'autoreply', 'automations', 'feature_autoreply'],
+    'feature_workflow': ['workflows', 'workflow', 'branching_flows', 'feature_workflow'],
+    'workflow': ['workflows', 'workflow', 'branching_flows', 'feature_workflow'],
+    'workflows': ['workflows', 'workflow', 'branching_flows', 'feature_workflow'],
+    'feature_quotation': ['quotations', 'quotation', 'sales_quotations', 'feature_quotation'],
+    'quotation': ['quotations', 'quotation', 'sales_quotations', 'feature_quotation'],
+    'quotations': ['quotations', 'quotation', 'sales_quotations', 'feature_quotation'],
+    'sales_quotations': ['quotations', 'quotation', 'sales_quotations', 'feature_quotation'],
+    'feature_proposal': ['proposals', 'proposal', 'sales_proposals', 'feature_proposal'],
+    'proposal': ['proposals', 'proposal', 'sales_proposals', 'feature_proposal'],
+    'proposals': ['proposals', 'proposal', 'sales_proposals', 'feature_proposal'],
+    'sales_proposals': ['proposals', 'proposal', 'sales_proposals', 'feature_proposal'],
+    'feature_invoice': ['invoices', 'invoice', 'sales_invoices', 'feature_invoice'],
+    'invoice': ['invoices', 'invoice', 'sales_invoices', 'feature_invoice'],
+    'invoices': ['invoices', 'invoice', 'sales_invoices', 'feature_invoice'],
+    'sales_invoices': ['invoices', 'invoice', 'sales_invoices', 'feature_invoice'],
+    'feature_voice_video_call': ['voice_video_call', 'voice_call', 'video_call', 'calls', 'feature_voice_video_call', 'conn_gmeet'],
+    'voice_video_call': ['voice_video_call', 'voice_call', 'video_call', 'calls', 'feature_voice_video_call', 'conn_gmeet'],
+    'calls': ['voice_video_call', 'voice_call', 'video_call', 'calls', 'feature_voice_video_call', 'conn_gmeet'],
+    'feature_knowledge_base': ['knowledge_base', 'knowledge', 'feature_knowledge_base', 'f-kb'],
+    'knowledge_base': ['knowledge_base', 'knowledge', 'feature_knowledge_base', 'f-kb'],
+    'knowledge': ['knowledge_base', 'knowledge', 'feature_knowledge_base', 'f-kb'],
+    'feature_team_dashboard': ['team_dashboard', 'team_management', 'team', 'feature_team_dashboard', 'f-team'],
+    'team_dashboard': ['team_dashboard', 'team_management', 'team', 'feature_team_dashboard', 'f-team'],
+    'team': ['team_dashboard', 'team_management', 'team', 'feature_team_dashboard', 'f-team'],
+    'team_management': ['team_dashboard', 'team_management', 'team', 'feature_team_dashboard', 'f-team'],
+    'feature_reports': ['reports', 'team_work_reports', 'work_reports', 'feature_reports', 'f-reports'],
+    'reports': ['reports', 'team_work_reports', 'work_reports', 'feature_reports', 'f-reports'],
+    'team_work_reports': ['reports', 'team_work_reports', 'work_reports', 'feature_reports', 'f-reports'],
+    'feature_broadcast': ['broadcast', 'broadcasts', 'campaigns', 'advanced_campaigns', 'feature_broadcast'],
+    'broadcast': ['broadcast', 'broadcasts', 'campaigns', 'advanced_campaigns', 'feature_broadcast'],
+    'broadcasts': ['broadcast', 'broadcasts', 'campaigns', 'advanced_campaigns', 'feature_broadcast'],
+    'campaigns': ['broadcast', 'broadcasts', 'campaigns', 'advanced_campaigns', 'feature_broadcast'],
+    'feature_catalog': ['catalog', 'catalogs', 'sales_catalog', 'feature_catalog'],
+    'catalog': ['catalog', 'catalogs', 'sales_catalog', 'feature_catalog'],
+    'catalogs': ['catalog', 'catalogs', 'sales_catalog', 'feature_catalog'],
+    'sales_catalog': ['catalog', 'catalogs', 'sales_catalog', 'feature_catalog'],
+    'feature_payment': ['payment', 'payments', 'native_payments', 'feature_payment'],
+    'payment': ['payment', 'payments', 'native_payments', 'feature_payment'],
+    'payments': ['payment', 'payments', 'native_payments', 'feature_payment'],
+    'native_payments': ['payment', 'payments', 'native_payments', 'feature_payment'],
+    'feature_order': ['order', 'orders', 'sales_orders', 'feature_order'],
+    'order': ['order', 'orders', 'sales_orders', 'feature_order'],
+    'orders': ['order', 'orders', 'sales_orders', 'feature_order'],
+    'sales_orders': ['order', 'orders', 'sales_orders', 'feature_order'],
+    'feature_crm': ['crm', 'crm_leads', 'contact_management', 'crm_clients', 'feature_crm'],
+    'crm': ['crm', 'crm_leads', 'contact_management', 'crm_clients', 'feature_crm'],
+    'crm_leads': ['crm', 'crm_leads', 'contact_management', 'crm_clients', 'feature_crm'],
+    'feature_shared_inbox': ['shared_inbox', 'live_messages_inbox', 'inbox', 'messages', 'feature_shared_inbox'],
+    'shared_inbox': ['shared_inbox', 'live_messages_inbox', 'inbox', 'messages', 'feature_shared_inbox'],
+    'inbox': ['shared_inbox', 'live_messages_inbox', 'inbox', 'messages', 'feature_shared_inbox'],
+    'live_messages_inbox': ['shared_inbox', 'live_messages_inbox', 'inbox', 'messages', 'feature_shared_inbox'],
+}
+
 # Default Master Plan configurations for fallback
 DEFAULT_PLANS_CONFIG = {
     'free': {
@@ -419,11 +477,40 @@ class EntitlementService:
             monthly_price = monthly_cfg.get('price') or meta.get('monthly_price', float(plan.price))
             yearly_price = yearly_cfg.get('price') or meta.get('yearly_price', round(float(monthly_price) * 12 * 0.8, 2))
 
-            feat_keys = meta.get('allowed_features') or meta.get('feature_keys') or []
-            if not feat_keys:
-                feat_keys = ['auto_replies', 'crm', 'feature_workflow', 'feature_proposal', 'feature_invoice']
-                if 'advanced' in slug or 'enterprise' in slug:
-                    feat_keys += ['feature_voice_call', 'feature_ai_kb', 'feature_broadcast']
+            # Determine plan tier
+            tier = 'free'
+            if 'advanced' in slug or 'enterprise' in slug or 'power' in slug:
+                tier = 'advanced'
+            elif 'growth' in slug or 'pro' in slug:
+                tier = 'growth'
+            elif 'starter' in slug or 'basic' in slug:
+                tier = 'starter'
+
+            tier_cfg = DEFAULT_PLANS_CONFIG.get(tier, {})
+            tier_baseline_features = list(tier_cfg.get('allowed_features', []))
+            tier_baseline_connectors = list(tier_cfg.get('allowed_connectors', []))
+            tier_baseline_channels = list(tier_cfg.get('allowed_channels', []))
+
+            # For Advanced plan, include all active features and connectors by default
+            if tier == 'advanced':
+                try:
+                    all_feat_keys = list(Feature.objects.values_list('key', flat=True))
+                    tier_baseline_features = list(set(tier_baseline_features + all_feat_keys))
+                except Exception:
+                    pass
+                try:
+                    all_conn_keys = list(GlobalConnector.objects.values_list('connector_key', flat=True))
+                    tier_baseline_connectors = list(set(tier_baseline_connectors + all_conn_keys))
+                except Exception:
+                    pass
+
+            meta_features = meta.get('allowed_features') or meta.get('feature_keys') or []
+            meta_connectors = meta.get('allowed_connectors') or []
+            meta_channels = meta.get('allowed_channels') or []
+
+            feat_keys = list(set(tier_baseline_features + [str(x) for x in meta_features]))
+            conn_keys = list(set(tier_baseline_connectors + [str(x) for x in meta_connectors]))
+            chan_keys = list(set(tier_baseline_channels + [str(x) for x in meta_channels]))
 
             return {
                 'id': str(plan.id),
@@ -435,8 +522,8 @@ class EntitlementService:
                 'yearlyConfig': yearly_cfg,
                 'yearly_discount_percent': meta.get('yearly_discount_percent', 20.0),
                 'max_channels': meta.get('max_channels', 3 if ('advanced' in slug or 'enterprise' in slug) else 2 if 'growth' in slug else 1),
-                'allowed_channels': meta.get('allowed_channels', ['whatsapp', 'facebook', 'instagram']),
-                'allowed_connectors': meta.get('allowed_connectors', ['whatsapp', 'facebook', 'instagram', 'gmail', 'outlook']),
+                'allowed_channels': chan_keys,
+                'allowed_connectors': conn_keys,
                 'allowed_features': feat_keys,
                 'limits': meta.get('limits', {}),
                 'message_costs': meta.get('message_costs', []),
@@ -505,21 +592,29 @@ class EntitlementService:
 
         # 3. Check if included in client's plan configuration
         plan_config = EntitlementService.get_client_plan_config(client)
-        allowed_connectors = [c.lower() for c in plan_config.get('allowed_connectors', [])]
-        allowed_features = [f.lower() for f in plan_config.get('allowed_features', [])]
-        allowed_channels = [ch.lower() for ch in plan_config.get('allowed_channels', [])]
+        slug = (plan_config.get('slug') or plan_config.get('name') or '').lower()
+
+        # Advanced tier has access to all active features and connectors
+        if 'advanced' in slug or 'enterprise' in slug or 'power' in slug:
+            return 'AVAILABLE'
+
+        allowed_connectors = [str(c).lower() for c in plan_config.get('allowed_connectors', [])]
+        allowed_features = [str(f).lower() for f in plan_config.get('allowed_features', [])]
+        allowed_channels = [str(ch).lower() for ch in plan_config.get('allowed_channels', [])]
 
         k_low = item_key.lower()
         clean_key = k_low.replace('connector_', '').replace('channel_', '').replace('feature_', '')
 
-        if (k_low in allowed_features or 
-            k_low in allowed_connectors or 
-            k_low in allowed_channels or 
-            clean_key in allowed_connectors or
-            clean_key in allowed_channels or
-            clean_key in allowed_features or
-            f"feature_{clean_key}" in allowed_features):
-            return 'AVAILABLE'
+        # Check direct keys and all canonical aliases
+        candidate_keys = set(FEATURE_ALIASES.get(k_low, []) + FEATURE_ALIASES.get(clean_key, []) + [
+            k_low, clean_key, f"feature_{clean_key}", f"connector_{clean_key}", f"channel_{clean_key}"
+        ])
+
+        for c_key in candidate_keys:
+            if (c_key in allowed_features or 
+                c_key in allowed_connectors or 
+                c_key in allowed_channels):
+                return 'AVAILABLE'
 
         return 'UPGRADE_REQUIRED'
 
