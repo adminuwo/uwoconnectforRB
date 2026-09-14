@@ -49,7 +49,8 @@ from .views import (
     AdminChannelAccessMatrixView, AdminClientChannelAccessDetailView,
     AdminBulkChannelAccessView, AdminChannelAuditLogsView, AdminChannelAuditLogView,
     EffectiveConnectorsView, GlobalConnectorsStatusView,
-    UserPreferenceView
+    UserPreferenceView,
+    LegalDocumentsView, LegalConsentStatusView, LegalConsentSubmitView, AccountDeletionView
 )
 from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
 from .views.agency_views import (
@@ -157,6 +158,16 @@ urlpatterns = [
     path('auth/gmail/sync', GmailSyncView.as_view(), name='gmail-sync'),
     path('auth/firebase-login', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/uwo-login', UWOLoginView.as_view(), name='uwo-login'),
+    path('auth/delete-account', AccountDeletionView.as_view(), name='account-delete'),
+    path('auth/delete-account/', AccountDeletionView.as_view()),
+
+    # Legal Center & Document Endpoints
+    path('legal/documents', LegalDocumentsView.as_view(), name='legal-documents'),
+    path('legal/documents/', LegalDocumentsView.as_view()),
+    path('legal/consent-status', LegalConsentStatusView.as_view(), name='legal-consent-status'),
+    path('legal/consent-status/', LegalConsentStatusView.as_view()),
+    path('legal/consent', LegalConsentSubmitView.as_view(), name='legal-consent-submit'),
+    path('legal/consent/', LegalConsentSubmitView.as_view()),
 
     # WhatsApp Web-Style QR Code Based Authentication & Device Linking
     path('auth/qr/create', QrAuthCreateView.as_view(), name='qr-auth-create'),

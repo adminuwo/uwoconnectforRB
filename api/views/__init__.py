@@ -56,4 +56,10 @@ from .admin_channel_access_views import (
 )
 from .whitelabel_views import WhiteLabelConfigView
 from .preference_views import UserPreferenceView
+from .legal_views import (
+    LegalDocumentsView,
+    LegalConsentStatusView,
+    LegalConsentSubmitView,
+    AccountDeletionView
+)
 
