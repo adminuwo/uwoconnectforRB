@@ -2471,6 +2471,42 @@ class DynamicContentVersionSnapshot(models.Model):
         return f"Content Version Snapshot v{self.version_number} at {self.published_at}"
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# MOBILE APP TELEMETRY & INSTALLATION TRACKING
+# ══════════════════════════════════════════════════════════════════════════════
+
+class AppInstallation(models.Model):
+    PLATFORM_CHOICES = [
+        ('android', 'Android'),
+        ('ios', 'iOS'),
+        ('web', 'Web/PWA'),
+        ('other', 'Other'),
+    ]
+
+    installation_id = models.CharField(max_length=128, unique=True, db_index=True)
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, default='android', db_index=True)
+    app_version = models.CharField(max_length=50, default='1.0.0', blank=True)
+    os_version = models.CharField(max_length=50, blank=True, default='')
+    device_model = models.CharField(max_length=150, blank=True, default='')
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='app_installations')
+    client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, related_name='app_installations')
+
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default='')
+
+    first_installed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    last_active_at = models.DateTimeField(auto_now=True, db_index=True)
+    open_count = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ['-first_installed_at']
+
+    def __str__(self):
+        return f"{self.platform.upper()} ({self.app_version}) - {self.installation_id[:8]}"
+
+
+
 
 
 

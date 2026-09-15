@@ -76,5 +76,9 @@ from .content_management_views import (
     AdminFeatureFlagManagementView,
     AdminCMSAuditLogsView
 )
+from .telemetry_views import (
+    AppInstallTelemetryView,
+    AdminAppAnalyticsView
+)
 
 

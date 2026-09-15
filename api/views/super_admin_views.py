@@ -20,7 +20,8 @@ from ..models import (
     PaymentOrder, ProductPayment, SalesDocument, SalesDocumentItem,
     Invoice, WorkReport, Task, Project, KnowledgeDocument, KnowledgeChunk,
     EmailAccount, EmailMessage, TeamChannel, TeamChatMessage,
-    Attendance, LeaveRequest, AuditLog, Automation, Workflow, SupportMessage
+    Attendance, LeaveRequest, AuditLog, Automation, Workflow, SupportMessage,
+    AppInstallation
 )
 from ..serializers import (
     ClientSerializer, UserSerializer, MessageSerializer, ConversationSerializer,
@@ -475,7 +476,11 @@ class SuperAdminOverviewView(APIView):
                 "pendingProjects": pending_projects,
                 "overdueProjects": overdue_projects,
                 "totalEmails": total_emails,
-                "totalEmailAccounts": total_email_accounts
+                "totalEmailAccounts": total_email_accounts,
+                # Mobile App Telemetry
+                "totalAppInstalls": AppInstallation.objects.count(),
+                "androidInstalls": AppInstallation.objects.filter(platform='android').count(),
+                "iosInstalls": AppInstallation.objects.filter(platform='ios').count(),
             },
             "charts": {
                 "messagesToday": messages_today,
