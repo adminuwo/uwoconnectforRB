@@ -139,6 +139,46 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response({'error': 'Invalid action type'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
+    def upload_image(self, request):
+        client = get_tenant_client(self.request)
+        if not client:
+            return Response({'error': 'Unauthorized tenant'}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES.get('image') or request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No image file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if file.size > 10 * 1024 * 1024:
+            return Response({'error': 'Image size must be under 10MB'}, status=status.HTTP_400_BAD_REQUEST)
+
+        import uuid
+        import os
+        from django.conf import settings
+        from django.core.files.storage import FileSystemStorage
+
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg']:
+            ext = '.jpg'
+
+        client_id_str = str(getattr(client, 'id', 'default'))
+        fs = FileSystemStorage(location=settings.MEDIA_ROOT, base_url=settings.MEDIA_URL)
+        filename = f"products/{client_id_str}/{uuid.uuid4().hex}{ext}"
+
+        try:
+            saved_path = fs.save(filename, file)
+            file_url = fs.url(saved_path)
+            if not file_url.startswith('http'):
+                file_url = request.build_absolute_uri(file_url)
+
+            return Response({
+                'status': 'success',
+                'image_url': file_url,
+                'name': file.name
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': f'Upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
     def import_csv(self, request):
         client = get_tenant_client(self.request)
         if not client:

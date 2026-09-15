@@ -51,6 +51,15 @@ class PlanSerializer(serializers.ModelSerializer):
             ]:
                 if key in meta and key not in ret:
                     ret[key] = meta[key]
+        
+        is_starter = (instance.slug == 'starter') or ('starter' in (instance.name or '').lower())
+        if is_starter:
+            ret['max_channels'] = 1
+        
+        # Ensure monthly_price, yearly_price, and price reflect the latest cycle configs
+        ret['monthly_price'] = instance.monthly_price
+        ret['yearly_price'] = instance.yearly_price
+        ret['price'] = instance.monthly_price
         return ret
 
     def create(self, validated_data):
@@ -67,6 +76,11 @@ class PlanSerializer(serializers.ModelSerializer):
         ]:
             if key in initial and initial[key] is not None:
                 metadata[key] = initial[key]
+        
+        slug = validated_data.get('slug') or initial.get('slug') or ''
+        name = validated_data.get('name') or initial.get('name') or ''
+        if slug == 'starter' or 'starter' in name.lower():
+            metadata['max_channels'] = 1
         validated_data['metadata'] = metadata
         return super().create(validated_data)
 
@@ -83,6 +97,10 @@ class PlanSerializer(serializers.ModelSerializer):
         ]:
             if key in initial and initial[key] is not None:
                 metadata[key] = initial[key]
+        
+        is_starter = (instance.slug == 'starter') or ('starter' in (instance.name or '').lower())
+        if is_starter:
+            metadata['max_channels'] = 1
         validated_data['metadata'] = metadata
         return super().update(instance, validated_data)
 

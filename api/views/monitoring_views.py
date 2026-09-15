@@ -240,18 +240,20 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.save()
 
         # Pause bot for contact (Human Takeover)
-        contact = conversation.contact
-        if not contact:
-            formatted_number = str(conversation.contact_platform_id).replace('+', '').strip()
-            contact = Contact.objects.filter(
-                Q(client=conversation.client) & (
-                    Q(platform_id=conversation.contact_platform_id) | 
-                    Q(phone_number__icontains=formatted_number)
-                )
-            ).first()
-        if contact:
-            contact.bot_paused = True
-            contact.save()
+        formatted_number = str(conversation.contact_platform_id or '').replace('+', '').strip()
+        matched_contacts = Contact.objects.filter(
+            Q(client=conversation.client) & (
+                Q(platform_id=conversation.contact_platform_id) | 
+                Q(phone_number=formatted_number) |
+                Q(phone_number__icontains=formatted_number)
+            )
+        )
+        for ct in matched_contacts:
+            ct.bot_paused = True
+            ct.save()
+        if conversation.contact and not conversation.contact.bot_paused:
+            conversation.contact.bot_paused = True
+            conversation.contact.save()
 
         # Audit Log
         effective_client = conversation.client or user.client
@@ -307,19 +309,20 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation.save()
 
         # 2. Find and unpause contact
-        contact = conversation.contact
-        if not contact:
-            formatted_number = str(conversation.contact_platform_id).replace('+', '').strip()
-            contact = Contact.objects.filter(
-                Q(client=conversation.client) & (
-                    Q(platform_id=conversation.contact_platform_id) | 
-                    Q(phone_number__icontains=formatted_number)
-                )
-            ).first()
-
-        if contact:
-            contact.bot_paused = False
-            contact.save()
+        formatted_number = str(conversation.contact_platform_id or '').replace('+', '').strip()
+        matched_contacts = Contact.objects.filter(
+            Q(client=conversation.client) & (
+                Q(platform_id=conversation.contact_platform_id) | 
+                Q(phone_number=formatted_number) |
+                Q(phone_number__icontains=formatted_number)
+            )
+        )
+        for ct in matched_contacts:
+            ct.bot_paused = False
+            ct.save()
+        if conversation.contact and conversation.contact.bot_paused:
+            conversation.contact.bot_paused = False
+            conversation.contact.save()
 
         # 3. Create Audit Log
         effective_client = conversation.client or user.client
