@@ -225,7 +225,8 @@ class AdminContentManagementView(APIView):
             {'value': s[0], 'label': s[1]}
             for s in DynamicContentItem.SECTION_CHOICES
         ]
-        languages = list(DynamicContentItem.objects.values_list('language', flat=True).distinct())
+        raw_langs = DynamicContentItem.objects.order_by().values_list('language', flat=True).distinct()
+        languages = sorted(list(set(raw_langs)))
         if 'en' not in languages:
             languages.insert(0, 'en')
 
