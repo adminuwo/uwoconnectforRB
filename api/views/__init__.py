@@ -62,4 +62,19 @@ from .legal_views import (
     LegalConsentSubmitView,
     AccountDeletionView
 )
+from .content_management_views import (
+    AppContentVersionView,
+    AppContentView,
+    AdminContentManagementView,
+    AdminContentDraftSaveView,
+    AdminContentPublishView,
+    AdminContentPreviewView,
+    AdminContentRollbackView,
+    AdminContentVersionsListView,
+    AdminBannerManagementView,
+    AdminMaintenanceConfigView,
+    AdminFeatureFlagManagementView,
+    AdminCMSAuditLogsView
+)
+
 

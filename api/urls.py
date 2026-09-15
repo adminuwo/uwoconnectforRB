@@ -50,7 +50,12 @@ from .views import (
     AdminBulkChannelAccessView, AdminChannelAuditLogsView, AdminChannelAuditLogView,
     EffectiveConnectorsView, GlobalConnectorsStatusView,
     UserPreferenceView,
-    LegalDocumentsView, LegalConsentStatusView, LegalConsentSubmitView, AccountDeletionView
+    LegalDocumentsView, LegalConsentStatusView, LegalConsentSubmitView, AccountDeletionView,
+    AppContentVersionView, AppContentView,
+    AdminContentManagementView, AdminContentDraftSaveView, AdminContentPublishView,
+    AdminContentPreviewView, AdminContentRollbackView, AdminContentVersionsListView,
+    AdminBannerManagementView, AdminMaintenanceConfigView, AdminFeatureFlagManagementView,
+    AdminCMSAuditLogsView
 )
 from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
 from .views.agency_views import (
@@ -600,4 +605,35 @@ urlpatterns = [
     # ── User Preferences Endpoints ──
     path('user/preferences/', UserPreferenceView.as_view(), name='user-preferences'),
     path('user/preferences', UserPreferenceView.as_view()),
+
+    # ── Dynamic Content Management System (CMS) Endpoints ──
+    # Public / App Content Endpoints
+    path('app/content/version/', AppContentVersionView.as_view(), name='app-content-version'),
+    path('app/content/version', AppContentVersionView.as_view()),
+    path('app/content/', AppContentView.as_view(), name='app-content'),
+    path('app/content', AppContentView.as_view()),
+
+    # Admin CMS Management Endpoints
+    path('admin/content/', AdminContentManagementView.as_view(), name='admin-content-management'),
+    path('admin/content', AdminContentManagementView.as_view()),
+    path('admin/content/draft/', AdminContentDraftSaveView.as_view(), name='admin-content-draft'),
+    path('admin/content/draft', AdminContentDraftSaveView.as_view()),
+    path('admin/content/publish/', AdminContentPublishView.as_view(), name='admin-content-publish'),
+    path('admin/content/publish', AdminContentPublishView.as_view()),
+    path('admin/content/preview/', AdminContentPreviewView.as_view(), name='admin-content-preview'),
+    path('admin/content/preview', AdminContentPreviewView.as_view()),
+    path('admin/content/rollback/', AdminContentRollbackView.as_view(), name='admin-content-rollback'),
+    path('admin/content/rollback', AdminContentRollbackView.as_view()),
+    path('admin/content/versions/', AdminContentVersionsListView.as_view(), name='admin-content-versions'),
+    path('admin/content/versions', AdminContentVersionsListView.as_view()),
+    path('admin/content/banners/', AdminBannerManagementView.as_view(), name='admin-content-banners'),
+    path('admin/content/banners', AdminBannerManagementView.as_view()),
+    path('admin/content/banners/<str:pk>/', AdminBannerManagementView.as_view(), name='admin-content-banner-detail'),
+    path('admin/content/banners/<str:pk>', AdminBannerManagementView.as_view()),
+    path('admin/content/maintenance/', AdminMaintenanceConfigView.as_view(), name='admin-content-maintenance'),
+    path('admin/content/maintenance', AdminMaintenanceConfigView.as_view()),
+    path('admin/content/feature-flags/', AdminFeatureFlagManagementView.as_view(), name='admin-content-feature-flags'),
+    path('admin/content/feature-flags', AdminFeatureFlagManagementView.as_view()),
+    path('admin/content/audit-logs/', AdminCMSAuditLogsView.as_view(), name='admin-content-audit-logs'),
+    path('admin/content/audit-logs', AdminCMSAuditLogsView.as_view()),
 ]
