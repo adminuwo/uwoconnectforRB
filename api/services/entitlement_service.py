@@ -521,7 +521,7 @@ class EntitlementService:
                 'monthlyConfig': monthly_cfg,
                 'yearlyConfig': yearly_cfg,
                 'yearly_discount_percent': meta.get('yearly_discount_percent', 20.0),
-                'max_channels': meta.get('max_channels', 3 if ('advanced' in slug or 'enterprise' in slug) else 2 if 'growth' in slug else 1),
+                'max_channels': 1 if ('starter' in slug or slug == 'starter') else meta.get('max_channels', 3 if ('advanced' in slug or 'enterprise' in slug) else 2 if 'growth' in slug else 1),
                 'allowed_channels': chan_keys,
                 'allowed_connectors': conn_keys,
                 'allowed_features': feat_keys,

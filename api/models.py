@@ -1919,14 +1919,34 @@ class Plan(models.Model):
 
     @property
     def monthly_price(self):
-        if self.metadata and isinstance(self.metadata, dict) and 'monthly_price' in self.metadata:
-            return float(self.metadata['monthly_price'])
+        if self.metadata and isinstance(self.metadata, dict):
+            m_cfg = self.metadata.get('monthlyConfig') or self.metadata.get('monthly_config') or {}
+            if isinstance(m_cfg, dict) and m_cfg.get('price'):
+                try:
+                    return float(m_cfg['price'])
+                except (ValueError, TypeError):
+                    pass
+            if 'monthly_price' in self.metadata:
+                try:
+                    return float(self.metadata['monthly_price'])
+                except (ValueError, TypeError):
+                    pass
         return float(self.price)
 
     @property
     def yearly_price(self):
-        if self.metadata and isinstance(self.metadata, dict) and 'yearly_price' in self.metadata:
-            return float(self.metadata['yearly_price'])
+        if self.metadata and isinstance(self.metadata, dict):
+            y_cfg = self.metadata.get('yearlyConfig') or self.metadata.get('yearly_config') or {}
+            if isinstance(y_cfg, dict) and y_cfg.get('price'):
+                try:
+                    return float(y_cfg['price'])
+                except (ValueError, TypeError):
+                    pass
+            if 'yearly_price' in self.metadata:
+                try:
+                    return float(self.metadata['yearly_price'])
+                except (ValueError, TypeError):
+                    pass
         # Default: 20% discount from monthly * 12
         return round(self.monthly_price * 12 * 0.8, 2)
 
@@ -1938,14 +1958,15 @@ class Plan(models.Model):
 
     @property
     def max_channels(self):
+        slug_lower = (self.slug or '').lower()
+        name_lower = (self.name or '').lower()
+        if slug_lower == 'starter' or 'starter' in name_lower:
+            return 1
         if self.metadata and isinstance(self.metadata, dict) and 'max_channels' in self.metadata:
             return int(self.metadata['max_channels'])
-        name_lower = self.name.lower()
-        if 'starter' in name_lower:
-            return 1
-        elif 'growth' in name_lower:
+        if 'growth' in name_lower or slug_lower == 'growth':
             return 2
-        elif 'advanced' in name_lower:
+        elif 'advanced' in name_lower or slug_lower == 'advanced':
             return 3
         return 1
 

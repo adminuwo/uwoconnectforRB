@@ -576,19 +576,31 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class TaskCommentSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
-    author_name = serializers.ReadOnlyField(source='author.username')
-    author_role = serializers.ReadOnlyField(source='author.enterprise_role')
+    author_name = serializers.SerializerMethodField()
+    author_role = serializers.SerializerMethodField()
 
     class Meta:
         model = TaskComment
         fields = '__all__'
         read_only_fields = ('author', 'created_at')
 
+    def get_author_name(self, obj):
+        try:
+            return obj.author.username if getattr(obj, 'author_id', None) and obj.author else 'Team Member'
+        except Exception:
+            return 'Team Member'
+
+    def get_author_role(self, obj):
+        try:
+            return obj.author.enterprise_role or obj.author.role if getattr(obj, 'author_id', None) and obj.author else 'EMPLOYEE'
+        except Exception:
+            return 'EMPLOYEE'
+
 
 class TaskSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
-    created_by_name = serializers.ReadOnlyField(source='created_by.username')
+    created_by_name = serializers.SerializerMethodField()
     comments = TaskCommentSerializer(many=True, read_only=True)
 
     class Meta:
@@ -596,37 +608,82 @@ class TaskSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('client', 'created_by', 'created_at', 'updated_at')
 
+    def get_created_by_name(self, obj):
+        try:
+            return obj.created_by.username if getattr(obj, 'created_by_id', None) and obj.created_by else 'Admin'
+        except Exception:
+            return 'Admin'
+
 
 class WorkReportSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
     employee = ObjectIdField(read_only=True)
-    employee_name = serializers.ReadOnlyField(source='employee.username')
+    employee_name = serializers.SerializerMethodField()
     employee_full_name = serializers.SerializerMethodField()
-    employee_department = serializers.ReadOnlyField(source='employee.department')
-    employee_role = serializers.ReadOnlyField(source='employee.enterprise_role')
+    employee_department = serializers.SerializerMethodField()
+    employee_role = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkReport
         fields = '__all__'
         read_only_fields = ('client', 'employee', 'created_at')
 
+    def get_employee_name(self, obj):
+        try:
+            return obj.employee.username if getattr(obj, 'employee_id', None) and obj.employee else 'Team Member'
+        except Exception:
+            return 'Team Member'
+
     def get_employee_full_name(self, obj):
-        if obj.employee:
-            return f"{obj.employee.first_name} {obj.employee.last_name}".strip() or obj.employee.username
+        try:
+            if getattr(obj, 'employee_id', None) and obj.employee:
+                return f"{obj.employee.first_name} {obj.employee.last_name}".strip() or obj.employee.username
+        except Exception:
+            pass
         return 'Team Member'
+
+    def get_employee_department(self, obj):
+        try:
+            return obj.employee.department if getattr(obj, 'employee_id', None) and obj.employee else 'General'
+        except Exception:
+            return 'General'
+
+    def get_employee_role(self, obj):
+        try:
+            return obj.employee.enterprise_role or obj.employee.role if getattr(obj, 'employee_id', None) and obj.employee else 'EMPLOYEE'
+        except Exception:
+            return 'EMPLOYEE'
 
 
 class WorkApprovalSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
-    task_title = serializers.ReadOnlyField(source='task.title')
-    employee_name = serializers.ReadOnlyField(source='employee.username')
-    reviewer_name = serializers.ReadOnlyField(source='reviewer.username')
+    task_title = serializers.SerializerMethodField()
+    employee_name = serializers.SerializerMethodField()
+    reviewer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkApproval
         fields = '__all__'
         read_only_fields = ('employee', 'submitted_at', 'reviewed_at')
+
+    def get_task_title(self, obj):
+        try:
+            return obj.task.title if getattr(obj, 'task_id', None) and obj.task else ''
+        except Exception:
+            return ''
+
+    def get_employee_name(self, obj):
+        try:
+            return obj.employee.username if getattr(obj, 'employee_id', None) and obj.employee else 'Team Member'
+        except Exception:
+            return 'Team Member'
+
+    def get_reviewer_name(self, obj):
+        try:
+            return obj.reviewer.username if getattr(obj, 'reviewer_id', None) and obj.reviewer else 'Reviewer'
+        except Exception:
+            return 'Reviewer'
 
 
 class TeamChannelSerializer(serializers.ModelSerializer):
@@ -658,20 +715,32 @@ class TeamChatMessageSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     channel = ObjectIdField(read_only=True)
     sender = ObjectIdField(read_only=True)
-    sender_name = serializers.ReadOnlyField(source='sender.username')
-    sender_role = serializers.ReadOnlyField(source='sender.enterprise_role')
+    sender_name = serializers.SerializerMethodField()
+    sender_role = serializers.SerializerMethodField()
 
     class Meta:
         model = TeamChatMessage
         fields = '__all__'
         read_only_fields = ('sender', 'created_at')
 
+    def get_sender_name(self, obj):
+        try:
+            return obj.sender.username if getattr(obj, 'sender_id', None) and obj.sender else 'Member'
+        except Exception:
+            return 'Member'
+
+    def get_sender_role(self, obj):
+        try:
+            return obj.sender.enterprise_role or obj.sender.role if getattr(obj, 'sender_id', None) and obj.sender else 'EMPLOYEE'
+        except Exception:
+            return 'EMPLOYEE'
+
 
 class ProjectSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
     owner = ObjectIdField(read_only=True)
-    owner_name = serializers.ReadOnlyField(source='owner.username')
+    owner_name = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
     task_count = serializers.SerializerMethodField()
     members_details = serializers.SerializerMethodField()
@@ -680,6 +749,12 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = '__all__'
         read_only_fields = ('client', 'owner', 'created_at', 'updated_at')
+
+    def get_owner_name(self, obj):
+        try:
+            return obj.owner.username if getattr(obj, 'owner_id', None) and obj.owner else 'Project Lead'
+        except Exception:
+            return 'Project Lead'
 
     def get_members(self, obj):
         try:
@@ -711,26 +786,56 @@ class ProjectSerializer(serializers.ModelSerializer):
 class AttendanceSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
-    user_name = serializers.ReadOnlyField(source='user.username')
-    user_email = serializers.ReadOnlyField(source='user.email')
-    user_department = serializers.ReadOnlyField(source='user.department')
+    user_name = serializers.SerializerMethodField()
+    user_email = serializers.SerializerMethodField()
+    user_department = serializers.SerializerMethodField()
 
     class Meta:
         model = Attendance
         fields = '__all__'
         read_only_fields = ('client', 'user', 'created_at')
 
+    def get_user_name(self, obj):
+        try:
+            return obj.user.username if getattr(obj, 'user_id', None) and obj.user else 'Member'
+        except Exception:
+            return 'Member'
+
+    def get_user_email(self, obj):
+        try:
+            return obj.user.email if getattr(obj, 'user_id', None) and obj.user else ''
+        except Exception:
+            return ''
+
+    def get_user_department(self, obj):
+        try:
+            return obj.user.department if getattr(obj, 'user_id', None) and obj.user else 'General'
+        except Exception:
+            return 'General'
+
 
 class LeaveRequestSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
-    user_name = serializers.ReadOnlyField(source='user.username')
-    reviewer_name = serializers.ReadOnlyField(source='reviewed_by.username')
+    user_name = serializers.SerializerMethodField()
+    reviewer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = LeaveRequest
         fields = '__all__'
         read_only_fields = ('client', 'user', 'created_at')
+
+    def get_user_name(self, obj):
+        try:
+            return obj.user.username if getattr(obj, 'user_id', None) and obj.user else 'Member'
+        except Exception:
+            return 'Member'
+
+    def get_reviewer_name(self, obj):
+        try:
+            return obj.reviewed_by.username if getattr(obj, 'reviewed_by_id', None) and obj.reviewed_by else 'Reviewer'
+        except Exception:
+            return 'Reviewer'
 
 
 class ConversationSerializer(serializers.ModelSerializer):
