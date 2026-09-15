@@ -2363,6 +2363,136 @@ class LinkedDevice(models.Model):
         return f"{self.device_name} ({self.user.username}) - {'Active' if self.is_active else 'Revoked'}"
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# DYNAMIC CONTENT MANAGEMENT SYSTEM (CMS)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class DynamicContentItem(models.Model):
+    SECTION_CHOICES = [
+        ('GENERAL', 'General App Content'),
+        ('ONBOARDING', 'Onboarding & Welcome'),
+        ('ANNOUNCEMENT', 'Announcements & Banners'),
+        ('SUPPORT', 'Support & Contact'),
+        ('EMPTY_STATES', 'Empty State Messages'),
+        ('HELP_FAQ', 'Help & FAQs'),
+        ('LEGAL', 'Legal & Compliance'),
+    ]
+
+    CONTENT_TYPE_CHOICES = [
+        ('text', 'Plain Text'),
+        ('rich_text', 'Rich Text / Markdown / HTML'),
+        ('json', 'JSON Structure'),
+        ('boolean', 'Boolean Flag'),
+        ('url', 'URL Link'),
+    ]
+
+    section = models.CharField(max_length=50, choices=SECTION_CHOICES, default='GENERAL', db_index=True)
+    key = models.CharField(max_length=100, db_index=True)
+    language = models.CharField(max_length=10, default='en', db_index=True)
+    content_type = models.CharField(max_length=20, choices=CONTENT_TYPE_CHOICES, default='text')
+    
+    label = models.CharField(max_length=255, blank=True, default='')
+    description = models.CharField(max_length=500, blank=True, default='')
+
+    draft_value = models.TextField(blank=True, default='')
+    published_value = models.TextField(blank=True, default='')
+    
+    is_active = models.BooleanField(default=True)
+    version = models.IntegerField(default=1)
+
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='cms_content_edits')
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['section', 'key', 'language']
+        unique_together = ['key', 'language']
+
+    def __str__(self):
+        return f"[{self.section}] {self.key} ({self.language}) - v{self.version}"
+
+
+class DynamicBanner(models.Model):
+    ACTION_TYPE_CHOICES = [
+        ('none', 'None'),
+        ('route', 'In-App Route'),
+        ('url', 'External Web Link'),
+        ('modal', 'Info Modal'),
+    ]
+
+    PLACEMENT_CHOICES = [
+        ('home_hero', 'Home Screen Carousel'),
+        ('promo_card', 'Promotional Card'),
+        ('announcement_bar', 'Announcement Bar'),
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default='')
+    image = models.ImageField(upload_to='banners/', null=True, blank=True)
+    image_url = models.CharField(max_length=1000, blank=True, default='')
+    
+    action_type = models.CharField(max_length=50, choices=ACTION_TYPE_CHOICES, default='none')
+    action_url = models.CharField(max_length=500, blank=True, default='')
+    placement = models.CharField(max_length=50, choices=PLACEMENT_CHOICES, default='home_hero')
+    display_order = models.IntegerField(default=0)
+    
+    is_active = models.BooleanField(default=True)
+    draft_mode = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['display_order', '-created_at']
+
+    def __str__(self):
+        return f"Banner: {self.title} ({'Active' if self.is_active else 'Inactive'})"
+
+
+class AppMaintenanceConfig(models.Model):
+    is_enabled = models.BooleanField(default=False)
+    title = models.CharField(max_length=255, default='Under Maintenance')
+    message = models.TextField(default='We are currently upgrading UWO Connect. Please check back shortly.')
+    estimated_completion = models.CharField(max_length=255, blank=True, default='Within 30 minutes')
+    allowed_roles = models.JSONField(default=list, blank=True)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='cms_maintenance_updates')
+
+    def __str__(self):
+        return f"Maintenance Mode: {'ON' if self.is_enabled else 'OFF'}"
+
+
+class AppFeatureFlag(models.Model):
+    feature_key = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default='')
+    is_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['feature_key']
+
+    def __str__(self):
+        return f"Feature {self.feature_key}: {'Enabled' if self.is_enabled else 'Disabled'}"
+
+
+class DynamicContentVersionSnapshot(models.Model):
+    version_number = models.IntegerField(unique=True, db_index=True)
+    snapshot_data = models.JSONField(default=dict)
+    changelog = models.TextField(blank=True, default='')
+    published_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='cms_version_snapshots')
+    published_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-version_number']
+
+    def __str__(self):
+        return f"Content Version Snapshot v{self.version_number} at {self.published_at}"
+
+
+
 
 
 

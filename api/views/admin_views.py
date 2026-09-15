@@ -112,6 +112,32 @@ class GlobalSettingsView(APIView):
             except Exception as e:
                 print(f"Error extracting text from file: {str(e)}")
             
+        # Synchronize with LegalDocumentVersion (used by Mobile App legal screens)
+        if key in ['terms_of_service', 'privacy_policy']:
+            try:
+                from api.models import LegalDocumentVersion
+                from django.utils import timezone
+                doc_type = 'TERMS' if key == 'terms_of_service' else 'PRIVACY'
+                doc_title = 'Terms & Conditions' if key == 'terms_of_service' else 'Privacy Policy'
+                final_content = setting.value or value
+
+                active_doc = LegalDocumentVersion.objects.filter(document_type=doc_type, is_active=True).first()
+                if active_doc:
+                    active_doc.content = final_content
+                    active_doc.effective_date = timezone.now()
+                    active_doc.save()
+                else:
+                    LegalDocumentVersion.objects.create(
+                        document_type=doc_type,
+                        title=doc_title,
+                        version='1.0',
+                        effective_date=timezone.now(),
+                        content=final_content,
+                        is_active=True
+                    )
+            except Exception as sync_err:
+                print(f"Error syncing to LegalDocumentVersion: {sync_err}")
+
         return Response(GlobalSettingSerializer(setting).data)
 
 
