@@ -55,7 +55,8 @@ from .views import (
     AdminContentManagementView, AdminContentDraftSaveView, AdminContentPublishView,
     AdminContentPreviewView, AdminContentRollbackView, AdminContentVersionsListView,
     AdminBannerManagementView, AdminMaintenanceConfigView, AdminFeatureFlagManagementView,
-    AdminCMSAuditLogsView
+    AdminCMSAuditLogsView,
+    AppInstallTelemetryView, AdminAppAnalyticsView
 )
 from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
 from .views.agency_views import (
@@ -636,4 +637,10 @@ urlpatterns = [
     path('admin/content/feature-flags', AdminFeatureFlagManagementView.as_view()),
     path('admin/content/audit-logs/', AdminCMSAuditLogsView.as_view(), name='admin-content-audit-logs'),
     path('admin/content/audit-logs', AdminCMSAuditLogsView.as_view()),
+
+    # ── Mobile App Telemetry & Installation Tracking Endpoints ──
+    path('telemetry/app-install/', AppInstallTelemetryView.as_view(), name='telemetry-app-install'),
+    path('telemetry/app-install', AppInstallTelemetryView.as_view()),
+    path('admin/app-analytics/', AdminAppAnalyticsView.as_view(), name='admin-app-analytics'),
+    path('admin/app-analytics', AdminAppAnalyticsView.as_view()),
 ]
