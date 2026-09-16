@@ -2186,6 +2186,20 @@ class SuperAdminMessagesListView(APIView):
             fb_msgs = [m for m in c_msgs if m.get('channel') == 'FACEBOOK']
             gm_msgs = [m for m in c_msgs if m.get('channel') in ['GMAIL', 'EMAIL']]
 
+            def calc_channel_metrics(msgs_list):
+                total_cnt = len(msgs_list)
+                incoming_cnt = sum(1 for m in msgs_list if m.get('message_type') == 'INCOMING')
+                outgoing_cnt = sum(1 for m in msgs_list if m.get('message_type') == 'OUTGOING')
+                bot_cnt = sum(1 for m in msgs_list if m.get('is_bot'))
+                human_cnt = total_cnt - bot_cnt
+                return {
+                    "total": total_cnt,
+                    "incoming": incoming_cnt,
+                    "outgoing": outgoing_cnt,
+                    "bot_replies": bot_cnt,
+                    "human_replies": human_cnt
+                }
+
             clients_breakdown.append({
                 "client_id": cid_str,
                 "client_name": c.business_name,
@@ -2193,17 +2207,22 @@ class SuperAdminMessagesListView(APIView):
                 "plan": c.plan,
                 "phone_number": c.phone_number or '',
                 "total_messages": len(c_msgs),
+                "total_incoming": sum(1 for m in c_msgs if m.get('message_type') == 'INCOMING'),
+                "total_outgoing": sum(1 for m in c_msgs if m.get('message_type') == 'OUTGOING'),
+                "total_bot": sum(1 for m in c_msgs if m.get('is_bot')),
+                "total_human": len(c_msgs) - sum(1 for m in c_msgs if m.get('is_bot')),
                 "channel_counts": {
                     "WHATSAPP": len(wa_msgs),
                     "INSTAGRAM": len(ig_msgs),
                     "FACEBOOK": len(fb_msgs),
                     "GMAIL": len(gm_msgs)
                 },
-                "messages": c_msgs,
-                "whatsapp_messages": wa_msgs,
-                "instagram_messages": ig_msgs,
-                "facebook_messages": fb_msgs,
-                "gmail_messages": gm_msgs
+                "channel_stats": {
+                    "WHATSAPP": calc_channel_metrics(wa_msgs),
+                    "INSTAGRAM": calc_channel_metrics(ig_msgs),
+                    "FACEBOOK": calc_channel_metrics(fb_msgs),
+                    "GMAIL": calc_channel_metrics(gm_msgs)
+                }
             })
 
         # Sort clients by total_messages descending so active ones are on top
@@ -2221,8 +2240,7 @@ class SuperAdminMessagesListView(APIView):
 
         return Response({
             "summary": summary,
-            "clients": clients_breakdown,
-            "messages": messages_data
+            "clients": clients_breakdown
         })
 
 

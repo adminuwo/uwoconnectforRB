@@ -171,13 +171,11 @@ class WorkflowEngine:
                     ai_welcome = (
                         f"🤖 *AI Assistant Connected!*\n\n"
                         f"I am your 24/7 AI Assistant for *{biz_name}*.\n\n"
-                        f"Ask me anything about our products, pricing, policies, or services!\n\n"
-                        f"_(Note: Session will return to menu after 2 minutes of inactivity)_"
+                        f"Ask me anything about our products, pricing, policies, or services!"
                     )
                     return [{
-                        "type": "buttons",
-                        "body": ai_welcome,
-                        "buttons": ["📋 Main Menu", "👤 Talk to Human"]
+                        "type": "text",
+                        "body": ai_welcome
                     }]
 
                 # Text did not match button options: end stuck session & allow new workflow triggers
@@ -411,17 +409,11 @@ class WorkflowEngine:
             res["type"] = "interactive"
             res["body"] = "\n".join(body_lines)
             res["media_url"] = media_url
+            res["media_type"] = "image"
             res["buttons"] = [cta_text[:20], "🛒 Buy Now"]
         elif node_type == 'ai_chat':
-            biz_name = getattr(client, 'business_name', 'our team')
-            greeting = data.get('message') or (
-                f"🤖 *AI Assistant Connected!*\n\n"
-                f"I am your 24/7 AI Assistant for *{biz_name}*.\n\n"
-                f"Ask me anything about our products, pricing, policies, or services!\n\n"
-                f"_(Note: Session will return to menu after 2 minutes of inactivity)_"
-            )
-            res["type"] = "interactive"
+            greeting = data.get('message') or "Hello! How can I assist you today?"
+            res["type"] = "text"
             res["body"] = greeting
-            res["buttons"] = ["📋 Main Menu", "👤 Talk to Human"]
             
         return res

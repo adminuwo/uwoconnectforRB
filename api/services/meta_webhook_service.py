@@ -68,17 +68,29 @@ class MetaWebhookService:
                             from_number = msg.get('from')
                             msg_type = msg.get('type')
                             body = ""
+                            media_id = None
+                            media_url_fetched = None
+                            media_type_tag = None
+                            media_filename_tag = None
+                            media_mime_tag = None
 
                             if msg_type == 'text':
                                 body = (msg.get('text') or {}).get('body', '')
                             elif msg_type == 'image':
                                 img_data = msg.get('image') or {}
                                 caption = img_data.get('caption', '')
+                                media_id = img_data.get('id')
+                                media_type_tag = 'image'
+                                media_mime_tag = img_data.get('mime_type', 'image/jpeg')
                                 body = f"📷 {caption}" if caption else "📷 [Photo]"
                             elif msg_type == 'document':
                                 doc_data = msg.get('document') or {}
                                 filename = doc_data.get('filename') or 'Document'
                                 caption = doc_data.get('caption', '')
+                                media_id = doc_data.get('id')
+                                media_type_tag = 'document'
+                                media_filename_tag = filename
+                                media_mime_tag = doc_data.get('mime_type', 'application/octet-stream')
                                 body = f"📄 {filename}" + (f" - {caption}" if caption else "")
                             elif msg_type == 'audio' or msg_type == 'voice':
                                 audio_data = msg.get('audio') or msg.get('voice') or {}
@@ -97,10 +109,13 @@ class MetaWebhookService:
                                                 body = f"🎵 {transcribed_text}"
                                                 print(f"Transcribed WhatsApp audio successfully: {body}")
                                     except Exception as ex:
-                                        print(f"Failed parsing incoming voice note: {str(ex)}")
+                                        print(f"Failed parsing incoming voice note: {str(ex)})")
                             elif msg_type == 'video':
                                 vid_data = msg.get('video') or {}
                                 caption = vid_data.get('caption', '')
+                                media_id = vid_data.get('id')
+                                media_type_tag = 'video'
+                                media_mime_tag = vid_data.get('mime_type', 'video/mp4')
                                 body = f"🎥 {caption}" if caption else "🎥 [Video]"
                             elif msg_type == 'location':
                                 loc = msg.get('location') or {}
@@ -127,7 +142,36 @@ class MetaWebhookService:
                                 body = "📎 [Attachment / Media]"
                             elif not body:
                                 body = f"📎 [{msg_type.capitalize()}]"
-                            
+
+                            # --- Fetch Media URL from Meta Graph API (image, document, video) ---
+                            if media_id and client.whatsapp_access_token:
+                                try:
+                                    import threading
+                                    def _fetch_and_save_media(msg_obj_id, _media_id, _token, _media_type, _filename, _mime):
+                                        try:
+                                            from ..models import Message as MsgModel
+                                            endpoint = f"https://graph.facebook.com/v19.0/{_media_id}"
+                                            hdrs = {"Authorization": f"Bearer {_token}"}
+                                            r = requests.get(endpoint, headers=hdrs, timeout=8)
+                                            if r.status_code == 200:
+                                                _url = r.json().get('url')
+                                                if _url:
+                                                    MsgModel.objects.filter(id=msg_obj_id).update(
+                                                        media_url=_url,
+                                                        media_type=_media_type,
+                                                        media_filename=_filename,
+                                                        media_mime_type=_mime
+                                                    )
+                                        except Exception as _me:
+                                            logger.warning("Media URL fetch failed for %s: %s", _media_id, _me)
+
+                                    # We'll save message first, then fetch media in background
+                                    _fetch_media_later = True
+                                except Exception:
+                                    _fetch_media_later = False
+                            else:
+                                _fetch_media_later = False
+
                             try:
                                 from django.utils import timezone
                                 from ..models import Conversation
@@ -181,6 +225,25 @@ class MetaWebhookService:
                                 status='RECEIVED',
                                 metadata=msg
                             )
+
+                            # Launch background thread to fetch & save Media URL from Meta
+                            if _fetch_media_later and incoming_msg_obj and media_id and client.whatsapp_access_token:
+                                try:
+                                    import threading
+                                    threading.Thread(
+                                        target=_fetch_and_save_media,
+                                        args=(
+                                            incoming_msg_obj.id,
+                                            media_id,
+                                            client.whatsapp_access_token,
+                                            media_type_tag,
+                                            media_filename_tag,
+                                            media_mime_tag
+                                        ),
+                                        daemon=True
+                                    ).start()
+                                except Exception as _mt_err:
+                                    logger.warning("Could not start media fetch thread: %s", _mt_err)
 
                             # OneDrive: sync media files in background
                             try:
@@ -620,24 +683,21 @@ class MetaWebhookService:
             welcome_msg = (
                 f"🤖 *AI Assistant Connected!*\n\n"
                 f"I am your 24/7 AI Assistant for *{biz_name}*.\n\n"
-                f"Ask me anything about our products, pricing, policies, or services!\n\n"
-                f"_(Note: Session will return to menu after 2 minutes of inactivity)_"
+                f"Ask me anything about our products, pricing, policies, or services!"
             )
             if platform == 'WHATSAPP':
                 MetaWebhookService.send_whatsapp_message(
                     client=client,
                     to_number=contact_id,
                     text_body=welcome_msg,
-                    phone_number_id=phone_number_id,
-                    buttons=["📋 Main Menu", "👤 Talk to Human"]
+                    phone_number_id=phone_number_id
                 )
             else:
                 MetaWebhookService.send_fb_ig_message(
                     client=client,
                     platform=platform,
                     recipient_id=contact_id,
-                    text_body=welcome_msg,
-                    buttons=["📋 Main Menu", "👤 Talk to Human"]
+                    text_body=welcome_msg
                 )
             return True
 
@@ -653,14 +713,36 @@ class MetaWebhookService:
         if incoming_clean in ['menu', 'main menu', 'exit', 'back', 'cancel', 'stop', 'quit', '📋 main menu']:
             ai_session.is_active = False
             ai_session.save()
-            greeting_text = client.greeting_message or f"Hello! Welcome to {client.business_name}. How can we assist you today?"
-            msg = f"✅ *Exited AI Assistant.*\n\n{greeting_text}"
-            btns = client.greeting_buttons or ["🛍️ Catalog", "🤖 Talk to AI", "💬 Talk to Support"]
-            if platform == 'WHATSAPP':
-                MetaWebhookService.send_whatsapp_message(client, contact_id, msg, phone_number_id, btns)
-            else:
-                MetaWebhookService.send_fb_ig_message(client, platform, contact_id, msg, btns)
-            return True
+            from .workflow_service import WorkflowEngine
+            from ..repositories.workflow_repository import WorkflowRepository
+            active_wf = WorkflowRepository.filter_workflows(client=client, enabled=True).first()
+            wf_messages = None
+            if active_wf:
+                wf_messages = WorkflowEngine._start_workflow(client, contact_id, active_wf)
+            if wf_messages:
+                for msg in wf_messages:
+                    if platform == 'WHATSAPP':
+                        MetaWebhookService.send_whatsapp_message(
+                            client=client,
+                            to_number=contact_id,
+                            text_body=msg.get('body', ''),
+                            phone_number_id=phone_number_id,
+                            buttons=msg.get('buttons'),
+                            media_url=msg.get('media_url'),
+                            media_type=msg.get('type')
+                        )
+                    else:
+                        MetaWebhookService.send_fb_ig_message(
+                            client=client,
+                            platform=platform,
+                            recipient_id=contact_id,
+                            text_body=msg.get('body', ''),
+                            buttons=msg.get('buttons'),
+                            media_url=msg.get('media_url'),
+                            media_type=msg.get('type')
+                        )
+                return True
+            return False
 
         # Human Handoff
         if incoming_clean in ['human', 'talk to human', 'agent', 'support', 'live agent', '👤 talk to human']:
@@ -677,22 +759,47 @@ class MetaWebhookService:
                 MetaWebhookService.send_fb_ig_message(client, platform, contact_id, msg)
             return True
 
-        # 2-Minute Inactivity Timeout Check
+        # 2-Minute Inactivity Timeout Check: Cycle back to Workflow!
         if elapsed > 120:
             ai_session.is_active = False
             ai_session.save()
-            timeout_msg = (
-                f"⏱️ *AI session closed due to 2 minutes of inactivity.*\n\n"
-                f"👋 Welcome back to *{client.business_name}*! How can we assist you today?"
-            )
-            btns = client.greeting_buttons or ["🛍️ Catalog", "🤖 Talk to AI", "💬 Talk to Support"]
-            if platform == 'WHATSAPP':
-                MetaWebhookService.send_whatsapp_message(client, contact_id, timeout_msg, phone_number_id, btns)
-            else:
-                MetaWebhookService.send_fb_ig_message(client, platform, contact_id, timeout_msg, btns)
-            return True
 
-        # Active AI Query within 2 minutes: Generate RAG response!
+            from .workflow_service import WorkflowEngine
+            from ..repositories.workflow_repository import WorkflowRepository
+
+            wf_messages = WorkflowEngine.process_workflow(client, contact_id, incoming_text, platform)
+            if not wf_messages:
+                active_wf = WorkflowRepository.filter_workflows(client=client, enabled=True).first()
+                if active_wf:
+                    wf_messages = WorkflowEngine._start_workflow(client, contact_id, active_wf)
+
+            if wf_messages:
+                for msg in wf_messages:
+                    if platform == 'WHATSAPP':
+                        MetaWebhookService.send_whatsapp_message(
+                            client=client,
+                            to_number=contact_id,
+                            text_body=msg.get('body', ''),
+                            phone_number_id=phone_number_id,
+                            buttons=msg.get('buttons'),
+                            media_url=msg.get('media_url'),
+                            media_type=msg.get('type')
+                        )
+                    else:
+                        MetaWebhookService.send_fb_ig_message(
+                            client=client,
+                            platform=platform,
+                            recipient_id=contact_id,
+                            text_body=msg.get('body', ''),
+                            buttons=msg.get('buttons'),
+                            media_url=msg.get('media_url'),
+                            media_type=msg.get('type')
+                        )
+                return True
+
+            return False
+
+        # Active AI Query within 2 minutes: Generate RAG response without buttons!
         ai_session.variables['last_ai_time'] = time.time()
         ai_session.save()
 
@@ -728,16 +835,14 @@ class MetaWebhookService:
                 client=client,
                 to_number=contact_id,
                 text_body=ai_reply,
-                phone_number_id=phone_number_id,
-                buttons=["📋 Main Menu", "👤 Talk to Human"]
+                phone_number_id=phone_number_id
             )
         else:
             MetaWebhookService.send_fb_ig_message(
                 client=client,
                 platform=platform,
                 recipient_id=contact_id,
-                text_body=ai_reply,
-                buttons=["📋 Main Menu", "👤 Talk to Human"]
+                text_body=ai_reply
             )
         return True
 
@@ -779,7 +884,7 @@ class MetaWebhookService:
                     phone_number_id=phone_number_id,
                     buttons=msg.get('buttons'),
                     media_url=msg.get('media_url'),
-                    media_type=msg.get('type')
+                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None)
                 )
             return
 
@@ -898,7 +1003,7 @@ class MetaWebhookService:
                     text_body=msg.get('body', ''),
                     buttons=msg.get('buttons'),
                     media_url=msg.get('media_url'),
-                    media_type=msg.get('type')
+                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None)
                 )
             return
 
@@ -1007,8 +1112,12 @@ class MetaWebhookService:
             if media_url.startswith('http://') and not ('127.0.0.1' in media_url or 'localhost' in media_url):
                 media_url = 'https://' + media_url[7:]
 
+        # Determine valid WhatsApp media type: 'image', 'video', or 'document'
+        m_type = 'video' if any(ext in str(media_url or '').lower() for ext in ['.mp4', '.mov', '.avi']) else 'image'
+        if media_type in ['image', 'video', 'document']:
+            m_type = media_type
+
         if media_url and buttons and len(buttons) > 0:
-            m_type = media_type or ('video' if any(ext in media_url.lower() for ext in ['.mp4', '.mov', '.avi']) else 'image')
             buttons_payload = []
             for i, btn_text in enumerate(buttons[:3]):
                 buttons_payload.append({
@@ -1036,10 +1145,6 @@ class MetaWebhookService:
                 }
             }
         elif media_url:
-            m_type = media_type
-            if not m_type:
-                m_type = 'video' if any(ext in media_url.lower() for ext in ['.mp4', '.mov', '.avi']) else 'image'
-            
             payload = {
                 "messaging_product": "whatsapp",
                 "to": formatted_to,
