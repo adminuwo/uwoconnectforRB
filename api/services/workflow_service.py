@@ -53,18 +53,28 @@ class WorkflowEngine:
             if len(wf_channels) > 0 and channel_upper not in wf_channels:
                 continue
 
+            # Reserved commercial system commands that shouldn't be hijacked by generic wildcard (*) triggers
+            reserved_commercial_keywords = {'catalog', 'product', 'products', 'browse products', 'shop', 'items', 'store', 'samaan', 'buy now', 'order now'}
+            is_reserved_command = any(rc in incoming_text_lower for rc in reserved_commercial_keywords)
+
             # Catch-all trigger: any incoming message
             catch_all_tokens = {'*', 'all', 'any', 'anything'}
             if wf.trigger_type in ['ALL', 'ANY', 'ANYTHING']:
-                return WorkflowEngine._start_workflow(client, phone_number, wf)
+                if not is_reserved_command:
+                    return WorkflowEngine._start_workflow(client, phone_number, wf)
 
             if isinstance(wf.trigger_value, list):
                 trigger_keywords = [t.lower().strip() for t in wf.trigger_value if isinstance(t, str)]
-                if any(t in catch_all_tokens for t in trigger_keywords) or any(kw and (kw == incoming_text_lower or kw in incoming_text_lower) for kw in trigger_keywords):
+                has_catch_all = any(t in catch_all_tokens for t in trigger_keywords)
+                has_keyword_match = any(kw and (kw == incoming_text_lower or kw in incoming_text_lower) for kw in trigger_keywords if kw not in catch_all_tokens)
+                if has_keyword_match or (has_catch_all and not is_reserved_command):
                     return WorkflowEngine._start_workflow(client, phone_number, wf)
             elif isinstance(wf.trigger_value, str):
                 kw = wf.trigger_value.lower().strip()
-                if kw in catch_all_tokens or (kw and (kw == incoming_text_lower or kw in incoming_text_lower)):
+                if kw in catch_all_tokens:
+                    if not is_reserved_command:
+                        return WorkflowEngine._start_workflow(client, phone_number, wf)
+                elif kw and (kw == incoming_text_lower or kw in incoming_text_lower):
                     return WorkflowEngine._start_workflow(client, phone_number, wf)
 
         return None
@@ -148,6 +158,28 @@ class WorkflowEngine:
                     session.save()
                     return None
             else:
+                # Check if user clicked or typed Talk to AI
+                ai_keywords = ['talk to ai', 'chat with ai', 'ask ai', 'ai assistant', 'ai chat']
+                if any(ak in input_clean for ak in ai_keywords):
+                    import time
+                    session.variables = session.variables or {}
+                    session.variables['ai_mode'] = True
+                    session.variables['last_ai_time'] = time.time()
+                    session.save()
+
+                    biz_name = getattr(session.client, 'business_name', 'our team')
+                    ai_welcome = (
+                        f"🤖 *AI Assistant Connected!*\n\n"
+                        f"I am your 24/7 AI Assistant for *{biz_name}*.\n\n"
+                        f"Ask me anything about our products, pricing, policies, or services!\n\n"
+                        f"_(Note: Session will return to menu after 2 minutes of inactivity)_"
+                    )
+                    return [{
+                        "type": "buttons",
+                        "body": ai_welcome,
+                        "buttons": ["📋 Main Menu", "👤 Talk to Human"]
+                    }]
+
                 # Text did not match button options: end stuck session & allow new workflow triggers
                 session.is_active = False
                 session.save()
@@ -242,15 +274,26 @@ class WorkflowEngine:
                     session.save()
                     break
 
-            elif node_type in ['plain', 'default', 'image', 'video', 'buttons']:
-                messages_to_send.append(WorkflowEngine._format_node_response(current_node))
+            elif node_type in ['plain', 'default', 'image', 'video', 'buttons', 'catalog_product', 'ai_chat']:
+                if node_type == 'ai_chat':
+                    import time
+                    session.variables = session.variables or {}
+                    session.variables['ai_mode'] = True
+                    session.variables['last_ai_time'] = time.time()
+                    session.current_node_id = current_node_id
+                    session.save()
+
+                    messages_to_send.append(WorkflowEngine._format_node_response(current_node, client=session.client))
+                    break
+
+                messages_to_send.append(WorkflowEngine._format_node_response(current_node, client=session.client))
                 
                 # Save the active node in session
                 session.current_node_id = current_node_id
                 session.save()
 
-                if node_type == 'buttons':
-                    # Stop traversing: wait for user selection
+                if node_type in ['buttons', 'catalog_product']:
+                    # Stop traversing: wait for user action / selection
                     break
 
                 # For plain, image, video nodes: advance to next node
@@ -305,7 +348,7 @@ class WorkflowEngine:
         return False
 
     @staticmethod
-    def _format_node_response(node):
+    def _format_node_response(node, client=None):
         node_type = node.get('type')
         data = node.get('data', {})
         
@@ -322,5 +365,63 @@ class WorkflowEngine:
             res["buttons"] = data.get('buttons', [])
         elif node_type in ['image', 'video']:
             res["media_url"] = data.get('mediaUrl')
+        elif node_type == 'catalog_product':
+            product_id = data.get('productId')
+            product = None
+            if product_id:
+                try:
+                    from ..repositories.product_repository import ProductRepository
+                    from bson import ObjectId
+                    product = ProductRepository.filter_products(id=product_id).first()
+                    if not product:
+                        try:
+                            product = ProductRepository.filter_products(id=ObjectId(str(product_id))).first()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            name = (product.name if product else None) or data.get('productName') or 'Catalog Product'
+            price = (product.price if product else None) or data.get('productPrice') or ''
+            desc = (product.description if product else None) or data.get('description') or ''
+            media_url = (product.image_url if product else None) or data.get('mediaUrl') or None
+            cta_text = data.get('ctaText') or (getattr(product, 'cta_text', None) if product else None) or 'View Product'
+
+            # Upgrade media_url to https if external
+            if media_url and isinstance(media_url, str):
+                media_url = media_url.strip()
+                if media_url.startswith('http://') and not ('127.0.0.1' in media_url or 'localhost' in media_url):
+                    media_url = 'https://' + media_url[7:]
+
+            body_lines = [f"🛍️ *{name}*"]
+            if price:
+                body_lines.append(f"💰 *Price*: ${price}")
+            if desc:
+                body_lines.append(f"_{desc}_")
+
+            import os
+            base_url = os.getenv('BACKEND_URL') or os.getenv('FRONTEND_URL') or 'https://uwoconnect.aisa24.com'
+            base_url = base_url.rstrip('/')
+            prod_id_str = str(product.id) if product else (str(product_id) if product_id else None)
+            if prod_id_str:
+                body_lines.append(f"\n🔗 [{cta_text}]: {base_url}/api/products/{prod_id_str}/redirect_link/")
+
+            body_lines.append("\n👉 Click a button below or reply to order!")
+
+            res["type"] = "interactive"
+            res["body"] = "\n".join(body_lines)
+            res["media_url"] = media_url
+            res["buttons"] = [cta_text[:20], "🛒 Buy Now"]
+        elif node_type == 'ai_chat':
+            biz_name = getattr(client, 'business_name', 'our team')
+            greeting = data.get('message') or (
+                f"🤖 *AI Assistant Connected!*\n\n"
+                f"I am your 24/7 AI Assistant for *{biz_name}*.\n\n"
+                f"Ask me anything about our products, pricing, policies, or services!\n\n"
+                f"_(Note: Session will return to menu after 2 minutes of inactivity)_"
+            )
+            res["type"] = "interactive"
+            res["body"] = greeting
+            res["buttons"] = ["📋 Main Menu", "👤 Talk to Human"]
             
         return res

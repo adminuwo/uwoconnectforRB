@@ -580,6 +580,168 @@ class MetaWebhookService:
             return {"status": "error", "status_code": 500}
 
     @staticmethod
+    def handle_ai_session_check(client, contact_id, incoming_text, platform='WHATSAPP', phone_number_id=None):
+        """
+        Handles the AI + Workflow Hybrid Session:
+        - Detects direct "Talk to AI" trigger
+        - Checks for active AI session
+        - Enforces 2-minute (120s) inactivity timeout to cycle back to workflow
+        - Processes manual exit ('Main Menu')
+        - Performs RAG knowledge answering within the active session
+        Returns True if handled, False otherwise.
+        """
+        import time
+        from ..models import WorkflowSession, Contact
+        from ..repositories.workflow_repository import WorkflowRepository
+        from django.db.models import Q
+
+        incoming_clean = incoming_text.strip().lower()
+
+        # 1. Direct trigger for Talk to AI
+        if incoming_clean in ['talk to ai', '🤖 talk to ai', 'chat with ai', 'ask ai', 'ai assistant']:
+            # Deactivate any previous session
+            WorkflowSession.objects.filter(client=client, phone_number=contact_id, is_active=True).update(is_active=False)
+
+            active_wf = WorkflowRepository.filter_workflows(client=client, enabled=True).first()
+            if not active_wf:
+                active_wf = WorkflowRepository.filter_workflows(client=client).first()
+
+            if active_wf:
+                WorkflowSession.objects.create(
+                    client=client,
+                    phone_number=contact_id,
+                    workflow=active_wf,
+                    current_node_id='ai_chat_session',
+                    variables={'ai_mode': True, 'last_ai_time': time.time()},
+                    is_active=True
+                )
+
+            biz_name = getattr(client, 'business_name', 'our team')
+            welcome_msg = (
+                f"🤖 *AI Assistant Connected!*\n\n"
+                f"I am your 24/7 AI Assistant for *{biz_name}*.\n\n"
+                f"Ask me anything about our products, pricing, policies, or services!\n\n"
+                f"_(Note: Session will return to menu after 2 minutes of inactivity)_"
+            )
+            if platform == 'WHATSAPP':
+                MetaWebhookService.send_whatsapp_message(
+                    client=client,
+                    to_number=contact_id,
+                    text_body=welcome_msg,
+                    phone_number_id=phone_number_id,
+                    buttons=["📋 Main Menu", "👤 Talk to Human"]
+                )
+            else:
+                MetaWebhookService.send_fb_ig_message(
+                    client=client,
+                    platform=platform,
+                    recipient_id=contact_id,
+                    text_body=welcome_msg,
+                    buttons=["📋 Main Menu", "👤 Talk to Human"]
+                )
+            return True
+
+        # 2. Check for active session in AI mode
+        ai_session = WorkflowSession.objects.filter(client=client, phone_number=contact_id, is_active=True).first()
+        if not ai_session or not ai_session.variables or not ai_session.variables.get('ai_mode'):
+            return False
+
+        last_ai_time = ai_session.variables.get('last_ai_time', 0)
+        elapsed = time.time() - last_ai_time
+
+        # Manual exit to Main Menu
+        if incoming_clean in ['menu', 'main menu', 'exit', 'back', 'cancel', 'stop', 'quit', '📋 main menu']:
+            ai_session.is_active = False
+            ai_session.save()
+            greeting_text = client.greeting_message or f"Hello! Welcome to {client.business_name}. How can we assist you today?"
+            msg = f"✅ *Exited AI Assistant.*\n\n{greeting_text}"
+            btns = client.greeting_buttons or ["🛍️ Catalog", "🤖 Talk to AI", "💬 Talk to Support"]
+            if platform == 'WHATSAPP':
+                MetaWebhookService.send_whatsapp_message(client, contact_id, msg, phone_number_id, btns)
+            else:
+                MetaWebhookService.send_fb_ig_message(client, platform, contact_id, msg, btns)
+            return True
+
+        # Human Handoff
+        if incoming_clean in ['human', 'talk to human', 'agent', 'support', 'live agent', '👤 talk to human']:
+            ai_session.is_active = False
+            ai_session.save()
+            ct = Contact.objects.filter(Q(client=client) & (Q(platform_id=contact_id) | Q(phone_number=contact_id))).first()
+            if ct:
+                ct.bot_paused = True
+                ct.save()
+            msg = "👤 You are being connected to our human support team. An agent will reply shortly!"
+            if platform == 'WHATSAPP':
+                MetaWebhookService.send_whatsapp_message(client, contact_id, msg, phone_number_id)
+            else:
+                MetaWebhookService.send_fb_ig_message(client, platform, contact_id, msg)
+            return True
+
+        # 2-Minute Inactivity Timeout Check
+        if elapsed > 120:
+            ai_session.is_active = False
+            ai_session.save()
+            timeout_msg = (
+                f"⏱️ *AI session closed due to 2 minutes of inactivity.*\n\n"
+                f"👋 Welcome back to *{client.business_name}*! How can we assist you today?"
+            )
+            btns = client.greeting_buttons or ["🛍️ Catalog", "🤖 Talk to AI", "💬 Talk to Support"]
+            if platform == 'WHATSAPP':
+                MetaWebhookService.send_whatsapp_message(client, contact_id, timeout_msg, phone_number_id, btns)
+            else:
+                MetaWebhookService.send_fb_ig_message(client, platform, contact_id, timeout_msg, btns)
+            return True
+
+        # Active AI Query within 2 minutes: Generate RAG response!
+        ai_session.variables['last_ai_time'] = time.time()
+        ai_session.save()
+
+        from .ai_service import get_rag_response, get_ai_response, get_embedding, find_relevant_chunks
+        from ..repositories.knowledge_repository import KnowledgeRepository
+
+        ai_reply = None
+        chunks = KnowledgeRepository.filter_chunks(client=client).exclude(embedding=[])
+        if chunks.exists():
+            query_embedding = get_embedding(incoming_text)
+            if query_embedding:
+                chunks_data = [{
+                    'text': c.chunk_text,
+                    'embedding': c.embedding,
+                    'doc_title': getattr(c.document, 'title', 'Knowledge') if hasattr(c, 'document') and c.document else 'Knowledge'
+                } for c in chunks.select_related('document')]
+                relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5)
+
+                if relevant and relevant[0]['score'] > 0.3:
+                    ai_reply = get_rag_response(incoming_text, relevant, client_model=client)
+                else:
+                    ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
+            else:
+                ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
+        else:
+            ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
+
+        if not ai_reply:
+            ai_reply = f"Thank you for contacting {client.business_name}. How can we assist you with our products or services today?"
+
+        if platform == 'WHATSAPP':
+            MetaWebhookService.send_whatsapp_message(
+                client=client,
+                to_number=contact_id,
+                text_body=ai_reply,
+                phone_number_id=phone_number_id,
+                buttons=["📋 Main Menu", "👤 Talk to Human"]
+            )
+        else:
+            MetaWebhookService.send_fb_ig_message(
+                client=client,
+                platform=platform,
+                recipient_id=contact_id,
+                text_body=ai_reply,
+                buttons=["📋 Main Menu", "👤 Talk to Human"]
+            )
+        return True
+
+    @staticmethod
     def handle_automations_whatsapp(client, to_number, incoming_text, phone_number_id):
         # Quick safety check: if contact bot is paused, do not proceed
         if client:
@@ -589,6 +751,10 @@ class MetaWebhookService:
             if _contact and _contact.bot_paused:
                 logger.info(f"Bot paused for WhatsApp contact {to_number}. Bypassing automations.")
                 return
+
+        # Check for active Hybrid AI Session or Talk to AI trigger
+        if MetaWebhookService.handle_ai_session_check(client, to_number, incoming_text, 'WHATSAPP', phone_number_id):
+            return
 
         # 1st Time Incoming Message check for Greeting Message
         msg_count = MessageRepository.filter_messages(client=client, channel='WHATSAPP', from_address=to_number, message_type='INCOMING').count()
@@ -705,6 +871,10 @@ class MetaWebhookService:
             if _contact and _contact.bot_paused:
                 logger.info(f"Bot paused for {platform} contact {sender_id}. Bypassing automations.")
                 return
+
+        # Check for active Hybrid AI Session or Talk to AI trigger
+        if MetaWebhookService.handle_ai_session_check(client, sender_id, incoming_text, platform):
+            return
 
         msg_count = MessageRepository.filter_messages(client=client, channel=platform, from_address=sender_id, message_type='INCOMING').count()
         if (msg_count <= 1 and client.greeting_enabled) or (client.greeting_enabled and client.greeting_message and incoming_text.lower().strip() in ['hi', 'hello', 'hey', 'start']):
@@ -831,7 +1001,41 @@ class MetaWebhookService:
             "Content-Type": "application/json"
         }
         
-        if media_url:
+        # Upgrade media_url to https if needed (Meta requires https for remote media)
+        if media_url and isinstance(media_url, str):
+            media_url = media_url.strip()
+            if media_url.startswith('http://') and not ('127.0.0.1' in media_url or 'localhost' in media_url):
+                media_url = 'https://' + media_url[7:]
+
+        if media_url and buttons and len(buttons) > 0:
+            m_type = media_type or ('video' if any(ext in media_url.lower() for ext in ['.mp4', '.mov', '.avi']) else 'image')
+            buttons_payload = []
+            for i, btn_text in enumerate(buttons[:3]):
+                buttons_payload.append({
+                    "type": "reply",
+                    "reply": {
+                        "id": f"btn_{i}",
+                        "title": btn_text[:20]
+                    }
+                })
+            
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": formatted_to,
+                "type": "interactive",
+                "interactive": {
+                    "type": "button",
+                    "header": {
+                        "type": m_type,
+                        m_type: {
+                            "link": media_url
+                        }
+                    },
+                    "body": {"text": text_body or "Select an option:"},
+                    "action": {"buttons": buttons_payload}
+                }
+            }
+        elif media_url:
             m_type = media_type
             if not m_type:
                 m_type = 'video' if any(ext in media_url.lower() for ext in ['.mp4', '.mov', '.avi']) else 'image'
@@ -879,6 +1083,25 @@ class MetaWebhookService:
             response = requests.post(url, headers=headers, json=payload, timeout=10)
             res_data = response.json()
             print(f"WhatsApp API Response: {res_data}")
+
+            # If interactive message with media header was rejected by Meta (e.g., media host issue), retry without header
+            if response.status_code != 200 and 'interactive' in payload and 'header' in payload.get('interactive', {}):
+                print("[WARNING] Interactive message with media header failed. Retrying without media header...")
+                fallback_payload = {
+                    "messaging_product": "whatsapp",
+                    "to": formatted_to,
+                    "type": "interactive",
+                    "interactive": {
+                        "type": "button",
+                        "body": payload['interactive']['body'],
+                        "action": payload['interactive']['action']
+                    }
+                }
+                fb_res = requests.post(url, headers=headers, json=fallback_payload, timeout=10)
+                if fb_res.status_code == 200:
+                    response = fb_res
+                    res_data = fb_res.json()
+                    payload = fallback_payload
 
             return MessageRepository.create_message(
                 client=client,
@@ -1027,14 +1250,22 @@ class MetaWebhookService:
             return
 
         msg_body = f"🛍️ *{client.business_name} Product Catalog*:\n\n"
+        first_product_image = None
+
+        base_url = os.getenv('BACKEND_URL') or os.getenv('FRONTEND_URL') or 'https://uwoconnect.aisa24.com'
+        base_url = base_url.rstrip('/')
+
         for p in products:
+            if not first_product_image and getattr(p, 'image_url', None):
+                first_product_image = p.image_url
+
             price_str = f"${p.price}" if p.price else "Contact for Price"
             msg_body += f"📦 *{p.name}* - {price_str}\n"
             if p.description:
                 msg_body += f"  _{p.description}_\n"
-            if getattr(p, 'product_url', None):
+            if getattr(p, 'product_url', None) or p.id:
                 cta = getattr(p, 'cta_text', 'View Product') or 'View Product'
-                tracking_url = f"http://127.0.0.1:8080/api/products/{p.id}/redirect_link/"
+                tracking_url = f"{base_url}/api/products/{p.id}/redirect_link/"
                 msg_body += f"  🔗 [{cta}]: {tracking_url}\n"
             msg_body += "\n"
 
@@ -1042,7 +1273,15 @@ class MetaWebhookService:
         buttons = ["🛒 Buy Now", "💬 Talk to Support"]
 
         if platform == 'WHATSAPP':
-            MetaWebhookService.send_whatsapp_message(client, recipient_id, msg_body, phone_number_id, buttons)
+            MetaWebhookService.send_whatsapp_message(
+                client=client,
+                to_number=recipient_id,
+                text_body=msg_body,
+                phone_number_id=phone_number_id,
+                buttons=buttons,
+                media_url=first_product_image,
+                media_type='image'
+            )
         else:
             MetaWebhookService.send_fb_ig_message(client, platform, recipient_id, msg_body, buttons)
 
