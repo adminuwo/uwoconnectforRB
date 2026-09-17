@@ -332,6 +332,11 @@ class Message(models.Model):
     edited_at = models.DateTimeField(null=True, blank=True)
     edited_history = models.JSONField(default=list, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
+    # Media support for incoming WhatsApp images, documents, videos, audio
+    media_url = models.URLField(max_length=1000, null=True, blank=True)
+    media_type = models.CharField(max_length=20, null=True, blank=True)  # 'image', 'document', 'video', 'audio'
+    media_filename = models.CharField(max_length=255, null=True, blank=True)
+    media_mime_type = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
 class Conversation(models.Model):
