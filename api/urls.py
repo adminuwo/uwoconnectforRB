@@ -56,7 +56,7 @@ from .views import (
     AdminContentPreviewView, AdminContentRollbackView, AdminContentVersionsListView,
     AdminBannerManagementView, AdminMaintenanceConfigView, AdminFeatureFlagManagementView,
     AdminCMSAuditLogsView,
-    AppInstallTelemetryView, AdminAppAnalyticsView
+    AppInstallTelemetryView, AdminAppAnalyticsView, ClientUpdateSelfView
 )
 from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
 from .views.agency_views import (
@@ -643,4 +643,16 @@ urlpatterns = [
     path('telemetry/app-install', AppInstallTelemetryView.as_view()),
     path('admin/app-analytics/', AdminAppAnalyticsView.as_view(), name='admin-app-analytics'),
     path('admin/app-analytics', AdminAppAnalyticsView.as_view()),
+
+    # ── Platform Compatibility & Unified Endpoint Aliases ──
+    path('client/update/', ClientUpdateSelfView.as_view(), name='client-update-self'),
+    path('client/update', ClientUpdateSelfView.as_view()),
+    path('auth/qr/consume/', QrAuthStatusView.as_view(), name='qr-auth-consume'),
+    path('auth/qr/consume', QrAuthStatusView.as_view()),
+    path('admin/logs/', AuditLogViewSet.as_view({'get': 'list'}), name='admin-logs-alias'),
+    path('admin/logs', AuditLogViewSet.as_view({'get': 'list'})),
+    path('admin/workflows/', WorkflowViewSet.as_view({'get': 'list'}), name='admin-workflows-alias'),
+    path('admin/workflows', WorkflowViewSet.as_view({'get': 'list'})),
+    path('team/', TeamMemberViewSet.as_view({'get': 'list'}), name='team-list-alias'),
+    path('team', TeamMemberViewSet.as_view({'get': 'list'})),
 ]

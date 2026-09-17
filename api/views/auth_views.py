@@ -260,22 +260,42 @@ class ProfileView(APIView):
         user_serializer = UserSerializer(request.user)
         user_data = user_serializer.data
 
-        client_data = {}
-        global_map = {}
+        from api.utils.channel_permissions import ensure_default_global_connectors
+        from api.models import GlobalConnector
+        ensure_default_global_connectors()
+        global_map = {gc.connector_key: gc.is_active for gc in GlobalConnector.objects.all()}
         effective_map = {}
 
-        if getattr(request.user, 'client', None):
-            serializer = ClientSerializer(request.user.client)
+        client = safe_get_client(request.user)
+        if not client and getattr(request.user, 'role', '') == 'CLIENT':
+            # Auto-provision or link a dedicated workspace for this client so they aren't orphaned
+            try:
+                from api.models import Client
+                name = request.user.first_name or (request.user.email.split('@')[0] if request.user.email else 'User')
+                workspace_name = f"{name.capitalize()}'s Workspace"
+                client = Client.objects.create(
+                    business_name=workspace_name,
+                    plan="ADVANCED"
+                )
+                request.user.client = client
+                request.user.save(update_fields=['client'])
+            except Exception:
+                pass
+
+        if client:
+            serializer = ClientSerializer(client)
             client_data = dict(serializer.data)
             try:
                 from api.utils.channel_permissions import get_user_effective_connectors
-                effective_map = get_user_effective_connectors(request.user, client=request.user.client)
-                global_map = {k: v['global_active'] for k, v in effective_map.items()}
+                effective_map = get_user_effective_connectors(request.user, client=client)
+                for k, v in effective_map.items():
+                    if 'global_active' in v:
+                        global_map[k] = v['global_active']
                 client_data['global_connectors'] = global_map
                 client_data['effective_connectors'] = effective_map
             except Exception as e:
-                global_map = {}
-                effective_map = {}
+                client_data['global_connectors'] = global_map
+                client_data['effective_connectors'] = effective_map
         else:
             # Super Admin or staff user without a direct client tenant
             client_data = {
@@ -283,7 +303,9 @@ class ProfileView(APIView):
                 "email": request.user.email,
                 "plan": "Super Admin",
                 "plan_name": "Super Admin",
-                "status": "ACTIVE"
+                "status": "ACTIVE",
+                "global_connectors": global_map,
+                "effective_connectors": effective_map,
             }
 
         client_plan = client_data.get('plan') or ('Super Admin' if request.user.role == 'ADMIN' else 'ADVANCED')

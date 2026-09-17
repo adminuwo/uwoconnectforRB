@@ -28,7 +28,7 @@ import requests
 import logging
 logger = logging.getLogger(__name__)
 from ..services.ai_service import get_ai_response, get_platform_assistance, get_rag_response, get_embedding, chunk_text, find_relevant_chunks, get_ai_draft
-from ..utils.channel_permissions import get_user_allowed_channels
+from ..utils.channel_permissions import get_user_allowed_channels, safe_get_client
 from rest_framework.permissions import BasePermission
 from .webhook_views import WhatsAppWebhookView, FacebookInstagramWebhookView
 def get_tenant_client(request):
@@ -41,8 +41,8 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except (Client.DoesNotExist, ValueError):
                 pass
-        return getattr(request.user, 'client', None)
-    return getattr(request.user, 'client', None)
+        return safe_get_client(request.user)
+    return safe_get_client(request.user)
 
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = ClientRepository.get_all_clients()
@@ -524,6 +524,28 @@ class ContactViewSet(viewsets.ModelViewSet):
             item['contact_phone'] = fu_obj.contact.phone_number or ''
             item['contact_stage'] = fu_obj.contact.stage
         return Response(data)
+
+
+class ClientUpdateSelfView(APIView):
+    """
+    PATCH /api/client/update/
+    Allows an authenticated client user to update their own client workspace configurations
+    (e.g., YouTube config, channels, integrations).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        client = getattr(request.user, 'client', None)
+        if not client:
+            return Response({"error": "No associated client found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ClientSerializer(client, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": True, "client": serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request):
+        return self.patch(request)
 
 
 class ClientStatsView(APIView):

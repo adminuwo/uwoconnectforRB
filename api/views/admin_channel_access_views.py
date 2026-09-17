@@ -2,7 +2,7 @@ import json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from api.models import (
@@ -100,8 +100,8 @@ class AdminGlobalConnectorsView(APIView):
             # Count team members who have permission for this connector
             member_access_count = 0
             for m in all_members:
-                if m.client:
-                    cid = str(m.client.id)
+                cid = str(m.client_id) if getattr(m, 'client_id', None) else None
+                if cid:
                     mid = str(m.id)
                     if (cid, mid, key) in member_perms_map:
                         if member_perms_map[(cid, mid, key)]:
@@ -111,8 +111,15 @@ class AdminGlobalConnectorsView(APIView):
                         if (cid, key) in client_perms_map:
                             if client_perms_map[(cid, key)]:
                                 member_access_count += 1
-                        elif m.client.has_channel_access(key):
-                            member_access_count += 1
+                        else:
+                            try:
+                                if m.client and m.client.has_channel_access(key):
+                                    member_access_count += 1
+                            except Exception:
+                                pass
+
+            from api.utils.channel_permissions import get_item_type
+            item_type = get_item_type(c.connector_key, c.category, c.is_core)
 
             results.append({
                 'id': str(c.id),
@@ -120,6 +127,7 @@ class AdminGlobalConnectorsView(APIView):
                 'name': c.name,
                 'short_name': c.short_name or c.name,
                 'category': c.category,
+                'item_type': item_type,
                 'is_core': c.is_core,
                 'is_active': c.is_active,
                 'scheduled_live_at': c.scheduled_live_at.isoformat() if getattr(c, 'scheduled_live_at', None) else None,
@@ -130,8 +138,24 @@ class AdminGlobalConnectorsView(APIView):
                 'updated_at': c.updated_at.isoformat() if c.updated_at else None
             })
 
+        channels = [x for x in results if x.get('item_type') == 'channel']
+        connectors_list = [x for x in results if x.get('item_type') == 'connector']
+        features = [x for x in results if x.get('item_type') == 'feature']
+
         return Response({
-            'connectors': results,
+            'connectors': results,  # legacy key
+            'items': results,
+            'channels': channels,
+            'connectors_list': connectors_list,
+            'features': features,
+            'counts': {
+                'channels': len(channels),
+                'connectors': len(connectors_list),
+                'features': len(features),
+                'total': len(results),
+                'active': sum(1 for x in results if x['is_active']),
+                'inactive': sum(1 for x in results if not x['is_active'])
+            },
             'total_active': sum(1 for x in results if x['is_active']),
             'total_inactive': sum(1 for x in results if not x['is_active'])
         })
@@ -147,9 +171,33 @@ class AdminGlobalConnectorsView(APIView):
         key = str(key).lower().strip()
         ensure_default_global_connectors()
 
-        gc = GlobalConnector.objects.filter(connector_key=key).first()
+        clean_k = key.replace('feature_', '').replace('connector_', '').replace('channel_', '')
+        gc = (
+            GlobalConnector.objects.filter(connector_key=key).first() or
+            GlobalConnector.objects.filter(connector_key=clean_k).first()
+        )
+
         if not gc:
-            return Response({"error": f"Connector '{key}' not found."}, status=status.HTTP_404_NOT_FOUND)
+            # Check Feature table and sync to GlobalConnector
+            from api.models import Feature
+            feat = (
+                Feature.objects.filter(key=key).first() or
+                Feature.objects.filter(key=clean_k).first() or
+                Feature.objects.filter(key=f"feature_{clean_k}").first()
+            )
+            if feat:
+                from api.utils.channel_permissions import get_item_type
+                gc = GlobalConnector.objects.create(
+                    connector_key=clean_k,
+                    name=feat.name,
+                    short_name=feat.name,
+                    category=feat.category or 'FEATURE',
+                    is_active=feat.status == 'ACTIVE',
+                    is_core=False,
+                    description=feat.description or ''
+                )
+            else:
+                return Response({"error": f"Item '{key}' not found."}, status=status.HTTP_404_NOT_FOUND)
 
         prev_state = {
             'is_active': gc.is_active,
@@ -191,6 +239,21 @@ class AdminGlobalConnectorsView(APIView):
         gc.updated_at = timezone.now()
         gc.save()
 
+        # Synchronize corresponding entries in Feature model
+        try:
+            from api.models import Feature
+            feat_keys = [gc.connector_key, clean_k, f"feature_{clean_k}", f"connector_{clean_k}", f"channel_{clean_k}"]
+            for f in Feature.objects.filter(key__in=feat_keys):
+                f.status = 'ACTIVE' if gc.is_active else 'INACTIVE'
+                f.is_coming_soon = not gc.is_active
+                f.save()
+        except Exception as sync_err:
+            print(f"[AdminGlobalConnectorsView] Feature sync error: {sync_err}")
+
+        # Invalidate all channel permission caches
+        from api.utils.channel_permissions import clear_channel_permissions_cache
+        clear_channel_permissions_cache()
+
         # Log in Audit Log
         action = 'GLOBAL_ACTIVATED' if gc.is_active else ('SCHEDULED_LIVE' if gc.scheduled_live_at else 'GLOBAL_DEACTIVATED')
         log_channel_permission_change(
@@ -206,11 +269,13 @@ class AdminGlobalConnectorsView(APIView):
             notes=request.data.get('notes', f"Global status updated (Active: {gc.is_active}, Scheduled: {gc.scheduled_live_at})")
         )
 
+        from api.utils.channel_permissions import get_item_type
         return Response({
             'success': True,
             'connector': {
                 'key': gc.connector_key,
                 'name': gc.name,
+                'item_type': get_item_type(gc.connector_key, gc.category, gc.is_core),
                 'is_active': gc.is_active,
                 'scheduled_live_at': gc.scheduled_live_at.isoformat() if gc.scheduled_live_at else None,
                 'updated_by': gc.updated_by,
@@ -656,9 +721,9 @@ class EffectiveConnectorsView(APIView):
 
 class GlobalConnectorsStatusView(APIView):
     """
-    Simple, direct endpoint returning live global_connectors active/deactive status map for all clients.
+    Simple, direct endpoint returning live global_connectors active/coming soon status map for all clients and mobile app.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         ensure_default_global_connectors()
@@ -672,5 +737,6 @@ class GlobalConnectorsStatusView(APIView):
                 gc.save()
             g_map[gc.connector_key] = bool(gc.is_active)
         return Response({
-            "global_connectors": g_map
+            "global_connectors": g_map,
+            "status_map": {k: ("ACTIVE" if v else "COMING_SOON") for k, v in g_map.items()}
         })

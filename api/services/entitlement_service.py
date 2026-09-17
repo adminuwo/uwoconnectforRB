@@ -554,20 +554,28 @@ class EntitlementService:
         Returns COMING_SOON | AVAILABLE | UPGRADE_REQUIRED
         """
         # 1. Check if item is marked COMING SOON or INACTIVE by Admin in DB
-        if item_type == 'connector':
-            gc = GlobalConnector.objects.filter(connector_key=item_key).first()
-            if gc:
-                if getattr(gc, 'is_coming_soon', False):
-                    return 'COMING_SOON'
-                if not getattr(gc, 'is_active', True):
-                    return 'DISABLED'
-        elif item_type == 'feature':
-            feat = Feature.objects.filter(key=item_key).first()
-            if feat:
-                if getattr(feat, 'is_coming_soon', False):
-                    return 'COMING_SOON'
-                if not getattr(feat, 'is_active', True):
-                    return 'DISABLED'
+        clean_k = item_key.lower().replace('feature_', '').replace('connector_', '').replace('channel_', '')
+
+        # Check GlobalConnector
+        gc = (
+            GlobalConnector.objects.filter(connector_key__iexact=item_key).first() or
+            GlobalConnector.objects.filter(connector_key__iexact=clean_k).first()
+        )
+        if gc:
+            if getattr(gc, 'is_coming_soon', False) or not getattr(gc, 'is_active', True):
+                return 'COMING_SOON'
+
+        # Check Feature
+        feat = (
+            Feature.objects.filter(key__iexact=item_key).first() or
+            Feature.objects.filter(key__iexact=clean_k).first() or
+            Feature.objects.filter(key__iexact=f"feature_{clean_k}").first() or
+            Feature.objects.filter(key__iexact=f"channel_{clean_k}").first() or
+            Feature.objects.filter(key__iexact=f"connector_{clean_k}").first()
+        )
+        if feat:
+            if getattr(feat, 'is_coming_soon', False) or getattr(feat, 'status', 'ACTIVE') != 'ACTIVE' or not getattr(feat, 'is_active', True):
+                return 'COMING_SOON'
 
         # 2. Check if item is override-added or override-removed by Admin for this client
         if client:
@@ -667,7 +675,7 @@ class EntitlementService:
                 'name': gc.name,
                 'category': gc.category,
                 'status': st,
-                'is_coming_soon': getattr(gc, 'is_coming_soon', False)
+                'is_coming_soon': True if st == 'COMING_SOON' else getattr(gc, 'is_coming_soon', False)
             }
             connectors_eval[k] = item_data
             clean_k = k.lower().replace('connector_', '')
@@ -685,7 +693,7 @@ class EntitlementService:
                 'name': ft.name,
                 'category': ft.category,
                 'status': st,
-                'is_coming_soon': getattr(ft, 'is_coming_soon', False)
+                'is_coming_soon': True if st == 'COMING_SOON' else getattr(ft, 'is_coming_soon', False)
             }
             features_eval[k] = item_data
             clean_k = k.lower().replace('feature_', '')

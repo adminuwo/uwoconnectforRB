@@ -20,6 +20,7 @@ import os
 import json
 from ..services.ai_service import get_ai_response, get_platform_assistance, get_rag_response, get_embedding, chunk_text, find_relevant_chunks
 from rest_framework.permissions import BasePermission
+from ..utils.channel_permissions import safe_get_client
 
 def get_tenant_client(request):
     if not request.user or not request.user.is_authenticated:
@@ -33,8 +34,8 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except Exception:
                 pass
-        return getattr(request.user, 'client', None)
-    return getattr(request.user, 'client', None)
+        return safe_get_client(request.user)
+    return safe_get_client(request.user)
 
 class AutomationViewSet(viewsets.ModelViewSet):
     serializer_class = AutomationSerializer

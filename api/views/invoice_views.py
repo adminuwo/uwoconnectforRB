@@ -13,6 +13,8 @@ from api.services.invoice_service import InvoiceService
 from api.services.invoice_pdf_service import InvoicePDFService
 from api.permissions.custom_permissions import IsApprovedUser
 
+from api.utils.channel_permissions import safe_get_client
+
 logger = logging.getLogger(__name__)
 
 def get_tenant_client(request):
@@ -25,8 +27,8 @@ def get_tenant_client(request):
                 return Client.objects.get(id=client_id)
             except Exception:
                 pass
-        return getattr(request.user, 'client_workspace', None) or getattr(request.user, 'client', None)
-    return getattr(request.user, 'client_workspace', None) or getattr(request.user, 'client', None)
+        return getattr(request.user, 'client_workspace', None) or safe_get_client(request.user)
+    return getattr(request.user, 'client_workspace', None) or safe_get_client(request.user)
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
