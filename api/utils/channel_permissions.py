@@ -9,12 +9,34 @@ Level 3: TEAM MEMBER CONNECTOR ASSIGNMENT
 from django.utils import timezone
 
 def safe_get_client(user):
-    if not user:
+    if not user or not getattr(user, 'is_authenticated', False):
         return None
     try:
-        return getattr(user, 'client', None)
+        if getattr(user, 'client_id', None):
+            client = getattr(user, 'client', None)
+            if client:
+                return client
     except Exception:
-        return None
+        pass
+
+    # If client is missing or unlinked, and user is an authenticated CLIENT or ADMIN
+    role = getattr(user, 'role', '')
+    if role in ['CLIENT', 'ADMIN']:
+        try:
+            from api.models import Client
+            name = getattr(user, 'first_name', '') or (user.email.split('@')[0] if getattr(user, 'email', None) else 'User')
+            workspace_name = f"{name.capitalize()}'s Workspace"
+            client = Client.objects.create(
+                business_name=workspace_name,
+                plan="ADVANCED"
+            )
+            user.client = client
+            user.save(update_fields=['client'])
+            return client
+        except Exception:
+            pass
+
+    return None
 
 
 DEFAULT_CONNECTORS = [

@@ -425,6 +425,7 @@ class ContactSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
     platform_id = serializers.CharField(required=False)
+    preferred_channel = serializers.SerializerMethodField()
     follow_ups_count = serializers.SerializerMethodField()
     next_followup_at = serializers.SerializerMethodField()
 
@@ -440,6 +441,25 @@ class ContactSerializer(serializers.ModelSerializer):
         if not data.get('platform_id'):
             data['platform_id'] = data.get('phone_number') or data.get('email') or f"contact_{timezone.now().strftime('%Y%m%d%H%M%S')}"
         return super().to_internal_value(data)
+
+    def get_preferred_channel(self, obj):
+        try:
+            convo = obj.conversations.first()
+            if convo and convo.channel:
+                return convo.channel
+        except Exception:
+            pass
+        name = (obj.name or '').upper()
+        pid = (obj.platform_id or '').lower()
+        if 'INSTAGRAM' in name or name.startswith('@') or pid.startswith('ig') or 'instagram' in pid:
+            return 'INSTAGRAM'
+        elif 'FACEBOOK' in name or pid.startswith('fb') or 'facebook' in pid:
+            return 'FACEBOOK'
+        elif 'YOUTUBE' in name or pid.startswith('yt') or 'youtube' in pid:
+            return 'YOUTUBE'
+        elif '@' in pid and not name.startswith('@'):
+            return 'GMAIL'
+        return 'WHATSAPP'
 
     def get_follow_ups_count(self, obj):
         return obj.follow_ups.filter(status='PENDING').count()
@@ -464,14 +484,22 @@ class ContactListSerializer(serializers.ModelSerializer):
         )
 
     def get_preferred_channel(self, obj):
+        try:
+            convo = obj.conversations.first()
+            if convo and convo.channel:
+                return convo.channel
+        except Exception:
+            pass
         name = (obj.name or '').upper()
         pid = (obj.platform_id or '').lower()
         
-        if 'INSTAGRAM' in name or pid.startswith('ig') or 'instagram' in pid:
+        if 'INSTAGRAM' in name or name.startswith('@') or pid.startswith('ig') or 'instagram' in pid:
             return 'INSTAGRAM'
         elif 'FACEBOOK' in name or pid.startswith('fb') or 'facebook' in pid:
             return 'FACEBOOK'
-        elif '@' in pid:
+        elif 'YOUTUBE' in name or pid.startswith('yt') or 'youtube' in pid:
+            return 'YOUTUBE'
+        elif '@' in pid and not name.startswith('@'):
             return 'GMAIL'
         else:
             return 'WHATSAPP'

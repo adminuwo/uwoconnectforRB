@@ -43,12 +43,15 @@ class AutomationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         client = get_tenant_client(self.request)
-        if self.request.user.role == 'ADMIN' and not client:
+        if not client:
             return Automation.objects.none()
         return AutomationRepository.filter_automations(client=client)
 
     def perform_create(self, serializer):
         client = get_tenant_client(self.request)
+        if not client:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"client": "No active client workspace found for this account."})
         instance = serializer.save(client=client)
         AdminService.log_admin_action(self.request, instance, 'Automations', 'CREATE', after_value=str(serializer.data))
 
@@ -70,12 +73,15 @@ class WorkflowViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         client = get_tenant_client(self.request)
-        if self.request.user.role == 'ADMIN' and not client:
+        if not client:
             return Workflow.objects.none()
         return WorkflowRepository.filter_workflows(client=client)
 
     def perform_create(self, serializer):
         client = get_tenant_client(self.request)
+        if not client:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"client": "No active client workspace found for this account."})
         instance = serializer.save(client=client)
         AdminService.log_admin_action(self.request, instance, 'Workflows', 'CREATE', after_value=str(serializer.data))
 

@@ -32,15 +32,7 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except (Client.DoesNotExist, ValueError):
                 pass
-        # Fallback to user's client if present
-        c = safe_get_client(request.user)
-        if c:
-            return c
-        # Fallback to first available client
-        try:
-            return ClientRepository.get_all_clients().first()
-        except Exception:
-            return None
+        return safe_get_client(request.user)
     return safe_get_client(request.user)
 
 class RegisterView(views.APIView):
@@ -77,15 +69,17 @@ class LoginView(views.APIView):
         email = req.data.get('email', '').strip().lower()
         password = req.data.get('password', '')
 
-        # Extract client IP address
+        # Extract client IP address and user agent
         x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
             ip_address = x_forwarded_for.split(',')[0].strip()
         else:
             ip_address = req.META.get('REMOTE_ADDR')
 
+        user_agent = req.META.get('HTTP_USER_AGENT', '')
+
         from ..services.auth_service import AuthService
-        result = AuthService.login_user(email, password, ip_address=ip_address)
+        result = AuthService.login_user(email, password, ip_address=ip_address, user_agent=user_agent)
         
         if "error" in result:
             return Response({"message": result["error"]}, status=result["status_code"])
@@ -161,6 +155,51 @@ class GoogleClientIdView(views.APIView):
 
     def get(self, req):
         return Response({"client_id": ""})
+
+@method_decorator(csrf_exempt, name='dispatch')
+
+
+class AppleLoginView(views.APIView):
+    """
+    POST /api/auth/apple/
+    Verifies Apple Sign-In identity token, links or registers user, and returns JWT session.
+    Body: { identity_token: str, name?: str, invite_token?: str }
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, req):
+        try:
+            identity_token = req.data.get('identity_token') or req.data.get('id_token')
+            if not identity_token or not isinstance(identity_token, str):
+                return Response({"message": "Valid Apple identity_token string is required."}, status=status.HTTP_400_BAD_REQUEST)
+            identity_token = identity_token.strip()
+
+            name = str(req.data.get('name') or '').strip()
+            invite_token = str(req.data.get('invite_token') or '').strip()
+
+            x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
+            ip_address = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else req.META.get('REMOTE_ADDR')
+
+            from ..services.auth_service import AuthService
+            result = AuthService.process_apple_login(
+                identity_token,
+                name=name or None,
+                invite_token=invite_token or None,
+                ip_address=ip_address,
+            )
+
+            if "error" in result:
+                return Response({"message": result["error"]}, status=result.get("status_code", 400))
+
+            if result.get("is_created"):
+                return Response({"user": result["user"], "token": result["token"]}, status=status.HTTP_201_CREATED)
+
+            return Response({"user": result["user"], "token": result["token"]}, status=status.HTTP_200_OK)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Apple login unhandled error")
+            return Response({"message": f"Apple authentication failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 @method_decorator(csrf_exempt, name='dispatch')
 

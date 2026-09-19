@@ -583,21 +583,22 @@ class ClientStatsView(APIView):
         automation_runs = MessageRepository.filter_messages(client=client, message_type='OUTGOING', status='SENT').count()
         active_users = total_conversations
 
-        # --- Live Resource Counts from Database ---
+        from ..utils.channel_permissions import is_connector_globally_active
+
+        # --- Live Resource Counts from Database (strictly respecting Global Admin & Coming Soon status) ---
         connector_flags = [
-            client.automation_enabled and bool(client.whatsapp_access_token),  # WhatsApp
-            client.facebook_enabled,
-            client.instagram_enabled,
-            client.gmail_enabled,
-            client.outlook_enabled,
-            client.youtube_enabled,
-            client.google_news_enabled,
-            client.onedrive_enabled,
-            client.google_calendar_enabled,
-            client.google_sheets_enabled,
-            client.google_docs_enabled,
-            client.google_slides_enabled,
-            client.zoho_enabled,
+            is_connector_globally_active('whatsapp') and bool(client.automation_enabled and bool(client.whatsapp_access_token)),
+            is_connector_globally_active('facebook') and bool(client.facebook_enabled),
+            is_connector_globally_active('instagram') and bool(client.instagram_enabled),
+            is_connector_globally_active('gmail') and bool(client.gmail_enabled),
+            is_connector_globally_active('outlook') and bool(client.outlook_enabled),
+            is_connector_globally_active('youtube') and bool(client.youtube_enabled),
+            is_connector_globally_active('google_news') and bool(client.google_news_enabled),
+            is_connector_globally_active('onedrive') and bool(client.onedrive_enabled),
+            is_connector_globally_active('google_calendar') and bool(client.google_calendar_enabled),
+            is_connector_globally_active('google_sheets') and bool(client.google_sheets_enabled),
+            is_connector_globally_active('google_docs') and bool(client.google_docs_enabled or client.google_slides_enabled),
+            is_connector_globally_active('zoho') and bool(client.zoho_enabled),
         ]
         connectors_count = sum(1 for flag in connector_flags if flag)
 

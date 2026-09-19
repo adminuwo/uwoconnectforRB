@@ -78,7 +78,11 @@ from .content_management_views import (
 )
 from .telemetry_views import (
     AppInstallTelemetryView,
-    AdminAppAnalyticsView
+    AdminAppAnalyticsView,
+    ClientPlatformOverviewView,
+    AdminInstallationsDetailView,
+    AdminInstallationToggleStatusView,
+    AppUninstallTelemetryView
 )
 
 

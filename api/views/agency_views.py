@@ -148,6 +148,12 @@ class AgencySubClientsListView(views.APIView):
             client=sub_client
         )
 
+        try:
+            from ..services.welcome_email_service import WelcomeEmailService
+            WelcomeEmailService.send_welcome_email(user, temp_password=password or 'Welcome@2026')
+        except Exception as e:
+            pass
+
         return Response({
             "message": f"Sub-Client '{business_name}' registered successfully under your agency!",
             "client_id": str(sub_client.id),

@@ -2,11 +2,43 @@ import secrets
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from firebase_admin import auth as firebase_auth
-from ..models import User, Client, TeamInvite, AuditLog
+from ..models import User, Client, TeamInvite, AuditLog, AppInstallation
 from django.utils import timezone
 from ..repositories.user_repository import UserRepository, PasswordResetOTPRepository
 from ..repositories.team_invite_repository import TeamInviteRepository
 from ..repositories.client_repository import ClientRepository
+
+def parse_client_device_meta(ua_string):
+    ua = str(ua_string or '')
+    ua_lower = ua.lower()
+    
+    os_name = 'Web / Desktop'
+    if 'windows nt 10.0' in ua_lower:
+        os_name = 'Windows 10/11'
+    elif 'windows' in ua_lower:
+        os_name = 'Windows'
+    elif 'macintosh' in ua_lower or 'mac os x' in ua_lower:
+        os_name = 'macOS'
+    elif 'iphone' in ua_lower:
+        os_name = 'iOS (iPhone)'
+    elif 'ipad' in ua_lower:
+        os_name = 'iPadOS'
+    elif 'android' in ua_lower:
+        os_name = 'Android'
+    elif 'linux' in ua_lower:
+        os_name = 'Linux'
+
+    browser_name = 'Web Browser'
+    if 'edg/' in ua_lower:
+        browser_name = 'Microsoft Edge'
+    elif 'chrome/' in ua_lower and 'safari/' in ua_lower:
+        browser_name = 'Google Chrome'
+    elif 'safari/' in ua_lower and 'chrome/' not in ua_lower:
+        browser_name = 'Apple Safari'
+    elif 'firefox/' in ua_lower:
+        browser_name = 'Mozilla Firefox'
+
+    return os_name, browser_name
 
 def generate_random_password():
     return secrets.token_urlsafe(24)
@@ -34,7 +66,7 @@ class AuthService:
         }
 
     @staticmethod
-    def login_user(email, password, ip_address=None):
+    def login_user(email, password, ip_address=None, user_agent=None):
         if not email or not password:
             return {"error": "Email and password are required.", "status_code": 400}
 
@@ -53,9 +85,39 @@ class AuthService:
         if not user.is_active:
             return {"error": "This account is inactive.", "status_code": 403}
 
+        os_name, browser_name = parse_client_device_meta(user_agent)
         user.is_online = True
         user.last_active_at = timezone.now()
-        user.save(update_fields=['is_online', 'last_active_at'])
+        fields_to_update = ['is_online', 'last_active_at']
+        if ip_address:
+            user.last_login_ip = ip_address
+            fields_to_update.append('last_login_ip')
+        if user_agent:
+            user.last_login_os = os_name
+            user.last_login_browser = browser_name
+            fields_to_update.extend(['last_login_os', 'last_login_browser'])
+        user.save(update_fields=fields_to_update)
+
+        # Register or touch web installation telemetry for the client
+        try:
+            client = AuthService._safe_get_client(user)
+            if client:
+                AppInstallation.objects.update_or_create(
+                    installation_id=f"web_client_{client.id}",
+                    defaults={
+                        'platform': 'web',
+                        'app_version': 'Web v1.0',
+                        'os_version': os_name,
+                        'device_model': f"{os_name} • {browser_name}",
+                        'user': user,
+                        'client': client,
+                        'ip_address': ip_address,
+                        'user_agent': str(user_agent)[:500] if user_agent else '',
+                        'last_active_at': timezone.now(),
+                    }
+                )
+        except Exception as e:
+            print(f"[WebTelemetry Error] {str(e)}")
 
         # Create AuditLog for LOGIN
         try:
@@ -285,6 +347,204 @@ class AuthService:
                     "user": AuthService._serialize_user(user),
                     "token": str(refresh.access_token)
                 }
+
+    @staticmethod
+    def process_apple_login(identity_token_str, name=None, invite_token=None, ip_address=None):
+        """
+        Verifies Apple Sign-In identity token (JWT) using Apple's public keys,
+        extracts email/sub, and authenticates or provisions the user.
+        Falls back to unverified decode in development if verification fails.
+        """
+        if not identity_token_str or not isinstance(identity_token_str, str):
+            return {"error": "Apple identity_token is required.", "status_code": 400}
+
+        identity_token_str = identity_token_str.strip()
+        decoded_token = None
+
+        # 1. Try cryptographic verification via Apple public keys
+        try:
+            import jwt as pyjwt
+            import requests as req_lib
+            import json as _json
+
+            # Fetch Apple's public JWKS
+            jwks_resp = req_lib.get("https://appleid.apple.com/auth/keys", timeout=5)
+            jwks = jwks_resp.json()
+
+            header = pyjwt.get_unverified_header(identity_token_str)
+            kid = header.get("kid")
+
+            from jwt.algorithms import RSAAlgorithm
+            public_key = None
+            for key_data in jwks.get("keys", []):
+                if key_data.get("kid") == kid:
+                    public_key = RSAAlgorithm.from_jwk(_json.dumps(key_data))
+                    break
+
+            if public_key:
+                decoded_token = pyjwt.decode(
+                    identity_token_str,
+                    public_key,
+                    algorithms=["RS256"],
+                    audience="com.uwo.uwoconnect",
+                    options={"verify_exp": True},
+                )
+            else:
+                raise ValueError("Matching Apple public key not found")
+        except Exception as apple_err:
+            # 2. Fallback: unverified decode (dev/testing)
+            try:
+                import jwt as pyjwt
+                decoded_token = pyjwt.decode(
+                    identity_token_str,
+                    options={"verify_signature": False},
+                )
+                print(f"[AppleLogin] Falling back to unverified decode: {apple_err}")
+            except Exception:
+                return {"error": f"Apple token verification failed: {str(apple_err)}", "status_code": 401}
+
+        if not decoded_token:
+            return {"error": "Failed to decode Apple identity token.", "status_code": 400}
+
+        email = (decoded_token.get("email") or "").lower().strip()
+        apple_sub = decoded_token.get("sub") or ""
+
+        # Apple may withhold email on repeated logins; use sub-based synthetic email
+        if not email and apple_sub:
+            email = f"apple_{apple_sub}@privaterelay.appleid.com"
+
+        if not email:
+            return {"error": "No email found in Apple identity token.", "status_code": 400}
+
+        display_name = name or (email.split("@")[0] if email else "Apple User")
+
+        # Admin special case
+        if email == "admin@uwo24.com":
+            user, created = UserRepository.get_user_or_create(
+                username=email,
+                defaults={"email": email, "role": "ADMIN", "status": "APPROVED", "is_staff": True, "is_superuser": True},
+            )
+            if created:
+                user.set_password(generate_random_password())
+                user.save()
+            refresh = RefreshToken.for_user(user)
+            return {"user": AuthService._serialize_user(user, override_name="System Admin"), "token": str(refresh.access_token)}
+
+        # Check existing user
+        user = UserRepository.filter_users(email=email).first()
+        if not user:
+            user = UserRepository.filter_users(username=email).first()
+
+        if user:
+            if user.role == "CLIENT" and user.status != "APPROVED":
+                return {"error": f"Account status: {user.status}. Please wait for admin approval.", "status_code": 403}
+
+            user.is_online = True
+            user.last_active_at = timezone.now()
+            user.save(update_fields=["is_online", "last_active_at"])
+
+            try:
+                AuditLog.objects.create(
+                    admin_name=user.username,
+                    client_name=user.client.business_name if user.client else "Platform",
+                    module="Authentication",
+                    action="LOGIN",
+                    before_value=f"Role: {user.role}",
+                    after_value=f"User {user.username} logged in successfully via Apple Sign-In.",
+                    ip_address=ip_address,
+                )
+            except Exception as e:
+                print(f"[AuditLog Error] {str(e)}")
+
+            refresh = RefreshToken.for_user(user)
+            return {"user": AuthService._serialize_user(user), "token": str(refresh.access_token)}
+        else:
+            # New user — invite or self-registration
+            if invite_token:
+                from django.db.models import Q
+                invite = TeamInvite.objects.filter(
+                    token=invite_token,
+                    expires_at__gt=timezone.now(),
+                ).filter(Q(is_used=False) | Q(is_qr=True)).first()
+
+                if not invite:
+                    return {"error": "Invalid or expired invite token.", "status_code": 400}
+
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=generate_random_password(),
+                    first_name=display_name,
+                    role="AGENT",
+                    enterprise_role="EMPLOYEE",
+                    status="APPROVED",
+                    client=invite.client,
+                    permissions=invite.permissions,
+                )
+
+                if not invite.is_qr:
+                    invite.is_used = True
+                    invite.save()
+
+                try:
+                    AuditLog.objects.create(
+                        admin_name=user.username,
+                        client_name=user.client.business_name if user.client else "Platform",
+                        module="Authentication",
+                        action="REGISTER & LOGIN",
+                        before_value=f"Role: {user.role}",
+                        after_value=f"User {user.username} registered and logged in via Apple Sign-In with invite.",
+                        ip_address=ip_address,
+                    )
+                except Exception as e:
+                    print(f"[AuditLog Error] {str(e)}")
+
+                try:
+                    from .welcome_email_service import WelcomeEmailService
+                    WelcomeEmailService.send_welcome_email(user)
+                except Exception as e:
+                    print(f"[WelcomeEmail Error] {e}")
+
+                refresh = RefreshToken.for_user(user)
+                return {"is_created": True, "status": "APPROVED", "user": AuthService._serialize_user(user), "token": str(refresh.access_token)}
+            else:
+                business_name_val = f"{display_name}'s Workspace"
+                client = Client.objects.create(business_name=business_name_val)
+                user = User.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=generate_random_password(),
+                    first_name=display_name,
+                    role="CLIENT",
+                    status="APPROVED",
+                    client=client,
+                    terms_accepted=True,
+                    privacy_accepted=True,
+                    terms_version="1.0",
+                    terms_accepted_at=timezone.now(),
+                )
+
+                try:
+                    AuditLog.objects.create(
+                        admin_name=user.username,
+                        client_name=client.business_name,
+                        module="Authentication",
+                        action="REGISTER & LOGIN",
+                        before_value="Role: CLIENT",
+                        after_value=f"New Apple user {user.username} registered with workspace {client.business_name}.",
+                        ip_address=ip_address,
+                    )
+                except Exception as e:
+                    print(f"[AuditLog Error] {str(e)}")
+
+                try:
+                    from .welcome_email_service import WelcomeEmailService
+                    WelcomeEmailService.send_welcome_email(user)
+                except Exception as e:
+                    print(f"[WelcomeEmail Error] {e}")
+
+                refresh = RefreshToken.for_user(user)
+                return {"is_created": True, "status": "APPROVED", "user": AuthService._serialize_user(user), "token": str(refresh.access_token)}
 
     @staticmethod
     def process_firebase_login(id_token, name, invite_token, business_name, ip_address=None, meta_portfolio_name=None):

@@ -6,6 +6,7 @@ from ..repositories.client_repository import ClientRepository
 from ..permissions.custom_permissions import IsApprovedUser
 from rest_framework import status, views, viewsets
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from firebase_admin import auth as firebase_auth
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -102,6 +103,132 @@ class TemplateViewSet(viewsets.ModelViewSet):
             return Response({"message": str(e)}, status=500)
 
 
+def extract_recipients_from_spreadsheet(file_obj, filename=""):
+    """
+    Parses an uploaded file (.xlsx, .xls, .csv) and extracts:
+    - Phone numbers (sanitized, formatted e.g. 919876543210, deduplicated)
+    - Names (from corresponding column or fallback)
+    Returns: (total_rows, valid_recipients, invalid_rows)
+    """
+    import io, csv, re
+
+    lower_name = (filename or getattr(file_obj, 'name', '') or '').lower()
+    raw_rows = []
+
+    if lower_name.endswith('.csv') or lower_name.endswith('.txt'):
+        try:
+            content = file_obj.read()
+            if isinstance(content, bytes):
+                try:
+                    text = content.decode('utf-8-sig')
+                except UnicodeDecodeError:
+                    text = content.decode('latin-1')
+            else:
+                text = str(content)
+            csv_file = io.StringIO(text)
+            reader = csv.reader(csv_file)
+            raw_rows = [row for row in reader if any(cell.strip() for cell in row)]
+        except Exception as e:
+            raise ValueError(f"Error reading CSV file: {str(e)}")
+    else:
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(file_obj, data_only=True)
+            sheet = wb.active
+            for row in sheet.iter_rows(values_only=True):
+                if row and any(cell is not None and str(cell).strip() for cell in row):
+                    raw_rows.append([str(cell).strip() if cell is not None else '' for cell in row])
+        except Exception as e:
+            # Fallback to CSV text reader
+            try:
+                file_obj.seek(0)
+                content = file_obj.read()
+                text = content.decode('utf-8-sig', errors='ignore') if isinstance(content, bytes) else str(content)
+                csv_file = io.StringIO(text)
+                reader = csv.reader(csv_file)
+                raw_rows = [row for row in reader if any(cell.strip() for cell in row)]
+            except Exception:
+                raise ValueError(f"Could not read spreadsheet file. Please upload a valid .xlsx or .csv file.")
+
+    if not raw_rows:
+        return 0, [], []
+
+    # Identify header vs data rows
+    first_row = [str(c).strip().lower() for c in raw_rows[0]]
+    phone_idx = -1
+    name_idx = -1
+
+    phone_keywords = ['phone', 'mobile', 'contact', 'whatsapp', 'number', 'cell', 'tel', 'ph']
+    name_keywords = ['name', 'customer', 'client', 'lead', 'full name', 'first name', 'person']
+
+    for idx, cell_text in enumerate(first_row):
+        if phone_idx == -1 and any(kw in cell_text for kw in phone_keywords):
+            phone_idx = idx
+        if name_idx == -1 and any(kw in cell_text for kw in name_keywords):
+            name_idx = idx
+
+    has_header = (phone_idx != -1 or name_idx != -1)
+    data_rows = raw_rows[1:] if has_header else raw_rows
+
+    # Fallback: scan columns for majority 10-15 digit values
+    if phone_idx == -1:
+        col_scores = {}
+        for row in data_rows[:20]:
+            for c_idx, cell in enumerate(row):
+                digits = re.sub(r'\D', '', str(cell))
+                if 10 <= len(digits) <= 15:
+                    col_scores[c_idx] = col_scores.get(c_idx, 0) + 1
+        if col_scores:
+            phone_idx = max(col_scores, key=col_scores.get)
+        else:
+            phone_idx = 0
+
+    if name_idx == -1:
+        for c_idx in range(len(raw_rows[0])):
+            if c_idx != phone_idx:
+                name_idx = c_idx
+                break
+
+    valid_recipients = []
+    invalid_rows = []
+    seen_numbers = set()
+
+    for r_idx, row in enumerate(data_rows):
+        raw_phone = row[phone_idx] if phone_idx < len(row) else ''
+        raw_name = row[name_idx] if name_idx != -1 and name_idx < len(row) else ''
+
+        digits = re.sub(r'\D', '', str(raw_phone))
+
+        # Standardize phone numbers (10 digits -> Indian standard 91XXXXXXXXXX)
+        if len(digits) == 10:
+            clean_phone = f"91{digits}"
+        elif len(digits) == 11 and digits.startswith('0'):
+            clean_phone = f"91{digits[1:]}"
+        elif 11 <= len(digits) <= 15:
+            clean_phone = digits
+        else:
+            clean_phone = None
+
+        if clean_phone:
+            if clean_phone not in seen_numbers:
+                seen_numbers.add(clean_phone)
+                clean_name = str(raw_name).strip() if raw_name else f"Contact #{clean_phone[-4:]}"
+                valid_recipients.append({
+                    'name': clean_name,
+                    'phone': clean_phone,
+                    'raw_phone': str(raw_phone).strip()
+                })
+        else:
+            if any(str(c).strip() for c in row):
+                invalid_rows.append({
+                    'row_index': r_idx + (2 if has_header else 1),
+                    'raw_phone': str(raw_phone).strip(),
+                    'reason': 'Invalid phone number (must be 10-15 digits)'
+                })
+
+    return len(data_rows), valid_recipients, invalid_rows
+
+
 class CampaignViewSet(viewsets.ModelViewSet):
     serializer_class = CampaignSerializer
     permission_classes = [IsApprovedUser]
@@ -112,28 +239,124 @@ class CampaignViewSet(viewsets.ModelViewSet):
             return Campaign.objects.none()
         return CampaignRepository.filter_campaigns(client=client).order_by('-created_at')
 
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser, JSONParser])
+    def parse_excel(self, request):
+        """
+        Parses an uploaded Excel (.xlsx, .xls) or CSV (.csv) file.
+        Extracts phone numbers, names, cleans formatting, and returns preview.
+        """
+        file_obj = request.FILES.get('file') or request.FILES.get('excel') or request.FILES.get('spreadsheet')
+        if not file_obj:
+            # Check if raw text / CSV data was pasted
+            csv_text = request.data.get('csv_text')
+            if csv_text and isinstance(csv_text, str):
+                import io
+                file_obj = io.BytesIO(csv_text.encode('utf-8'))
+                file_obj.name = "pasted_data.csv"
+            else:
+                return Response(
+                    {"error": "No file uploaded. Please upload a .xlsx, .xls, or .csv file."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        filename = getattr(file_obj, 'name', '')
+        try:
+            total_rows, valid_recipients, invalid_rows = extract_recipients_from_spreadsheet(file_obj, filename)
+            return Response({
+                "filename": filename,
+                "total_rows": total_rows,
+                "valid_count": len(valid_recipients),
+                "invalid_count": len(invalid_rows),
+                "preview": valid_recipients[:5],
+                "recipients": valid_recipients,
+                "sample_invalid": invalid_rows[:3] if invalid_rows else []
+            })
+        except Exception as e:
+            return Response({"error": f"Failed to parse spreadsheet: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
     def perform_create(self, serializer):
         from django.utils import timezone
         client = get_tenant_client(self.request)
 
-        # Resolve template from request data (support both 'template' and 'template_id' keys)
+        # Resolve template from request data (support 'template', 'template_id', and 'template_name')
         template_id = self.request.data.get('template') or self.request.data.get('template_id')
+        template_name = self.request.data.get('template_name')
         template_obj = None
         if template_id:
             try:
                 template_obj = Template.objects.get(id=template_id)
             except Exception as ex:
                 print(f"Error resolving template ID {template_id}: {ex}")
+        elif template_name:
+            try:
+                template_obj = Template.objects.filter(client=client, name=template_name).first()
+            except Exception as ex:
+                print(f"Error resolving template name {template_name}: {ex}")
 
-        # Determine channel and platforms
-        platforms = self.request.data.get('platforms') or ['WHATSAPP']
-        channel = self.request.data.get('channel') or (platforms[0] if platforms else 'WHATSAPP')
+        # Determine channel and platforms - Broadcasts strictly route through WhatsApp Cloud API
+        platforms = ['WHATSAPP']
+        channel = 'WHATSAPP'
 
+        # Handle imported recipients from Excel/CSV if provided
+        imported_recipients = self.request.data.get('imported_recipients') or []
+        created_contact_ids = []
+        if imported_recipients and isinstance(imported_recipients, list):
+            camp_name = serializer.validated_data.get('name', 'Excel Broadcast')
+            camp_tag = f"Excel: {camp_name}"
+            from ..models import Contact
+            for r in imported_recipients:
+                r_phone = str(r.get('phone') or '').strip()
+                r_name = str(r.get('name') or '').strip() or f"Contact #{r_phone[-4:] if len(r_phone) >= 4 else 'Lead'}"
+                if not r_phone:
+                    continue
+                try:
+                    ct, _ = Contact.objects.get_or_create(
+                        client=client,
+                        platform_id=r_phone,
+                        defaults={
+                            'name': r_name,
+                            'phone_number': r_phone,
+                            'stage': 'NEW',
+                            'tags': [camp_tag],
+                        }
+                    )
+                    tags = list(getattr(ct, 'tags', []) or [])
+                    if camp_tag not in tags:
+                        tags.append(camp_tag)
+                        ct.tags = tags
+                        ct.save(update_fields=['tags'])
+                    created_contact_ids.append(str(ct.id))
+                except Exception as ct_err:
+                    print(f"Error upserting contact for imported phone {r_phone}: {ct_err}")
+
+        msg_content = (
+            self.request.data.get('message') or 
+            self.request.data.get('message_body') or 
+            self.request.data.get('body') or 
+            serializer.validated_data.get('message_body') or 
+            serializer.validated_data.get('body') or 
+            ''
+        )
         scheduled_at = serializer.validated_data.get('scheduled_at')
+        extra_kwargs = {
+            'client': client,
+            'template': template_obj,
+            'channel': channel,
+            'platforms': platforms,
+        }
+        if msg_content:
+            extra_kwargs['message_body'] = msg_content
+            extra_kwargs['body'] = msg_content
+
+        if created_contact_ids:
+            extra_kwargs['tags'] = created_contact_ids
+            extra_kwargs['audience_filter'] = 'SPECIFIC'
+            extra_kwargs['total_recipients'] = len(created_contact_ids)
+
         if scheduled_at and scheduled_at > timezone.now():
-            campaign = serializer.save(client=client, template=template_obj, channel=channel, platforms=platforms, status='SCHEDULED')
+            campaign = serializer.save(**extra_kwargs, status='SCHEDULED')
         else:
-            campaign = serializer.save(client=client, template=template_obj, channel=channel, platforms=platforms, status='SENDING')
+            campaign = serializer.save(**extra_kwargs, status='SENDING')
 
         # Create optional follow-up
         delay_hours = self.request.data.get('followup_delay_hours')

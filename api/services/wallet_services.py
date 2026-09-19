@@ -261,10 +261,25 @@ class PaymentService:
             status='PENDING'
         )
 
+        customer_name = user.get_full_name() or user.username or (client.business_name if client else 'UWO Customer')
+        customer_email = user.email or 'admin@uwo24.com'
+        customer_phone = client.phone_number if client else getattr(user, 'phone_number', '') or '+918358990909'
+
+        plink_res = rzp_service.create_payment_link(
+            amount_in_inr=amount_inr,
+            receipt_id=receipt_id,
+            description=f"UwoConnect Wallet Recharge ₹{amount_inr:,.2f}",
+            customer_name=customer_name,
+            customer_email=customer_email,
+            customer_phone=customer_phone,
+            callback_url="https://uwoconnect.aisa24.com/api/payments/checkout/callback"
+        )
+
         return {
             'order_id': receipt_id,
             'razorpay_order_id': razorpay_order_id,
             'razorpay_key_id': rzp_res.get('razorpay_key_id'),
+            'payment_link_url': plink_res.get('short_url'),
             'amount_inr': amount_inr,
             'amount_paise': amount_paise,
             'currency': 'INR',

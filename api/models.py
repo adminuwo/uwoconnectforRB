@@ -205,6 +205,9 @@ class User(AbstractUser):
     meta_portfolio_eligible = models.BooleanField(default=True)
     meta_portfolio_name = models.CharField(max_length=255, null=True, blank=True)
 
+    # Email Dispatch Tracking (Idempotence & Deduplication)
+    welcome_email_sent = models.BooleanField(default=False)
+
     def __str__(self):
         return f"{self.username} ({self.enterprise_role or self.role})"
 
@@ -2524,6 +2527,10 @@ class AppInstallation(models.Model):
     first_installed_at = models.DateTimeField(auto_now_add=True, db_index=True)
     last_active_at = models.DateTimeField(auto_now=True, db_index=True)
     open_count = models.PositiveIntegerField(default=1)
+
+    is_uninstalled = models.BooleanField(default=False, db_index=True)
+    uninstalled_at = models.DateTimeField(null=True, blank=True)
+    uninstall_reason = models.CharField(max_length=255, blank=True, default='')
 
     class Meta:
         ordering = ['-first_installed_at']
