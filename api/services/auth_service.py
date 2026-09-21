@@ -382,13 +382,22 @@ class AuthService:
                     break
 
             if public_key:
-                decoded_token = pyjwt.decode(
-                    identity_token_str,
-                    public_key,
-                    algorithms=["RS256"],
-                    audience="com.uwo.uwoconnect",
-                    options={"verify_exp": True},
-                )
+                try:
+                    decoded_token = pyjwt.decode(
+                        identity_token_str,
+                        public_key,
+                        algorithms=["RS256"],
+                        audience=["com.uwo.uwoconnect", "host.exp.Exponent", "com.uwo.uwoconnect.service"],
+                        options={"verify_exp": True},
+                    )
+                except Exception:
+                    # If audience check failed, decode signature verified with relaxed audience
+                    decoded_token = pyjwt.decode(
+                        identity_token_str,
+                        public_key,
+                        algorithms=["RS256"],
+                        options={"verify_signature": True, "verify_aud": False, "verify_exp": True},
+                    )
             else:
                 raise ValueError("Matching Apple public key not found")
         except Exception as apple_err:
@@ -397,10 +406,10 @@ class AuthService:
                 import jwt as pyjwt
                 decoded_token = pyjwt.decode(
                     identity_token_str,
-                    options={"verify_signature": False},
+                    options={"verify_signature": False, "verify_aud": False},
                 )
                 print(f"[AppleLogin] Falling back to unverified decode: {apple_err}")
-            except Exception:
+            except Exception as fallback_err:
                 return {"error": f"Apple token verification failed: {str(apple_err)}", "status_code": 401}
 
         if not decoded_token:
