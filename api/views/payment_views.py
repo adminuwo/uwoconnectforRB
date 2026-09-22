@@ -106,7 +106,7 @@ class CreatePaymentOrderView(APIView):
         plink_res = rzp_service.create_payment_link(
             amount_in_inr=amount,
             receipt_id=receipt_id,
-            description=f"UwoConnect {plan_name} Plan Upgrade",
+            description=f"UWO Connect {plan_name} Plan Upgrade",
             customer_name=customer_name,
             customer_email=customer_email,
             customer_phone=customer_phone,
@@ -373,7 +373,7 @@ class PlanUpgradeCheckoutView(APIView):
         user = payment_order.user
         client = payment_order.client
         user_email = getattr(user, 'email', '') or 'user@uwoconnect.com'
-        client_name = getattr(client, 'business_name', '') or 'UwoConnect Workspace'
+        client_name = getattr(client, 'business_name', '') or 'UWO Connect Workspace'
         user_phone = getattr(client, 'phone_number', '') or getattr(user, 'phone_number', '') or '8358990909'
         amount_inr = float(payment_order.amount)
         amount_paise = int(amount_inr * 100)
@@ -397,7 +397,7 @@ class PlanUpgradeCheckoutView(APIView):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>UwoConnect Plan Upgrade</title>
+  <title>UWO Connect Plan Upgrade</title>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     * {{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }}
@@ -583,7 +583,7 @@ class PlanUpgradeCheckoutView(APIView):
       .then(res => res.json())
       .then(data => {{
         if (data.success) {{
-          setStatus('Payment Successful! Upgraded to ' + PLAN_NAME + '. Returning to UwoConnect...');
+          setStatus('Payment Successful! Upgraded to ' + PLAN_NAME + '. Returning to UWO Connect...');
           setTimeout(() => {{
             window.location.href = REDIRECT_URL + '?status=success&order_id=' + encodeURIComponent(ORDER_ID) + '&plan=' + encodeURIComponent(PLAN_NAME) + '&amount=' + AMOUNT_INR;
           }}, 600);
@@ -612,7 +612,7 @@ class PlanUpgradeCheckoutView(APIView):
           key: KEY_ID,
           amount: AMOUNT_PAISE,
           currency: 'INR',
-          name: 'UwoConnect',
+          name: 'UWO Connect',
           description: 'Upgrade to ' + PLAN_NAME + ' Plan (₹' + AMOUNT_INR + ')',
           order_id: RZP_ORDER_ID,
           prefill: {{
@@ -776,7 +776,7 @@ class PlanUpgradeCallbackView(APIView):
 
         html = f"""<!DOCTYPE html>
 <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Returning to UwoConnect</title>
+<title>Returning to UWO Connect</title>
 <style>
   body {{ font-family: -apple-system, sans-serif; background: #090d16; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; }}
   .box {{ background: #131b2e; border: 1px solid rgba(16,185,129,0.3); border-radius: 24px; padding: 32px 24px; max-width: 360px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }}
@@ -792,7 +792,7 @@ class PlanUpgradeCallbackView(APIView):
 <div class="box">
   <div style="font-size: 36px; margin-bottom: 12px;">✅</div>
   <h3 style="color:#10b981; margin: 0 0 10px 0;">Payment Complete</h3>
-  <p style="color:#94a3b8; font-size: 14px; margin: 0;">Returning to UwoConnect mobile app...</p>
+  <p style="color:#94a3b8; font-size: 14px; margin: 0;">Returning to UWO Connect mobile app...</p>
   <a href="{deep_link}" class="btn">Open App</a>
 </div>
 </body></html>"""

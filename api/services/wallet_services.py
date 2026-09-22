@@ -268,7 +268,7 @@ class PaymentService:
         plink_res = rzp_service.create_payment_link(
             amount_in_inr=amount_inr,
             receipt_id=receipt_id,
-            description=f"UwoConnect Wallet Recharge ₹{amount_inr:,.2f}",
+            description=f"UWO Connect Wallet Recharge ₹{amount_inr:,.2f}",
             customer_name=customer_name,
             customer_email=customer_email,
             customer_phone=customer_phone,

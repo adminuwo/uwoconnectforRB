@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import requests
 from django.http import HttpResponse
 from ..models import Client, Contact, Message, Automation, KnowledgeChunk
@@ -175,20 +176,56 @@ class MetaWebhookService:
                             try:
                                 from django.utils import timezone
                                 from ..models import Conversation
+
+                                # Extract lead contact details from body if available
+                                extracted_wa_phone = None
+                                extracted_wa_email = None
+                                if body:
+                                    m_lead_name = re.search(r'(?:Full\s*name|Name)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                                    if m_lead_name and m_lead_name.group(1).strip() and m_lead_name.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                                        contact_name = m_lead_name.group(1).strip()
+                                    m_lead_p = re.search(r'(?:Phone\s*(?:number)?|Mobile)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                                    if m_lead_p and m_lead_p.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                                        extracted_wa_phone = m_lead_p.group(1).strip()
+                                    m_lead_e = re.search(r'(?:Email|E-mail)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                                    if m_lead_e and m_lead_e.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                                        extracted_wa_email = m_lead_e.group(1).strip()
+
+                                # If contact_name is still generic or Unknown, default to phone number
+                                is_wa_generic = lambda n: not n or str(n).strip().upper() in ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL', '']
+                                if is_wa_generic(contact_name):
+                                    contact_name = f"+{from_number}" if from_number else "Customer"
+
                                 contact, _ = ContactRepository.get_contact_or_create(
                                     client=client,
                                     platform_id=from_number,
                                     defaults={
-                                        'phone_number': from_number,
+                                        'phone_number': extracted_wa_phone or from_number,
+                                        'email': extracted_wa_email,
                                         'name': contact_name,
                                         'stage': 'NEW'
                                     }
                                 )
                                 if contact:
                                     contact.updated_at = timezone.now()
-                                    if contact_name and contact_name != 'Unknown' and (not contact.name or contact.name == 'Unknown'):
+                                    ct_updated = False
+                                    if is_wa_generic(contact.name) and not is_wa_generic(contact_name):
                                         contact.name = contact_name
-                                    contact.save()
+                                        ct_updated = True
+                                    elif not is_wa_generic(contact_name) and contact.name != contact_name:
+                                        contact.name = contact_name
+                                        ct_updated = True
+                                    elif is_wa_generic(contact.name) and from_number:
+                                        contact.name = f"+{from_number}"
+                                        ct_updated = True
+                                    if extracted_wa_phone and not contact.phone_number:
+                                        contact.phone_number = extracted_wa_phone
+                                        ct_updated = True
+                                    if extracted_wa_email and not contact.email:
+                                        contact.email = extracted_wa_email
+                                        ct_updated = True
+                                    if ct_updated:
+                                        contact.save()
 
                                 # Ensure Conversation record is kept fresh
                                 try:
@@ -502,7 +539,22 @@ class MetaWebhookService:
                     if not body:
                         body = "📎 [Attachment / Media]"
                     
-                    contact_name = f"{platform} User"
+                    extracted_lead_name = None
+                    extracted_lead_phone = None
+                    extracted_lead_email = None
+
+                    if body:
+                        m_lead_n = re.search(r'(?:Full\s*name|Name)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                        if m_lead_n and m_lead_n.group(1).strip() and m_lead_n.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                            extracted_lead_name = m_lead_n.group(1).strip()
+                        m_lead_p = re.search(r'(?:Phone\s*(?:number)?|Mobile)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                        if m_lead_p and m_lead_p.group(1).strip() and m_lead_p.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                            extracted_lead_phone = m_lead_p.group(1).strip()
+                        m_lead_e = re.search(r'(?:Email|E-mail)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                        if m_lead_e and m_lead_e.group(1).strip() and m_lead_e.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                            extracted_lead_email = m_lead_e.group(1).strip()
+
+                    contact_name = extracted_lead_name or f"{platform} User"
                     access_token = None
                     if platform == 'INSTAGRAM':
                         access_token = (client.instagram_config or {}).get('access_token') or (client.facebook_config or {}).get('access_token')
@@ -510,7 +562,7 @@ class MetaWebhookService:
                         access_token = (client.facebook_config or {}).get('access_token') or (client.instagram_config or {}).get('access_token')
 
                     profile_pic_url = None
-                    if access_token:
+                    if not extracted_lead_name and access_token:
                         try:
                             import requests
                             if platform == 'INSTAGRAM':
@@ -560,19 +612,29 @@ class MetaWebhookService:
                         client=client,
                         platform_id=sender_id,
                         defaults={
-                            'phone_number': sender_id,
+                            'phone_number': extracted_lead_phone or sender_id,
+                            'email': extracted_lead_email,
                             'name': contact_name,
                             'stage': 'NEW'
                         }
                     )
                     
-                    is_generic_name = lambda n: not n or n.upper().strip() in ['INSTAGRAM USER', 'FACEBOOK USER', 'UNKNOWN', 'USER']
+                    is_generic_name = lambda n: not n or n.upper().strip() in ['INSTAGRAM USER', 'FACEBOOK USER', 'UNKNOWN', 'USER', 'CUSTOMER', 'NONE', 'NULL']
                     if not created:
+                        updated_fields = []
                         if is_generic_name(contact.name) and not is_generic_name(contact_name):
                             contact.name = contact_name
-                            contact.save()
+                            updated_fields.append('name')
                         elif contact_name and not is_generic_name(contact_name) and contact.name != contact_name:
                             contact.name = contact_name
+                            updated_fields.append('name')
+                        if extracted_lead_phone and (not contact.phone_number or contact.phone_number == sender_id):
+                            contact.phone_number = extracted_lead_phone
+                            updated_fields.append('phone_number')
+                        if extracted_lead_email and not contact.email:
+                            contact.email = extracted_lead_email
+                            updated_fields.append('email')
+                        if updated_fields:
                             contact.save()
 
                     # Keep Conversation record fresh for unified Live Inbox display

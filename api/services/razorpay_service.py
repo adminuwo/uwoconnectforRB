@@ -32,7 +32,7 @@ class RazorpayService:
                 'is_mock': True,
             }
 
-        safe_notes = {str(k): str(v) for k, v in (notes or {'platform': 'UwoConnect'}).items()}
+        safe_notes = {str(k): str(v) for k, v in (notes or {'platform': 'UWO Connect'}).items()}
         payload = {
             'amount': amount_paise,
             'currency': 'INR',
@@ -126,7 +126,7 @@ class RazorpayService:
             'reference_id': str(receipt_id),
             'description': str(description),
             'customer': {
-                'name': customer_name or 'UwoConnect Customer',
+                'name': customer_name or 'UWO Connect Customer',
                 'email': customer_email or 'admin@uwo24.com',
                 'contact': customer_phone or '+918358990909'
             },

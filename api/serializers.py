@@ -912,8 +912,21 @@ class ConversationSerializer(serializers.ModelSerializer):
     def get_contact_name(self, obj):
         contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None
         if contact:
-            return contact.name or contact.phone_number or obj.contact_platform_id
-        return obj.contact_platform_id
+            name = (contact.name or '').strip()
+            # If name is generic or 'Unknown', prefer phone number or formatted platform id
+            if not name or name.upper() in ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL']:
+                phone = contact.phone_number or obj.contact_platform_id
+                if phone:
+                    clean_phone = str(phone).strip()
+                    if not clean_phone.startswith('+') and clean_phone.isdigit() and len(clean_phone) >= 10:
+                        return f"+{clean_phone}"
+                    return clean_phone
+            return name
+
+        raw_id = obj.contact_platform_id or ''
+        if raw_id and str(raw_id).isdigit() and len(str(raw_id)) >= 10 and not str(raw_id).startswith('+'):
+            return f"+{raw_id}"
+        return raw_id or 'Customer'
 
     def get_contact_phone(self, obj):
         contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None

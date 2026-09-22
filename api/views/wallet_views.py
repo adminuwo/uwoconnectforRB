@@ -282,7 +282,7 @@ class WalletRechargeCheckoutView(APIView):
         user = recharge_order.user
         client = recharge_order.client
         user_email = getattr(user, 'email', '') or ''
-        client_name = getattr(client, 'business_name', '') or 'UwoConnect Workspace'
+        client_name = getattr(client, 'business_name', '') or 'UWO Connect Workspace'
         amount_inr = float(recharge_order.amount_inr)
         amount_paise = int(recharge_order.amount_paise)
         razorpay_order_id = recharge_order.razorpay_order_id or recharge_order.order_id
@@ -293,7 +293,7 @@ class WalletRechargeCheckoutView(APIView):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>UwoConnect Secure Checkout</title>
+  <title>UWO Connect Secure Checkout</title>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     * {{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }}
@@ -466,7 +466,7 @@ class WalletRechargeCheckoutView(APIView):
       .then(res => res.json())
       .then(data => {{
         if (data.success) {{
-          setStatus('Payment Successful! Returning to UwoConnect...');
+          setStatus('Payment Successful! Returning to UWO Connect...');
           setTimeout(() => {{
             window.location.href = REDIRECT_URL + '?status=success&order_id=' + encodeURIComponent(ORDER_ID) + '&amount=' + AMOUNT_INR;
           }}, 500);
@@ -499,7 +499,7 @@ class WalletRechargeCheckoutView(APIView):
           key: KEY_ID,
           amount: AMOUNT_PAISE,
           currency: 'INR',
-          name: 'UwoConnect',
+          name: 'UWO Connect',
           description: 'Prepaid Usage Wallet Recharge (₹' + AMOUNT_INR + ')',
           order_id: RZP_ORDER_ID.startsWith('order_') ? RZP_ORDER_ID : undefined,
           prefill: {{
