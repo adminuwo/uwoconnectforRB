@@ -1,4 +1,6 @@
 import secrets
+import datetime
+from .welcome_email_service import DEFAULT_WEB_URL, DEFAULT_APP_URL, DEFAULT_SUPPORT_EMAIL
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from firebase_admin import auth as firebase_auth
@@ -66,7 +68,7 @@ class AuthService:
         }
 
     @staticmethod
-    def login_user(email, password, ip_address=None, user_agent=None):
+    def login_user(email, password, ip_address=None, user_agent=None, request=None, payload=None):
         if not email or not password:
             return {"error": "Email and password are required.", "status_code": 400}
 
@@ -97,6 +99,13 @@ class AuthService:
             user.last_login_browser = browser_name
             fields_to_update.extend(['last_login_os', 'last_login_browser'])
         user.save(update_fields=fields_to_update)
+
+        # Record subsequent login activity (device, location, platform) without touching registration fields
+        try:
+            from ..utils.registration_tracker import record_login_activity
+            record_login_activity(user, request=request, payload=payload)
+        except Exception as e:
+            print(f"[LoginActivity Error] {str(e)}")
 
         # Register or touch web installation telemetry for the client
         try:
@@ -141,7 +150,7 @@ class AuthService:
         }
 
     @staticmethod
-    def process_google_login(id_token_str, name=None, invite_token=None, business_name=None, ip_address=None):
+    def process_google_login(id_token_str, name=None, invite_token=None, business_name=None, ip_address=None, request=None, payload=None):
         """
         Cryptographically verifies Google ID Token or Firebase ID Token, extracts verified claims,
         and authenticates or provisions the user.
@@ -233,6 +242,12 @@ class AuthService:
             user.save(update_fields=['is_online', 'last_active_at'])
 
             try:
+                from ..utils.registration_tracker import record_login_activity
+                record_login_activity(user, request=request, payload=payload)
+            except Exception as e:
+                print(f"[LoginActivity Error] {str(e)}")
+
+            try:
                 AuditLog.objects.create(
                     admin_name=user.username,
                     client_name=user.client.business_name if user.client else "Platform",
@@ -252,6 +267,9 @@ class AuthService:
             }
         else:
             # New user registration with Google
+            from ..utils.registration_tracker import extract_registration_meta
+            reg_meta = extract_registration_meta(request=request, payload=payload, signup_method='google')
+
             if invite_token:
                 from django.db.models import Q
                 invite = TeamInvite.objects.filter(
@@ -271,7 +289,8 @@ class AuthService:
                     enterprise_role='EMPLOYEE',
                     status='APPROVED',
                     client=invite.client,
-                    permissions=invite.permissions
+                    permissions=invite.permissions,
+                    **reg_meta
                 )
                 
                 if not invite.is_qr:
@@ -318,7 +337,8 @@ class AuthService:
                     terms_accepted=True,
                     privacy_accepted=True,
                     terms_version='1.0',
-                    terms_accepted_at=timezone.now()
+                    terms_accepted_at=timezone.now(),
+                    **reg_meta
                 )
                 
                 try:
@@ -349,7 +369,7 @@ class AuthService:
                 }
 
     @staticmethod
-    def process_apple_login(identity_token_str, name=None, invite_token=None, ip_address=None):
+    def process_apple_login(identity_token_str, name=None, invite_token=None, ip_address=None, request=None, payload=None):
         """
         Verifies Apple Sign-In identity token (JWT) using Apple's public keys,
         extracts email/sub, and authenticates or provisions the user.
@@ -453,6 +473,12 @@ class AuthService:
             user.save(update_fields=["is_online", "last_active_at"])
 
             try:
+                from ..utils.registration_tracker import record_login_activity
+                record_login_activity(user, request=request, payload=payload)
+            except Exception as e:
+                print(f"[LoginActivity Error] {str(e)}")
+
+            try:
                 AuditLog.objects.create(
                     admin_name=user.username,
                     client_name=user.client.business_name if user.client else "Platform",
@@ -469,6 +495,9 @@ class AuthService:
             return {"user": AuthService._serialize_user(user), "token": str(refresh.access_token)}
         else:
             # New user — invite or self-registration
+            from ..utils.registration_tracker import extract_registration_meta
+            reg_meta = extract_registration_meta(request=request, payload=payload, signup_method='apple')
+
             if invite_token:
                 from django.db.models import Q
                 invite = TeamInvite.objects.filter(
@@ -489,6 +518,7 @@ class AuthService:
                     status="APPROVED",
                     client=invite.client,
                     permissions=invite.permissions,
+                    **reg_meta
                 )
 
                 if not invite.is_qr:
@@ -531,6 +561,7 @@ class AuthService:
                     privacy_accepted=True,
                     terms_version="1.0",
                     terms_accepted_at=timezone.now(),
+                    **reg_meta
                 )
 
                 try:
@@ -556,7 +587,7 @@ class AuthService:
                 return {"is_created": True, "status": "APPROVED", "user": AuthService._serialize_user(user), "token": str(refresh.access_token)}
 
     @staticmethod
-    def process_firebase_login(id_token, name, invite_token, business_name, ip_address=None, meta_portfolio_name=None):
+    def process_firebase_login(id_token, name, invite_token, business_name, ip_address=None, meta_portfolio_name=None, request=None, payload=None):
         if not id_token:
             return {"error": "Firebase ID token is required", "status_code": 400}
 
@@ -623,6 +654,12 @@ class AuthService:
             user.last_active_at = timezone.now()
             user.save(update_fields=['is_online', 'last_active_at'])
 
+            try:
+                from ..utils.registration_tracker import record_login_activity
+                record_login_activity(user, request=request, payload=payload)
+            except Exception as e:
+                print(f"[LoginActivity Error] {str(e)}")
+
             # Create AuditLog for LOGIN
             try:
                 AuditLog.objects.create(
@@ -643,6 +680,9 @@ class AuthService:
             }
         else:
             # New user logic
+            from ..utils.registration_tracker import extract_registration_meta
+            reg_meta = extract_registration_meta(request=request, payload=payload, signup_method='other')
+
             if invite_token:
                 from django.db.models import Q
                 invite = TeamInvite.objects.filter(
@@ -662,7 +702,8 @@ class AuthService:
                     enterprise_role='EMPLOYEE',
                     status='APPROVED',
                     client=invite.client,
-                    permissions=invite.permissions
+                    permissions=invite.permissions,
+                    **reg_meta
                 )
                 
                 if not invite.is_qr:
@@ -721,7 +762,8 @@ class AuthService:
                     terms_accepted=True,
                     privacy_accepted=True,
                     terms_version='1.0',
-                    terms_accepted_at=timezone.now()
+                    terms_accepted_at=timezone.now(),
+                    **reg_meta
                 )
                 try:
                     from .welcome_email_service import WelcomeEmailService
@@ -880,7 +922,13 @@ class AuthService:
                 "white_label_domain": client.white_label_domain or '',
                 "white_label_name": client.white_label_name or ''
             } if client else None,
-            "clientId": str(client.id) if client else None
+            "clientId": str(client.id) if client else None,
+            "registration_platform": getattr(user, 'registration_platform', 'web'),
+            "registration_country": getattr(user, 'registration_country', 'Unknown'),
+            "registration_city": getattr(user, 'registration_city', 'Unknown'),
+            "registered_at": user.registered_at.isoformat() if getattr(user, 'registered_at', None) else None,
+            "last_login_platform": getattr(user, 'last_login_platform', 'web'),
+            "last_login_at": user.last_login_at.isoformat() if getattr(user, 'last_login_at', None) else None
         }
 
     @staticmethod
@@ -902,38 +950,82 @@ class AuthService:
         PasswordResetOTPRepository.filter_passwordresetotps(email=email).delete()
         PasswordResetOTPRepository.create_passwordresetotp(email=email, otp=otp)
         
-        html_body = f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;">
-    <tr><td align="center">
-      <table width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+        html_body = f"""<!DOCTYPE html
+<html lang=\"en\">
+<head>
+  <meta charset=\"UTF-8\"/>
+  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>
+  <title>Password Reset - UWO Connect</title>
+</head>
+<body style=\"margin:0;padding:0;background:#0f172a;font-family:'Segoe UI',Arial,sans-serif;\">
+  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0f172a;padding:48px 0;\">
+    <tr><td align=\"center\>
+      <!-- Card -->
+      <table width=\"520\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#1e293b;border-radius:24px;overflow:hidden;border:1px solid #334155;\">
+        <!-- Top accent bar -->
+        <tr><td style=\"background:linear-gradient(90deg,#16a34a,#059669,#0d9488);height:4px;font-size:0;\">&nbsp;</td></tr>
+        <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#16A34A,#059669);padding:36px 40px;text-align:center;">
-            <h1 style="color:#fff;margin:0;font-size:24px;font-weight:700;">Uwo Connect</h1>
-            <p style="color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;">Password Reset Request</p>
+          <td style=\"padding:40px 48px 32px;text-align:center;\">
+            <img src=\"https://uwoconnect.aisa24.com/download%20(3).gif\" alt=\"UWO Connect Logo\" width=\"48\" style=\"display:block;margin:0 auto 16px;\">
+            <h1 style=\"color:#f1f5f9;font-size:22px;font-weight:700;margin:0 0 6px;\">Password Reset Request</h1>
+            <p style=\"color:#64748b;font-size:14px;margin:0;\">Security verification code</p>
           </td>
         </tr>
+        <!-- Divider -->
+        <tr><td style=\"padding:0 48px;\"><div style=\"height:1px;background:#334155;\"></div></td></tr>
+        <!-- Body -->
         <tr>
-          <td style="padding:40px;">
-            <p style="color:#374151;font-size:15px;margin:0 0 20px;">Hi there,</p>
-            <p style="color:#374151;font-size:15px;margin:0 0 28px;">Use the OTP below to reset your Uwo Connect password. This code expires in <strong>15 minutes</strong>.</p>
-            <div style="background:#f0fdf4;border:2px dashed #16A34A;border-radius:16px;padding:28px;text-align:center;margin:0 0 28px;">
-              <p style="margin:0 0 8px;color:#6b7280;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Your OTP Code</p>
-              <p style="margin:0;font-size:48px;font-weight:800;letter-spacing:12px;color:#16A34A;">{otp}</p>
+          <td style=\"padding:36px 48px;\">
+            <p style=\"color:#94a3b8;font-size:15px;line-height:1.7;margin:0 0 24px;\">
+              We received a request to reset the password for your UWO Connect account. Use the one-time code below — it expires in <strong style=\"color:#f1f5f9;\">15 minutes</strong>.
+            </p>
+            <!-- OTP Box -->
+            <div style=\"background:#0f172a;border:1px solid #16a34a;border-radius:20px;padding:36px 24px;text-align:center;margin:0 0 28px;box-shadow:0 0 40px rgba(22,163,74,0.15);\">
+              <p style=\"margin:0 0 12px;color:#16a34a;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;\">Your Verification Code</p>
+              <p style=\"margin:0;font-size:52px;font-weight:900;letter-spacing:14px;color:#ffffff;font-variant-numeric:tabular-nums;\">{otp}</p>
+              <p style=\"margin:16px 0 0;color:#475569;font-size:12px;\">Valid for 15 minutes only</p>
             </div>
-            <p style="color:#9ca3af;font-size:13px;margin:0;">If you did not request this, you can safely ignore this email.</p>
+            <!-- Security Notice -->
+            <div style=\"background:#1c1917;border:1px solid #292524;border-left:3px solid #f59e0b;border-radius:10px;padding:14px 18px;margin-bottom:24px;\">
+              <p style=\"margin:0;color:#d97706;font-size:13px;font-weight:600;\">⚠️ Security Notice</p>
+              <p style=\"margin:6px 0;color:#78716c;font-size:12px;line-height:1.6;\">Never share this code with anyone. UWO Connect will never ask for your OTP via phone or chat.</p>
+            </div>
+            <p style=\"color:#475569;font-size:13px;margin:0;line-height:1.6;\">
+              If you didn't request a password reset, you can safely ignore this email. Your account remains secure.
+            </p>
+            <!-- Support -->
+            <p style=\"color:#94a3b8;font-size:13px;margin:24px 0 8px;\">Need help? Contact our support team at <a href=\"mailto:{DEFAULT_SUPPORT_EMAIL}\" style=\"color:#16a34a;\">{DEFAULT_SUPPORT_EMAIL}</a></p>
+            <!-- Action Buttons -->
+            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:16px 0;\">
+              <tr>
+                <td align=\"center\">
+                  <a href=\"{DEFAULT_WEB_URL}\" style=\"display:inline-block;background:#16a34a;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;\">Open UWO Connect Web</a>
+                </td>
+              </tr>
+              <tr><td height=\"8\"></td></tr>
+              <tr>
+                <td align=\"center\">
+                  <a href=\"{DEFAULT_APP_URL}\" style=\"display:inline-block;background:#059669;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;\">Get the UWO Connect App</a>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
+        <!-- Footer -->
+        <tr><td style=\"padding:0 48px;\"><div style=\"height:1px;background:#334155;\"></div></td></tr>
         <tr>
-          <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
-            <p style="color:#9ca3af;font-size:12px;margin:0;">© 2025 Uwo Connect. All rights reserved.</p>
+          <td style=\"padding:24px 48px;text-align:center;\">
+            <p style=\"color:#334155;font-size:12px;margin:0 0 6px;\">© {datetime.datetime.now().year} UWO Connect · All rights reserved</p>
+            <p style=\"color:#1e3a29;font-size:11px;margin:0;\">This is an automated message, please do not reply.</p>
           </td>
         </tr>
       </table>
+      <!-- /Card -->
     </td></tr>
   </table>
-</body></html>"""
+</body>
+</html>"""
         
         try:
             send_mail(
