@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_WEB_URL = "https://uwoconnect.aisa24.com"
 DEFAULT_APP_URL = "https://play.google.com/store/apps/details?id=com.uwo.uwoconnect"
-DEFAULT_SUPPORT_EMAIL = "admin@uwo24.com"
+DEFAULT_SUPPORT_EMAIL = "connect@uwo24.com"
 
 class WelcomeEmailService:
     @staticmethod
