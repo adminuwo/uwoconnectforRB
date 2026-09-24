@@ -1047,17 +1047,19 @@ class AuthService:
                 print("=" * 55 + "\n")
             return resp
         except Exception as e:
+            import traceback
+            print(f"\n[OTP EMAIL ERROR] Failed to send OTP email to {email}")
+            print(f"[OTP EMAIL ERROR] Error type: {type(e).__name__}")
+            print(f"[OTP EMAIL ERROR] Error detail: {str(e)}")
+            print(f"[OTP EMAIL ERROR] Traceback:\n{traceback.format_exc()}")
             # In debug mode without active SMTP, still provide OTP for development
             if getattr(settings, 'DEBUG', False):
-                print(f"\n" + "=" * 55)
-                print(f"🔑 [DEV MODE - SMTP FALLBACK] OTP FOR {email}: {otp}")
-                print(f"   (Mail send error: {e})")
-                print("=" * 55 + "\n")
                 return {
                     "message": "A 6-digit OTP code has been generated (Dev Mode).",
                     "status_code": 200,
                     "otp_debug": otp,
-                    "email": email
+                    "email": email,
+                    "smtp_error": str(e)  # temporary: shows real error
                 }
             return {"message": f"Failed to send email: {str(e)}", "status_code": 500}
 
