@@ -684,18 +684,32 @@ class AdminChannelAuditLogsView(APIView):
         logs = ChannelAuditLog.objects.all().order_by('-timestamp')[:200]
         results = []
         for l in logs:
+            try:
+                c_obj = l.client
+                client_name = c_obj.business_name if c_obj else (l.client_name or 'Global')
+                client_id = str(c_obj.id) if c_obj else None
+            except Exception:
+                client_name = l.client_name or 'Global'
+                client_id = None
+
+            try:
+                tm_obj = l.team_member
+                tm_name = l.team_member_name or (tm_obj.username if tm_obj else None)
+            except Exception:
+                tm_name = l.team_member_name
+
             results.append({
                 'id': str(l.id),
                 'admin_user': l.admin_user,
-                'client_name': l.client.business_name if l.client else (l.client_name or 'Global'),
-                'client_id': str(l.client.id) if l.client else None,
-                'team_member_name': l.team_member_name or (l.team_member.username if l.team_member else None),
+                'client_name': client_name,
+                'client_id': client_id,
+                'team_member_name': tm_name,
                 'channel': l.channel,
                 'action': l.action,
                 'previous_state': l.previous_state,
                 'new_state': l.new_state,
                 'notes': l.notes,
-                'timestamp': l.timestamp.isoformat()
+                'timestamp': l.timestamp.isoformat() if l.timestamp else None
             })
 
         return Response({
