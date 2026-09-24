@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+import django.utils.timezone as dj_timezone
 
 class Client(models.Model):
     PLAN_CHOICES = [
@@ -205,8 +206,30 @@ class User(AbstractUser):
     meta_portfolio_eligible = models.BooleanField(default=True)
     meta_portfolio_name = models.CharField(max_length=255, null=True, blank=True)
 
+    # ── User Registration Tracking & Analytics (First Registration Only) ──
+    registration_platform = models.CharField(max_length=20, default='web', db_index=True)  # 'ios', 'android', 'web', 'unknown'
+    registration_country = models.CharField(max_length=100, default='Unknown', blank=True)
+    registration_country_code = models.CharField(max_length=10, default='Unknown', blank=True)
+    registration_region = models.CharField(max_length=100, default='Unknown', blank=True)
+    registration_city = models.CharField(max_length=100, default='Unknown', blank=True)
+    registered_at = models.DateTimeField(default=dj_timezone.now, db_index=True)
+    registration_device_type = models.CharField(max_length=50, default='unknown', blank=True)  # 'mobile', 'desktop', 'tablet'
+    registration_device_model = models.CharField(max_length=150, default='Unknown', blank=True)
+    registration_os = models.CharField(max_length=50, default='Unknown', blank=True)
+    registration_os_version = models.CharField(max_length=50, default='Unknown', blank=True)
+    registration_app_version = models.CharField(max_length=50, default='Unknown', blank=True)
+    registration_method = models.CharField(max_length=20, default='email', blank=True)  # 'email', 'google', 'apple', 'other'
+
     # Email Dispatch Tracking (Idempotence & Deduplication)
     welcome_email_sent = models.BooleanField(default=False)
+
+    # ── Login Activity Tracking (Updated on Subsequent Logins) ──
+    last_login_platform = models.CharField(max_length=20, default='web', blank=True)
+    last_login_country = models.CharField(max_length=100, default='Unknown', blank=True)
+    last_login_city = models.CharField(max_length=100, default='Unknown', blank=True)
+    last_login_device = models.CharField(max_length=150, default='Unknown', blank=True)
+    last_login_app_version = models.CharField(max_length=50, default='Unknown', blank=True)
+    last_login_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.enterprise_role or self.role})"
@@ -2538,11 +2561,41 @@ class AppInstallation(models.Model):
     def __str__(self):
         return f"{self.platform.upper()} ({self.app_version}) - {self.installation_id[:8]}"
 
+class AppleIAPTransaction(models.Model):
+    STATUS_CHOICES = [
+        ('ACTIVE', 'Active'),
+        ('EXPIRED', 'Expired'),
+        ('CANCELLED', 'Cancelled'),
+        ('REFUNDED', 'Refunded'),
+        ('PENDING', 'Pending'),
+    ]
 
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='apple_iap_transactions')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='apple_iap_transactions')
 
+    original_transaction_id = models.CharField(max_length=150, db_index=True)
+    transaction_id = models.CharField(max_length=150, db_index=True)
+    product_id = models.CharField(max_length=150, db_index=True)
+    plan_name = models.CharField(max_length=100, default='Starter')
+    billing_cycle = models.CharField(max_length=20, default='MONTHLY')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='ACTIVE')
 
+    purchase_date = models.DateTimeField(null=True, blank=True)
+    expires_date = models.DateTimeField(null=True, blank=True)
+    is_sandbox = models.BooleanField(default=False)
+    raw_data = models.JSONField(default=dict, blank=True)
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['original_transaction_id', 'status']),
+        ]
+
+    def __str__(self):
+        return f"Apple IAP: {self.client.business_name} - {self.product_id} ({self.status})"
 
 
 

@@ -209,9 +209,23 @@ class RegisterSerializer(serializers.Serializer):
     meta_portfolio_eligible = serializers.BooleanField(required=False, default=None)
     metaPortfolioEligible = serializers.BooleanField(required=False, default=None)
     meta_portfolio_name = serializers.CharField(required=False, allow_blank=True)
-    metaPortfolioName = serializers.CharField(required=False, allow_blank=True)
     portfolio_name = serializers.CharField(required=False, allow_blank=True)
     portfolioName = serializers.CharField(required=False, allow_blank=True)
+
+    # Registration Analytics & Device Tracking fields (Optional from client)
+    platform = serializers.CharField(required=False, allow_blank=True)
+    registration_platform = serializers.CharField(required=False, allow_blank=True)
+    device_type = serializers.CharField(required=False, allow_blank=True)
+    device_model = serializers.CharField(required=False, allow_blank=True)
+    os_name = serializers.CharField(required=False, allow_blank=True)
+    os_version = serializers.CharField(required=False, allow_blank=True)
+    app_version = serializers.CharField(required=False, allow_blank=True)
+    country = serializers.CharField(required=False, allow_blank=True)
+    country_code = serializers.CharField(required=False, allow_blank=True)
+    region = serializers.CharField(required=False, allow_blank=True)
+    city = serializers.CharField(required=False, allow_blank=True)
+    location = serializers.CharField(required=False, allow_blank=True)
+    registration_method = serializers.CharField(required=False, allow_blank=True)
 
     def validate_email(self, value):
         email = value.lower().strip()
@@ -269,6 +283,8 @@ class RegisterSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         from django.utils import timezone
+        from .utils.registration_tracker import extract_registration_meta
+
         email = validated_data['email'].lower().strip()
         business_name = validated_data.get('businessName', f"{validated_data['name']}'s Business")
         invite_token = validated_data.get('invite_token')
@@ -277,6 +293,14 @@ class RegisterSerializer(serializers.Serializer):
         department = validated_data.get('department', '').strip() or 'General'
         brand_domain = validated_data.get('brand_domain', '').strip().lower()
         now = timezone.now()
+
+        # Extract registration tracking metadata
+        request_obj = self.context.get('request') if hasattr(self, 'context') else None
+        reg_meta = extract_registration_meta(
+            request=request_obj,
+            payload=validated_data,
+            signup_method=validated_data.get('registration_method') or 'email'
+        )
 
         if invite_token:
             from django.db.models import Q
@@ -310,7 +334,8 @@ class RegisterSerializer(serializers.Serializer):
                 terms_version=terms_ver,
                 terms_accepted_at=now,
                 privacy_version=privacy_ver,
-                privacy_accepted_at=now
+                privacy_accepted_at=now,
+                **reg_meta
             )
             try:
                 UserLegalConsent.objects.create(
@@ -372,7 +397,8 @@ class RegisterSerializer(serializers.Serializer):
                 terms_version=terms_ver,
                 terms_accepted_at=now,
                 privacy_version=privacy_ver,
-                privacy_accepted_at=now
+                privacy_accepted_at=now,
+                **reg_meta
             )
             try:
                 UserLegalConsent.objects.create(

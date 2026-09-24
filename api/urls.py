@@ -86,6 +86,9 @@ from .views.broadcast_entitlement_views import (
     BroadcastEntitlementSummaryView, BroadcastValidateView,
     BroadcastConsumeView, BroadcastRefundView
 )
+from .views.apple_iap_views import (
+    AppleIAPVerifyView, AppleIAPRestoreView, AppleIAPNotificationWebhookView
+)
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -200,8 +203,11 @@ urlpatterns = [
     path('auth/linked-devices/revoke-all/', LinkedDeviceRevokeAllView.as_view()),
 
     path('auth/forgot-password/send-otp', ForgotPasswordSendOTPView.as_view(), name='forgot-password-send-otp'),
+    path('auth/forgot-password/send-otp/', ForgotPasswordSendOTPView.as_view()),
     path('auth/forgot-password/verify-otp', ForgotPasswordVerifyOTPView.as_view(), name='forgot-password-verify-otp'),
+    path('auth/forgot-password/verify-otp/', ForgotPasswordVerifyOTPView.as_view()),
     path('auth/forgot-password/reset', ForgotPasswordResetView.as_view(), name='forgot-password-reset'),
+    path('auth/forgot-password/reset/', ForgotPasswordResetView.as_view()),
     path('auth/whatsapp/embedded-signup', WhatsAppEmbeddedSignupView.as_view(), name='whatsapp-embedded-signup'),
     path('auth/whatsapp/embedded-signup/', WhatsAppEmbeddedSignupView.as_view()),
     path('auth/instagram/embedded-signup', InstagramEmbeddedSignupView.as_view(), name='instagram-embedded-signup'),
@@ -325,6 +331,13 @@ urlpatterns = [
     path('payments/history/', PaymentHistoryView.as_view()),
     path('payments/webhook', RazorpayWebhookView.as_view(), name='payment-webhook'),
     path('payments/webhook/', RazorpayWebhookView.as_view()),
+    # Apple In-App Purchases (iOS StoreKit)
+    path('payments/apple/verify', AppleIAPVerifyView.as_view(), name='apple-iap-verify'),
+    path('payments/apple/verify/', AppleIAPVerifyView.as_view()),
+    path('payments/apple/restore', AppleIAPRestoreView.as_view(), name='apple-iap-restore'),
+    path('payments/apple/restore/', AppleIAPRestoreView.as_view()),
+    path('payments/apple/notifications', AppleIAPNotificationWebhookView.as_view(), name='apple-iap-notifications'),
+    path('payments/apple/notifications/', AppleIAPNotificationWebhookView.as_view()),
     # Prepaid Usage Wallet & Billing System
     path('wallet/dashboard', ClientWalletDashboardView.as_view(), name='wallet-dashboard'),
     path('wallet/dashboard/', ClientWalletDashboardView.as_view()),

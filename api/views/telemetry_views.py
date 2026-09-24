@@ -266,49 +266,62 @@ def compute_client_platform_telemetry():
 
         installs = installs_by_client.get(str(client.id), [])
 
-        platforms_found = []
-        has_android = any(i.platform == 'android' for i in installs)
-        has_ios = any(i.platform == 'ios' for i in installs)
-        has_web_install = any(i.platform == 'web' for i in installs)
+        # STRICT: Associate each client ONLY with the platform where their account / ID was registered
+        reg_platform = 'web'
+        if primary_user and getattr(primary_user, 'registration_platform', None):
+            reg_platform = str(primary_user.registration_platform).lower().strip()
+        elif installs:
+            earliest_inst = min(installs, key=lambda i: i.first_installed_at)
+            reg_platform = str(earliest_inst.platform).lower().strip()
 
-        if has_android:
-            platforms_found.append('android')
-        if has_ios:
-            platforms_found.append('ios')
+        if reg_platform not in ['ios', 'android', 'web']:
+            reg_platform = 'web'
 
-        has_web = (
-            has_web_install or
-            (not has_android and not has_ios) or
-            bool(primary_user and (primary_user.last_login_browser or primary_user.last_active_at or primary_user.last_login_os))
-        )
-        if has_web and 'web' not in platforms_found:
-            platforms_found.append('web')
+        # Only the exact registration platform is attached to the client
+        platforms_found = [reg_platform]
+        primary_platform = reg_platform
 
-        if not platforms_found:
-            platforms_found.append('web')
-
-        latest_mobile = next((i for i in installs if i.platform in ['android', 'ios']), None)
-        latest_inst = installs[0] if installs else None
-
-        if latest_mobile:
-            primary_platform = latest_mobile.platform
-            device_model = latest_mobile.device_model or ('Apple iPhone' if primary_platform == 'ios' else 'Android Device')
-            os_raw = latest_mobile.os_version
-            os_prefix = 'iOS' if primary_platform == 'ios' else 'Android'
-            os_version = f"{os_prefix} {os_raw}".strip() if os_raw else os_prefix
-            app_version = f"v{latest_mobile.app_version}" if latest_mobile.app_version else "v1.0.0"
-            last_active_dt = latest_mobile.last_active_at
+        # Extract device, OS, and app version matching the registration platform
+        if reg_platform == 'ios':
+            ios_inst = next((i for i in installs if i.platform == 'ios'), None)
+            device_model = (
+                (primary_user.registration_device_model if (primary_user and primary_user.registration_device_model and primary_user.registration_device_model != 'Unknown') else None) or
+                (ios_inst.device_model if ios_inst and ios_inst.device_model else None) or
+                'iPhone 17'
+            )
+            os_raw = (
+                (primary_user.registration_os_version if (primary_user and primary_user.registration_os_version and primary_user.registration_os_version != 'Unknown') else None) or
+                (ios_inst.os_version if ios_inst and ios_inst.os_version else None)
+            )
+            os_version = f"iOS {os_raw}".strip() if os_raw and not str(os_raw).startswith('iOS') else (os_raw or 'iOS')
+            app_version = f"v{ios_inst.app_version}" if (ios_inst and ios_inst.app_version) else (f"v{primary_user.registration_app_version}" if (primary_user and primary_user.registration_app_version and primary_user.registration_app_version != 'Unknown') else "v1.0.0")
+            last_active_dt = ios_inst.last_active_at if ios_inst else (primary_user.last_active_at if primary_user else client.updated_at)
+        elif reg_platform == 'android':
+            android_inst = next((i for i in installs if i.platform == 'android'), None)
+            device_model = (
+                (primary_user.registration_device_model if (primary_user and primary_user.registration_device_model and primary_user.registration_device_model != 'Unknown') else None) or
+                (android_inst.device_model if android_inst and android_inst.device_model else None) or
+                'Android Device'
+            )
+            os_raw = (
+                (primary_user.registration_os_version if (primary_user and primary_user.registration_os_version and primary_user.registration_os_version != 'Unknown') else None) or
+                (android_inst.os_version if android_inst and android_inst.os_version else None)
+            )
+            os_version = f"Android {os_raw}".strip() if os_raw and not str(os_raw).startswith('Android') else (os_raw or 'Android')
+            app_version = f"v{android_inst.app_version}" if (android_inst and android_inst.app_version) else (f"v{primary_user.registration_app_version}" if (primary_user and primary_user.registration_app_version and primary_user.registration_app_version != 'Unknown') else "v1.0.0")
+            last_active_dt = android_inst.last_active_at if android_inst else (primary_user.last_active_at if primary_user else client.updated_at)
         else:
-            primary_platform = 'web'
-            device_model = (primary_user.last_login_os if primary_user else None) or "Web Desktop/Browser"
-            os_version = (primary_user.last_login_browser if primary_user else None) or "Modern Browser"
+            web_inst = next((i for i in installs if i.platform == 'web'), None)
+            device_model = (primary_user.last_login_os if primary_user and primary_user.last_login_os else None) or (web_inst.device_model if web_inst and web_inst.device_model else None) or "Web Desktop/Browser"
+            os_version = (primary_user.last_login_browser if primary_user and primary_user.last_login_browser else None) or (web_inst.os_version if web_inst and web_inst.os_version else None) or "Modern Browser"
             app_version = "Web v1.0"
-            last_active_dt = (primary_user.last_active_at if primary_user else None) or client.updated_at
+            last_active_dt = (primary_user.last_active_at if primary_user else None) or (web_inst.last_active_at if web_inst else None) or client.updated_at
 
         if primary_user and primary_user.last_active_at:
             if not last_active_dt or primary_user.last_active_at > last_active_dt:
                 last_active_dt = primary_user.last_active_at
 
+        latest_inst = installs[0] if installs else None
         uninstalled_installs = [i for i in installs if bool(getattr(i, 'is_uninstalled', False))]
         has_uninstalled = len(uninstalled_installs) > 0
         is_uninstalled = has_uninstalled
@@ -324,6 +337,8 @@ def compute_client_platform_telemetry():
             "business_name": client.business_name,
             "owner_name": owner_name,
             "owner_email": owner_email,
+            "registration_platform": reg_platform,
+            "platform": reg_platform,
             "platforms": platforms_found,
             "primary_platform": primary_platform,
             "device_model": device_model,
@@ -341,12 +356,12 @@ def compute_client_platform_telemetry():
             "created_at": client.created_at.isoformat() if client.created_at else None,
         })
 
-    # Summary metrics
+    # Summary metrics strictly based on registration platform
     total_clients = len(all_clients_data)
-    web_clients = sum(1 for c in all_clients_data if 'web' in c['platforms'])
-    android_clients = sum(1 for c in all_clients_data if 'android' in c['platforms'])
-    ios_clients = sum(1 for c in all_clients_data if 'ios' in c['platforms'])
-    mobile_clients = sum(1 for c in all_clients_data if ('android' in c['platforms'] or 'ios' in c['platforms']))
+    web_clients = sum(1 for c in all_clients_data if c['registration_platform'] == 'web')
+    android_clients = sum(1 for c in all_clients_data if c['registration_platform'] == 'android')
+    ios_clients = sum(1 for c in all_clients_data if c['registration_platform'] == 'ios')
+    mobile_clients = sum(1 for c in all_clients_data if c['registration_platform'] in ['android', 'ios'])
     uninstalled_clients = sum(1 for c in all_clients_data if c['is_uninstalled'])
     active_clients = sum(1 for c in all_clients_data if c['is_active'] and not c['is_uninstalled'])
     inactive_clients = sum(1 for c in all_clients_data if not c['is_active'] and not c['is_uninstalled'])
@@ -364,34 +379,29 @@ def compute_client_platform_telemetry():
         "uninstalled_clients": uninstalled_clients,
     }
 
-    # Platform distribution percentages
+    # Platform distribution percentages strictly based on registration platform
     web_pct = round((web_clients / total_clients * 100), 1) if total_clients > 0 else 0.0
     android_pct = round((android_clients / total_clients * 100), 1) if total_clients > 0 else 0.0
     ios_pct = round((ios_clients / total_clients * 100), 1) if total_clients > 0 else 0.0
 
-    total_footprints = web_clients + android_clients + ios_clients
-    web_share_pct = round((web_clients / total_footprints * 100), 1) if total_footprints > 0 else 0.0
-    android_share_pct = round((android_clients / total_footprints * 100), 1) if total_footprints > 0 else 0.0
-    ios_share_pct = round((ios_clients / total_footprints * 100), 1) if total_footprints > 0 else 0.0
-
     distribution = {
-        "total_footprints": total_footprints,
+        "total_footprints": total_clients,
         "web": {
             "count": web_clients,
             "percentage": web_pct,
-            "share_pct": web_share_pct,
+            "share_pct": web_pct,
             "label": "Web Clients",
         },
         "android": {
             "count": android_clients,
             "percentage": android_pct,
-            "share_pct": android_share_pct,
+            "share_pct": android_pct,
             "label": "Android App",
         },
         "ios": {
             "count": ios_clients,
             "percentage": ios_pct,
-            "share_pct": ios_share_pct,
+            "share_pct": ios_pct,
             "label": "iOS / iPhone App",
         },
     }

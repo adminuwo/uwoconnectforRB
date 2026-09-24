@@ -40,7 +40,7 @@ class RegisterView(views.APIView):
     authentication_classes = []
 
     def post(self, req):
-        serializer = RegisterSerializer(data=req.data)
+        serializer = RegisterSerializer(data=req.data, context={'request': req})
         if serializer.is_valid():
             from ..services.auth_service import AuthService
             result = AuthService.register_user(serializer)
@@ -79,7 +79,7 @@ class LoginView(views.APIView):
         user_agent = req.META.get('HTTP_USER_AGENT', '')
 
         from ..services.auth_service import AuthService
-        result = AuthService.login_user(email, password, ip_address=ip_address, user_agent=user_agent)
+        result = AuthService.login_user(email, password, ip_address=ip_address, user_agent=user_agent, request=req, payload=req.data)
         
         if "error" in result:
             return Response({"message": result["error"]}, status=result["status_code"])
@@ -119,7 +119,15 @@ class GoogleLoginView(views.APIView):
                 ip_address = req.META.get('REMOTE_ADDR')
 
             from ..services.auth_service import AuthService
-            result = AuthService.process_google_login(id_token, name=name, invite_token=invite_token, business_name=business_name, ip_address=ip_address)
+            result = AuthService.process_google_login(
+                id_token, 
+                name=name, 
+                invite_token=invite_token, 
+                business_name=business_name, 
+                ip_address=ip_address,
+                request=req,
+                payload=req.data
+            )
 
             if "error" in result:
                 return Response({"message": result["error"]}, status=result.get("status_code", 400))
@@ -187,6 +195,8 @@ class AppleLoginView(views.APIView):
                 name=name or None,
                 invite_token=invite_token or None,
                 ip_address=ip_address,
+                request=req,
+                payload=req.data,
             )
 
             if "error" in result:
@@ -230,7 +240,7 @@ class FirebaseLoginView(views.APIView):
 
             from ..services.auth_service import AuthService
             result = AuthService.process_firebase_login(
-                id_token, name, invite_token, business_name, ip_address=ip_address, meta_portfolio_name=meta_portfolio_name
+                id_token, name, invite_token, business_name, ip_address=ip_address, meta_portfolio_name=meta_portfolio_name, request=req, payload=req.data
             )
 
             if "error" in result:
