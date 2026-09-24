@@ -950,79 +950,286 @@ class AuthService:
         PasswordResetOTPRepository.filter_passwordresetotps(email=email).delete()
         PasswordResetOTPRepository.create_passwordresetotp(email=email, otp=otp)
         
-        html_body = f"""<!DOCTYPE html
-<html lang=\"en\">
+        html_body = f"""<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-  <meta charset=\"UTF-8\"/>
-  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>Password Reset - UWO Connect</title>
+  <!--[if mso]>
+  <style type="text/css">
+    table {{border-collapse:collapse;border-spacing:0;margin:0;}}
+    div, td, a, span {{font-family:Arial, sans-serif !important;}}
+  </style>
+  <![endif]-->
+  <style>
+    :root {{
+      color-scheme: light;
+      supported-color-schemes: light;
+    }}
+    body {{
+      margin: 0 !important;
+      padding: 0 !important;
+      -webkit-text-size-adjust: 100% !important;
+      -ms-text-size-adjust: 100% !important;
+      background-color: #f1f5f9 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }}
+    table {{
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }}
+    img {{
+      border: 0;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+      -ms-interpolation-mode: bicubic;
+    }}
+    @media only screen and (max-width: 620px) {{
+      .wrapper-table {{
+        width: 100% !important;
+        padding: 10px !important;
+      }}
+      .main-container {{
+        width: 100% !important;
+        border-radius: 16px !important;
+      }}
+      .content-padding {{
+        padding: 24px 20px !important;
+      }}
+      .hero-padding {{
+        padding: 32px 20px 28px !important;
+      }}
+      .cta-button {{
+        display: block !important;
+        width: 100% !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+      }}
+    }}
+    /* Force light mode — override any dark-mode auto-inversion */
+    @media (prefers-color-scheme: dark) {{
+      body {{ background-color: #f1f5f9 !important; color: #0f172a !important; }}
+      .main-container {{ background-color: #ffffff !important; }}
+      .footer-bg {{ background-color: #f8fafc !important; }}
+      .otp-card {{ background-color: #f0fdf4 !important; border-color: #86efac !important; }}
+    }}
+  </style>
 </head>
-<body style=\"margin:0;padding:0;background:#0f172a;font-family:'Segoe UI',Arial,sans-serif;\">
-  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#0f172a;padding:48px 0;\">
-    <tr><td align=\"center\>
-      <!-- Card -->
-      <table width=\"520\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#1e293b;border-radius:24px;overflow:hidden;border:1px solid #334155;\">
-        <!-- Top accent bar -->
-        <tr><td style=\"background:linear-gradient(90deg,#16a34a,#059669,#0d9488);height:4px;font-size:0;\">&nbsp;</td></tr>
-        <!-- Header -->
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#0f172a;">
+
+  <!-- Email Wrapper -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="wrapper-table" style="background-color:#f1f5f9;padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <!--[if (gte mso 9)|(IE)]>
+        <table align="center" border="0" cellspacing="0" cellpadding="0" width="600">
         <tr>
-          <td style=\"padding:40px 48px 32px;text-align:center;\">
-            <img src=\"https://uwoconnect.aisa24.com/download%20(3).gif\" alt=\"UWO Connect Logo\" width=\"48\" style=\"display:block;margin:0 auto 16px;\">
-            <h1 style=\"color:#f1f5f9;font-size:22px;font-weight:700;margin:0 0 6px;\">Password Reset Request</h1>
-            <p style=\"color:#64748b;font-size:14px;margin:0;\">Security verification code</p>
-          </td>
+        <td align="center" valign="top" width="600">
+        <![endif]-->
+        <table role="presentation" width="100%" class="main-container" style="max-width:600px;background-color:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 12px 36px rgba(15,23,42,0.08);border:1px solid #e2e8f0;" cellspacing="0" cellpadding="0">
+
+          <!-- Top Brand Bar -->
+          <tr>
+            <td style="padding:22px 32px 20px;background-color:#ffffff;border-bottom:1px solid #f1f5f9;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="left" valign="middle">
+                    <table role="presentation" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td valign="middle" style="padding-right:12px;">
+                          <div style="width:42px;height:42px;border-radius:12px;background:#f0fdf4;border:1.5px solid #d1fae5;overflow:hidden;text-align:center;line-height:42px;">
+                            <img src="https://uwoconnect.aisa24.com/download%20(3).gif" alt="UWO Connect Logo" width="42" height="42" style="display:block;width:42px;height:42px;object-fit:cover;border-radius:10px;" onerror="this.style.display='none';">
+                          </div>
+                        </td>
+                        <td valign="middle">
+                          <span style="font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;display:inline-block;line-height:1.1;">
+                            UWO <span style="color:#059669;">Connect</span>
+                          </span>
+                          <br>
+                          <span style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1.4px;display:inline-block;margin-top:2px;">
+                            AI Workspace &amp; CRM
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right" valign="middle">
+                    <div style="display:inline-block;background:#ecfdf5;border:1px solid #a7f3d0;padding:5px 12px;border-radius:20px;">
+                      <span style="color:#047857;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">&#128274; Secure Request</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Green Hero Banner -->
+          <tr>
+            <td class="hero-padding" style="background:linear-gradient(135deg, #059669 0%, #047857 50%, #064e3b 100%);padding:42px 36px 36px;text-align:center;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <div style="display:inline-block;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.25);padding:8px 20px;border-radius:30px;margin-bottom:16px;">
+                      <span style="color:#ffffff;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">Password Reset Request</span>
+                    </div>
+                    <h1 style="color:#ffffff;margin:0 0 10px;font-size:26px;font-weight:800;letter-spacing:-0.6px;line-height:1.25;">
+                      Reset Your Password
+                    </h1>
+                    <p style="color:#d1fae5;margin:0;font-size:15px;font-weight:500;line-height:1.5;max-width:460px;">
+                      Use the one-time code below to securely reset your account password.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td class="content-padding" style="padding:36px 36px 30px;background-color:#ffffff;">
+
+              <!-- Greeting -->
+              <p style="margin:0 0 16px;font-size:17px;font-weight:700;color:#0f172a;">
+                Hi there,
+              </p>
+
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#334155;">
+                We received a request to reset the password for your UWO Connect account. Use the one-time code below &mdash; it expires in <strong style="color:#047857;">15 minutes</strong>.
+              </p>
+
+              <!-- OTP Card — matches Welcome email credential block style -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="otp-card" style="margin:4px 0 28px;background-color:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;overflow:hidden;">
+                <tr>
+                  <td style="padding:28px 24px;text-align:center;">
+                    <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;">
+                      Your One-Time Password
+                    </div>
+                    <div style="font-family:'Courier New',Courier,monospace;font-size:42px;font-weight:800;color:#047857;letter-spacing:10px;line-height:1.1;">
+                      {otp}
+                    </div>
+                    <div style="font-size:12px;color:#166534;margin-top:14px;line-height:1.5;">
+                      This code is valid for <strong>15 minutes only</strong>. Do not share it with anyone.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Notice — same light card style -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;background-color:#fffbeb;border:1px solid #fde68a;border-radius:14px;overflow:hidden;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:5px;">Security Notice</div>
+                    <div style="font-size:13px;color:#78350f;line-height:1.6;">
+                      If you did not request a password reset, you can safely ignore this email. Your account remains secure.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Need Help -->
+              <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f172a;">Need help?</p>
+              <p style="margin:0 0 28px;font-size:14px;color:#334155;">
+                Reach us at <a href="mailto:{DEFAULT_SUPPORT_EMAIL}" style="color:#059669;font-weight:700;text-decoration:none;">{DEFAULT_SUPPORT_EMAIL}</a>
+              </p>
+
+              <!-- CTA Buttons — exactly matching Welcome email button style -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 24px;">
+                <tr>
+                  <td align="center">
+                    <!-- Web Button -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" style="display:inline-table;margin:6px 6px;">
+                      <tr>
+                        <td align="center" style="border-radius:12px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);box-shadow:0 6px 18px rgba(16,185,129,0.35);">
+                          <a href="{DEFAULT_WEB_URL}" class="cta-button" style="display:inline-block;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:15px 30px;letter-spacing:0.3px;text-align:center;" target="_blank">
+                            &#127760; Open UWO Connect Web &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- App Button -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" style="display:inline-table;margin:6px 6px;">
+                      <tr>
+                        <td align="center" style="border-radius:12px;background:#0f172a;box-shadow:0 6px 18px rgba(15,23,42,0.22);">
+                          <a href="{DEFAULT_APP_URL}" class="cta-button" style="display:inline-block;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:15px 30px;letter-spacing:0.3px;text-align:center;" target="_blank">
+                            &#128241; Download Mobile App &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top:12px;">
+                    <span style="font-size:12px;color:#64748b;">
+                      Available on Web Browser &bull; Android (Google Play) &bull; iOS
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Team Tagline — same as Welcome email -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:10px 0 8px;background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;overflow:hidden;">
+                <tr>
+                  <td style="padding:18px 24px;text-align:center;">
+                    <div style="font-size:15px;font-weight:800;color:#047857;letter-spacing:0.2px;margin-bottom:6px;">
+                      Connect everything. Automate anything.
+                    </div>
+                    <div style="font-size:13px;font-weight:700;color:#059669;">
+                      &mdash; Team UWO Connect
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer — exact match with Welcome email -->
+          <tr>
+            <td class="footer-bg" style="background-color:#f8fafc;padding:28px 36px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <div style="font-size:14px;font-weight:800;color:#0f172a;letter-spacing:-0.3px;margin-bottom:4px;">
+                      UWO <span style="color:#059669;">Connect</span>
+                    </div>
+                    <div style="font-size:12px;color:#64748b;line-height:1.5;margin-bottom:14px;">
+                      Unified Communication &amp; Business Automation Platform
+                    </div>
+
+                    <div style="font-size:12px;color:#94a3b8;line-height:1.6;margin-bottom:14px;">
+                      Support: <a href="mailto:{DEFAULT_SUPPORT_EMAIL}" style="color:#059669;font-weight:700;text-decoration:none;">{DEFAULT_SUPPORT_EMAIL}</a>
+                      &nbsp;&bull;&nbsp;
+                      <a href="{DEFAULT_WEB_URL}" style="color:#059669;font-weight:600;text-decoration:none;">Web Dashboard</a>
+                      &nbsp;&bull;&nbsp;
+                      <a href="{DEFAULT_APP_URL}" style="color:#059669;font-weight:600;text-decoration:none;">Mobile App</a>
+                    </div>
+
+                    <div style="font-size:11px;color:#94a3b8;line-height:1.5;border-top:1px solid #f1f5f9;padding-top:14px;margin-top:10px;">
+                      &copy; {datetime.datetime.now().year} UWO Connect. All rights reserved.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+        <!--[if (gte mso 9)|(IE)]>
+        </td>
         </tr>
-        <!-- Divider -->
-        <tr><td style=\"padding:0 48px;\"><div style=\"height:1px;background:#334155;\"></div></td></tr>
-        <!-- Body -->
-        <tr>
-          <td style=\"padding:36px 48px;\">
-            <p style=\"color:#94a3b8;font-size:15px;line-height:1.7;margin:0 0 24px;\">
-              We received a request to reset the password for your UWO Connect account. Use the one-time code below — it expires in <strong style=\"color:#f1f5f9;\">15 minutes</strong>.
-            </p>
-            <!-- OTP Box -->
-            <div style=\"background:#0f172a;border:1px solid #16a34a;border-radius:20px;padding:36px 24px;text-align:center;margin:0 0 28px;box-shadow:0 0 40px rgba(22,163,74,0.15);\">
-              <p style=\"margin:0 0 12px;color:#16a34a;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;\">Your Verification Code</p>
-              <p style=\"margin:0;font-size:52px;font-weight:900;letter-spacing:14px;color:#ffffff;font-variant-numeric:tabular-nums;\">{otp}</p>
-              <p style=\"margin:16px 0 0;color:#475569;font-size:12px;\">Valid for 15 minutes only</p>
-            </div>
-            <!-- Security Notice -->
-            <div style=\"background:#1c1917;border:1px solid #292524;border-left:3px solid #f59e0b;border-radius:10px;padding:14px 18px;margin-bottom:24px;\">
-              <p style=\"margin:0;color:#d97706;font-size:13px;font-weight:600;\">⚠️ Security Notice</p>
-              <p style=\"margin:6px 0;color:#78716c;font-size:12px;line-height:1.6;\">Never share this code with anyone. UWO Connect will never ask for your OTP via phone or chat.</p>
-            </div>
-            <p style=\"color:#475569;font-size:13px;margin:0;line-height:1.6;\">
-              If you didn't request a password reset, you can safely ignore this email. Your account remains secure.
-            </p>
-            <!-- Support -->
-            <p style=\"color:#94a3b8;font-size:13px;margin:24px 0 8px;\">Need help? Contact our support team at <a href=\"mailto:{DEFAULT_SUPPORT_EMAIL}\" style=\"color:#16a34a;\">{DEFAULT_SUPPORT_EMAIL}</a></p>
-            <!-- Action Buttons -->
-            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:16px 0;\">
-              <tr>
-                <td align=\"center\">
-                  <a href=\"{DEFAULT_WEB_URL}\" style=\"display:inline-block;background:#16a34a;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;\">Open UWO Connect Web</a>
-                </td>
-              </tr>
-              <tr><td height=\"8\"></td></tr>
-              <tr>
-                <td align=\"center\">
-                  <a href=\"{DEFAULT_APP_URL}\" style=\"display:inline-block;background:#059669;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:14px;\">Get the UWO Connect App</a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr><td style=\"padding:0 48px;\"><div style=\"height:1px;background:#334155;\"></div></td></tr>
-        <tr>
-          <td style=\"padding:24px 48px;text-align:center;\">
-            <p style=\"color:#334155;font-size:12px;margin:0 0 6px;\">© {datetime.datetime.now().year} UWO Connect · All rights reserved</p>
-            <p style=\"color:#1e3a29;font-size:11px;margin:0;\">This is an automated message, please do not reply.</p>
-          </td>
-        </tr>
-      </table>
-      <!-- /Card -->
-    </td></tr>
+        </table>
+        <![endif]-->
+      </td>
+    </tr>
   </table>
 </body>
 </html>"""
