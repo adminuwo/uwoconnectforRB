@@ -717,8 +717,16 @@ class ClientMessagesView(APIView):
                 if len(clean_digits) == 10:
                     search_terms.add(f"91{clean_digits}")
                     search_terms.add(f"+91{clean_digits}")
+                    search_terms.add(f"0{clean_digits}")
+                elif len(clean_digits) == 11 and clean_digits.startswith('0'):
+                    r10 = clean_digits[1:]
+                    search_terms.add(r10)
+                    search_terms.add(f"91{r10}")
+                    search_terms.add(f"+91{r10}")
                 elif clean_digits.startswith("91") and len(clean_digits) == 12:
-                    search_terms.add(clean_digits[2:])
+                    r10 = clean_digits[2:]
+                    search_terms.add(r10)
+                    search_terms.add(f"0{r10}")
                     search_terms.add(f"+{clean_digits}")
 
             # Safely lookup matching Contact without ValidationError on non-ObjectId strings
@@ -756,6 +764,20 @@ class ClientMessagesView(APIView):
                     p_digits = ''.join(filter(str.isdigit, str(contact_obj.phone_number)))
                     if p_digits:
                         search_terms.add(p_digits)
+                        if len(p_digits) == 10:
+                            search_terms.add(f"91{p_digits}")
+                            search_terms.add(f"+91{p_digits}")
+                            search_terms.add(f"0{p_digits}")
+                        elif len(p_digits) == 11 and p_digits.startswith('0'):
+                            r10 = p_digits[1:]
+                            search_terms.add(r10)
+                            search_terms.add(f"91{r10}")
+                            search_terms.add(f"+91{r10}")
+                        elif p_digits.startswith("91") and len(p_digits) == 12:
+                            r10 = p_digits[2:]
+                            search_terms.add(r10)
+                            search_terms.add(f"0{r10}")
+                            search_terms.add(f"+{p_digits}")
                 if contact_obj.email:
                     search_terms.add(str(contact_obj.email))
                 search_terms.add(str(contact_obj.id))
@@ -991,6 +1013,8 @@ class ClientMessagesView(APIView):
                 client_digits = re.sub(r'\D', '', str(getattr(client, 'phone_number', '') or ''))
                 country_prefix = client_digits[:-10] if len(client_digits) > 10 else '91'
                 target_dest = f"{country_prefix}{digits}"
+            elif len(digits) == 11 and digits.startswith('0'):
+                target_dest = f"91{digits[1:]}"
             elif digits:
                 target_dest = digits
         
@@ -1003,6 +1027,8 @@ class ClientMessagesView(APIView):
                 print(f"Failed to auto-pause bot for contact: {str(e)}")
         
         new_msg = None
+        template_id = request.data.get('template_id') or request.data.get('template')
+        template_name = request.data.get('template_name')
         
         if message_type == 'INTERNAL':
             sender_name = request.user.username if (request.user and request.user.is_authenticated) else 'Team Member'
@@ -1018,6 +1044,49 @@ class ClientMessagesView(APIView):
                 sender_avatar=sender_avatar,
                 status='SENT'
             )
+        elif channel == 'WHATSAPP' and (template_id or template_name):
+            from ..models import Template
+            from ..integrations.meta_integration import MetaIntegration
+            template_obj = None
+            if template_id and ObjectId.is_valid(str(template_id)):
+                template_obj = Template.objects.filter(client=client, id=template_id).first()
+            if not template_obj:
+                tmpl_search = template_name or template_id
+                template_obj = Template.objects.filter(client=client, name=tmpl_search).first()
+            
+            if template_obj:
+                phone_number_id = client.whatsapp_phone_number_id or 'WHATSAPP_SYSTEM'
+                t_payload = {
+                    "messaging_product": "whatsapp",
+                    "to": target_dest,
+                    "type": "template",
+                    "template": {
+                        "name": template_obj.name,
+                        "language": {"code": template_obj.language or "en"}
+                    }
+                }
+                res = MetaIntegration.send_whatsapp_message(phone_number_id, client.whatsapp_access_token, t_payload)
+                res_data = {}
+                wamid = None
+                try:
+                    res_data = res.json()
+                    if 'messages' in res_data and len(res_data['messages']) > 0:
+                        wamid = res_data['messages'][0].get('id')
+                except Exception:
+                    pass
+                is_ok = res.status_code in [200, 201]
+                t_body = body or f"[Template: {template_obj.name}]"
+                new_msg = MessageRepository.create_message(
+                    client=client,
+                    channel='WHATSAPP',
+                    from_address=phone_number_id,
+                    to_address=target_dest,
+                    body=t_body,
+                    message_type='OUTGOING',
+                    whatsapp_message_id=wamid,
+                    status='SENT' if is_ok else 'FAILED',
+                    metadata={"payload": t_payload, "response": res_data, "template": template_obj.name}
+                )
         elif channel == 'WHATSAPP':
             phone_number_id = client.whatsapp_phone_number_id or 'WHATSAPP_SYSTEM'
             webhook_view = WhatsAppWebhookView()
@@ -1031,7 +1100,8 @@ class ClientMessagesView(APIView):
                     to_address=target_dest,
                     body=body,
                     message_type='OUTGOING',
-                    status='SENT'
+                    status='FAILED',
+                    metadata={"error": str(_werr)}
                 )
         elif channel in ['INSTAGRAM', 'FACEBOOK']:
             webhook_view = FacebookInstagramWebhookView()
@@ -1045,7 +1115,8 @@ class ClientMessagesView(APIView):
                     to_address=target_dest,
                     body=body,
                     message_type='OUTGOING',
-                    status='SENT'
+                    status='FAILED',
+                    metadata={"error": str(_ferr)}
                 )
         elif channel == 'GMAIL':
             from ..services.gmail_service import send_gmail_message
@@ -1065,6 +1136,35 @@ class ClientMessagesView(APIView):
         else:
             return Response({"error": f"Unsupported channel: {channel}"}, status=400)
             
+        failure_reason = None
+        err_code = None
+        if new_msg:
+            res_meta = (new_msg.metadata or {}).get('response', {})
+            err_dict = res_meta.get('error', {}) if isinstance(res_meta, dict) else {}
+            err_code = err_dict.get('code')
+            err_msg = err_dict.get('message', '')
+            if new_msg.status == 'FAILED' or (res_meta and 'error' in res_meta):
+                new_msg.status = 'FAILED'
+                if err_code == 131047 or '24 hours' in err_msg.lower() or 're-engagement' in err_msg.lower():
+                    failure_reason = "24-Hour Window Closed: Customer has not replied in the last 24h. Meta WhatsApp policy requires sending an approved template to message this customer."
+                elif err_code == 131009 or 'not registered' in err_msg.lower():
+                    failure_reason = "Recipient phone number is not registered on WhatsApp or is invalid."
+                elif err_code == 100:
+                    failure_reason = f"Meta Authorization Error: {err_msg or 'Recipient phone number is restricted in Meta Development mode or token expired.'}"
+                elif err_msg:
+                    failure_reason = err_msg
+                else:
+                    failure_reason = "Message delivery rejected by Meta WhatsApp API."
+
+                meta = new_msg.metadata or {}
+                meta['error'] = failure_reason
+                meta['error_code'] = err_code
+                new_msg.metadata = meta
+                try:
+                    new_msg.save()
+                except Exception:
+                    pass
+
         if new_msg:
             return Response({
                 "id": str(new_msg.id),
@@ -1074,6 +1174,9 @@ class ClientMessagesView(APIView):
                 "channel": new_msg.channel,
                 "message_type": new_msg.message_type,
                 "status": new_msg.status,
+                "whatsapp_message_id": getattr(new_msg, 'whatsapp_message_id', None),
+                "error": failure_reason,
+                "error_code": err_code,
                 "buttons": getattr(new_msg, 'buttons', []) or [],
                 "metadata": new_msg.metadata or {},
                 "created_at": new_msg.created_at

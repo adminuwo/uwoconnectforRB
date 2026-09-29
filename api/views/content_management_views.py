@@ -532,7 +532,12 @@ class AdminBannerManagementView(APIView):
     """
     permission_classes = [IsCMSAdmin]
 
-    def get(self, request):
+    def get(self, request, pk=None, *args, **kwargs):
+        if pk:
+            banner = DynamicBanner.objects.filter(pk=pk).first()
+            if not banner:
+                return Response({"error": "Banner not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(DynamicBannerSerializer(banner, context={'request': request}).data, status=status.HTTP_200_OK)
         banners = DynamicBanner.objects.all().order_by('display_order', '-created_at')
         serializer = DynamicBannerSerializer(banners, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)

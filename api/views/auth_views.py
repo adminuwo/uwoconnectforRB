@@ -1337,9 +1337,12 @@ class QrAuthStatusView(views.APIView):
     """
     permission_classes = [AllowAny]
 
-    def get(self, request, session_id):
+    def get(self, request, session_id=None):
+        sess_id = session_id or request.GET.get('session_id')
+        if not sess_id:
+            return Response({"error": "session_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            qr_session = QrAuthSession.objects.get(session_id=session_id)
+            qr_session = QrAuthSession.objects.get(session_id=sess_id)
         except QrAuthSession.DoesNotExist:
             return Response({"error": "QR Session not found"}, status=status.HTTP_404_NOT_FOUND)
 

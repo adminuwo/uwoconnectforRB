@@ -371,6 +371,30 @@ class MetaWebhookService:
 
                                         if new_rank >= curr_rank or status_raw == 'FAILED':
                                             msg_to_update.status = status_raw
+                                            
+                                            if status_raw == 'FAILED':
+                                                err_list = st.get('errors') or []
+                                                if not err_list and st.get('error'):
+                                                    err_list = [st.get('error')]
+                                                err_item = err_list[0] if isinstance(err_list, list) and len(err_list) > 0 else (err_list if isinstance(err_list, dict) else {})
+                                                err_c = err_item.get('code')
+                                                err_m = err_item.get('message') or err_item.get('title') or ''
+                                                
+                                                if err_c == 131047 or '24 hours' in err_m.lower() or 're-engagement' in err_m.lower():
+                                                    human_reason = "24-Hour Window Closed: Customer has not replied in 24h. Send an approved template instead."
+                                                elif err_c == 131009 or 'not registered' in err_m.lower():
+                                                    human_reason = "Recipient is not registered on WhatsApp or has an invalid phone number."
+                                                elif err_m:
+                                                    human_reason = err_m
+                                                else:
+                                                    human_reason = "24-Hour Window Closed: Customer has not replied in 24h. Send an approved template instead."
+                                                
+                                                meta = msg_to_update.metadata or {}
+                                                meta['error'] = human_reason
+                                                meta['error_code'] = err_c or 131047
+                                                meta['raw_error'] = err_item
+                                                msg_to_update.metadata = meta
+
                                             msg_to_update.save()
 
                                             # Real-time WebSocket event broadcast to inbox group
@@ -386,6 +410,8 @@ class MetaWebhookService:
                                                             "message_id": str(msg_to_update.id),
                                                             "whatsapp_message_id": wamid,
                                                             "status": status_raw,
+                                                            "error": human_reason,
+                                                            "error_code": err_c,
                                                             "from_address": msg_to_update.from_address,
                                                             "to_address": msg_to_update.to_address
                                                         }
@@ -1307,6 +1333,8 @@ class MetaWebhookService:
         clean_num = re.sub(r'\D', '', raw_to)
         if len(clean_num) == 10:
             clean_num = '91' + clean_num
+        elif len(clean_num) == 11 and clean_num.startswith('0'):
+            clean_num = '91' + clean_num[1:]
         formatted_to = clean_num or raw_to
 
         if text_body:
@@ -1426,7 +1454,7 @@ class MetaWebhookService:
                 client=client,
                 channel='WHATSAPP',
                 from_address=phone_number_id or 'WHATSAPP_SYSTEM',
-                to_address=raw_to,
+                to_address=formatted_to,
                 body=text_body or f"[{media_type or 'Media'} Message]",
                 message_type='OUTGOING',
                 whatsapp_message_id=res_data.get('messages', [{}])[0].get('id') if 'messages' in res_data else None,
@@ -1440,10 +1468,10 @@ class MetaWebhookService:
                     client=client,
                     channel='WHATSAPP',
                     from_address=phone_number_id or 'WHATSAPP_SYSTEM',
-                    to_address=raw_to,
+                    to_address=formatted_to,
                     body=text_body or '[Message]',
                     message_type='OUTGOING',
-                    status='SENT',
+                    status='FAILED',
                     metadata={"error": str(e)}
                 )
             except Exception:

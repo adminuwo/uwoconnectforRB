@@ -624,6 +624,7 @@ class Campaign(models.Model):
     total_clicked = models.IntegerField(default=0)
     total_failed = models.IntegerField(default=0)
     failed_recipients = models.JSONField(default=list, blank=True)
+    sent_recipients = models.JSONField(default=list, blank=True)
 
     scheduled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

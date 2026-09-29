@@ -49,7 +49,7 @@ class GoogleCalendarConnectView(APIView):
         if not creds["client_id"] or not creds["client_secret"]:
             return Response(
                 {"error": "Google OAuth credentials not configured on backend (GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET)."},
-                status=500,
+                status=503,
             )
 
         state = secrets.token_urlsafe(32)

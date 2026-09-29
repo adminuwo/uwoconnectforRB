@@ -40,7 +40,7 @@ class GoogleDocsConnectView(APIView):
         redirect_uri = "http://localhost:8080/api/auth/gmail/callback"
 
         if not client_id:
-            return Response({"error": "Google OAuth is not configured on backend."}, status=500)
+            return Response({"error": "Google OAuth is not configured on backend."}, status=503)
 
         state = secrets.token_urlsafe(24)
         # Store state in cache to delegate callback

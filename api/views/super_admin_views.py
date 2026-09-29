@@ -975,7 +975,10 @@ class SuperAdminClientDetailDashboardView(APIView):
         # WhatsApp conversation drill-down
         wa_conversation_list = []
         for convo in wa_convos.order_by('-updated_at')[:25]:
-            thread_msgs = list(Message.objects.filter(conversation=convo).order_by('-created_at')[:10])
+            thread_msgs = list(Message.objects.filter(
+                Q(client=client),
+                Q(from_address=convo.contact_platform_id) | Q(to_address=convo.contact_platform_id)
+            ).order_by('-created_at')[:10])
             last_m = thread_msgs[0] if thread_msgs else None
             recent_thread = []
             for m in thread_msgs:
@@ -989,8 +992,8 @@ class SuperAdminClientDetailDashboardView(APIView):
                 })
             wa_conversation_list.append({
                 "id": str(convo.id),
-                "customer_name": safe_get_relation_attr(convo, 'contact', 'name', convo.customer_phone or "Customer"),
-                "customer_phone": safe_get_relation_attr(convo, 'contact', 'phone_number', convo.customer_phone or "—"),
+                "customer_name": safe_get_relation_attr(convo, 'contact', 'name', getattr(convo, 'customer_phone', None) or getattr(convo, 'contact_platform_id', '') or "Customer"),
+                "customer_phone": safe_get_relation_attr(convo, 'contact', 'phone_number', getattr(convo, 'customer_phone', None) or getattr(convo, 'contact_platform_id', '') or "—"),
                 "status": convo.status,
                 "assigned_to": safe_get_relation_attr(convo, 'assigned_to', 'username', 'Unassigned (Bot)'),
                 "unread_count": convo.unread_count_admin + convo.unread_count_employee,
@@ -2889,7 +2892,7 @@ class SuperAdminProjectDetailView(APIView):
     def get(self, request, project_id):
         try:
             project = Project.objects.select_related('client', 'owner').get(id=project_id)
-        except Project.DoesNotExist:
+        except Exception:
             return Response({"error": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
 
         members_list = [{
@@ -3343,10 +3346,12 @@ class SuperAdminMemberDetailView(APIView):
     """
     permission_classes = [IsSuperAdminUser]
 
-    def get(self, request, member_id):
+    def get(self, request, member_id=None, *args, **kwargs):
+        if not member_id or member_id == 'create':
+            return Response({"message": "Ready to create member. Send POST request."}, status=status.HTTP_200_OK)
         try:
             user = User.objects.select_related('client', 'reporting_manager').get(id=member_id)
-        except User.DoesNotExist:
+        except Exception:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
         assigned_projects = []

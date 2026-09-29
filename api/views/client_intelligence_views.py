@@ -768,6 +768,9 @@ class ClientIntelligenceDetailView(APIView):
         try:
             client = ClientRepository.get_client(id=client_id)
         except Exception:
+            client = None
+
+        if not client:
             return Response({'error': 'Client not found'}, status=status.HTTP_404_NOT_FOUND)
 
         now = timezone.now()
@@ -783,7 +786,7 @@ class ClientIntelligenceDetailView(APIView):
         approval_status = primary_user.status if primary_user else 'APPROVED'
 
         # ── 2. Projects & Mapping ──
-        projects = list(Project.objects.filter(client=client).prefetch_related('members'))
+        projects = list(Project.objects.filter(client=client))
         project_list = []
         for p in projects:
             assigned_members = []
@@ -1110,6 +1113,9 @@ class ClientIntelligenceActionView(APIView):
         try:
             client = ClientRepository.get_client(id=client_id)
         except Exception:
+            client = None
+
+        if not client:
             return Response({'error': 'Client not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # ── 1. Add Team Member to Client ──

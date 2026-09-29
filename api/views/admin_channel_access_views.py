@@ -56,12 +56,14 @@ class AdminGlobalConnectorsView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, connector_key=None, *args, **kwargs):
         if not check_admin_privileges(request.user):
             return Response({"error": "Admin privileges required."}, status=status.HTTP_403_FORBIDDEN)
 
         ensure_default_global_connectors()
         connectors = list(GlobalConnector.objects.all())
+        if connector_key:
+            connectors = [c for c in connectors if c.connector_key == connector_key]
         all_clients = list(Client.objects.all())
         all_members = list(User.objects.filter(role__in=['AGENT', 'EMPLOYEE', 'CLIENT']))
 

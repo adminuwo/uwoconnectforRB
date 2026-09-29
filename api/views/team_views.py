@@ -585,7 +585,7 @@ class TeamMemberViewSet(viewsets.ModelViewSet):
                 'department': m.department,
                 'is_online': m.is_online,
                 'status': m.availability_status or ('ONLINE' if m.is_online else 'OFFLINE'),
-                'current_page': m.current_page or '/client/dashboard',
+                'current_page': m.current_page or '/client',
                 'last_active_at': m.last_active_at,
                 'last_login_ip': m.last_login_ip or '127.0.0.1',
                 'last_login_browser': m.last_login_browser or 'Chrome / Windows'
