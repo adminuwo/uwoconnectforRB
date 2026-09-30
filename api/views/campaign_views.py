@@ -305,7 +305,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
             camp_tag = f"Excel: {camp_name}"
             from ..models import Contact
             for r in imported_recipients:
-                r_phone = str(r.get('phone') or '').strip()
+                r_phone = str(r.get('phone') or r.get('phone_number') or '').strip()
                 r_name = str(r.get('name') or '').strip() or f"Contact #{r_phone[-4:] if len(r_phone) >= 4 else 'Lead'}"
                 if not r_phone:
                     continue
