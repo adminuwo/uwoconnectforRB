@@ -168,6 +168,13 @@ class WorkflowEngine:
                 opt_clean = opt_text.strip().lower()
                 opt_words = re.sub(r'[^\w\s]', '', opt_clean).strip()
 
+                # 0. Row ID match (e.g. Meta list_reply id)
+                if is_list and i < len(raw_items) and isinstance(raw_items[i], dict):
+                    r_id = (raw_items[i].get('id') or '').strip().lower()
+                    if r_id and input_clean == r_id:
+                        matched_index = i
+                        break
+
                 # 1. Exact match
                 if input_clean == opt_clean:
                     matched_index = i

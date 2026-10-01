@@ -1404,34 +1404,12 @@ class MetaWebhookService:
                 "messaging_product": "whatsapp",
                 "to": formatted_to,
                 "type": m_type,
-                "type": m_type,
                 m_type: {
                     "link": media_url
                 }
             }
             if text_body:
                 payload[m_type]["caption"] = text_body
-        elif buttons and len(buttons) > 0:
-            buttons_payload = []
-            for i, btn_text in enumerate(buttons[:3]):
-                buttons_payload.append({
-                    "type": "reply",
-                    "reply": {
-                        "id": f"btn_{i}",
-                        "title": btn_text[:20]
-                    }
-                })
-            
-            payload = {
-                "messaging_product": "whatsapp",
-                "to": formatted_to,
-                "type": "interactive",
-                "interactive": {
-                    "type": "button",
-                    "body": {"text": text_body or "Select an option:"},
-                    "action": {"buttons": buttons_payload}
-                }
-            }
         elif list_items and len(list_items) > 0:
             rows_payload = []
             for idx, item in enumerate(list_items[:10]):
@@ -1469,6 +1447,27 @@ class MetaWebhookService:
                             }
                         ]
                     }
+                }
+            }
+        elif buttons and len(buttons) > 0:
+            buttons_payload = []
+            for i, btn_text in enumerate(buttons[:3]):
+                buttons_payload.append({
+                    "type": "reply",
+                    "reply": {
+                        "id": f"btn_{i}",
+                        "title": btn_text[:20]
+                    }
+                })
+            
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": formatted_to,
+                "type": "interactive",
+                "interactive": {
+                    "type": "button",
+                    "body": {"text": text_body or "Select an option:"},
+                    "action": {"buttons": buttons_payload}
                 }
             }
         else:
