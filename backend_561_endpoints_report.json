@@ -1,0 +1,3781 @@
+{
+  "total_registered_patterns": 801,
+  "total_evaluated_endpoints": 419,
+  "healthy_endpoints": 419,
+  "crashed_500_endpoints": 0,
+  "health_percentage": 100.0,
+  "timestamp": "2026-09-29 07:41:04",
+  "endpoints": [
+    {
+      "num": 1,
+      "url": "/",
+      "raw_pattern": "",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 2,
+      "url": "/health/",
+      "raw_pattern": "health",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 42.1
+    },
+    {
+      "num": 3,
+      "url": "/robots.txt",
+      "raw_pattern": "robots.txt",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.2
+    },
+    {
+      "num": 4,
+      "url": "/sitemap.xml",
+      "raw_pattern": "sitemap.xml",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.1
+    },
+    {
+      "num": 5,
+      "url": "/api/plans/public/",
+      "raw_pattern": "api/plans/public/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 119.2
+    },
+    {
+      "num": 6,
+      "url": "/api/client/entitlements/",
+      "raw_pattern": "api/client/entitlements/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 11358.2
+    },
+    {
+      "num": 7,
+      "url": "/api/client/select-channel/",
+      "raw_pattern": "api/client/select-channel/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 11143.0
+    },
+    {
+      "num": 8,
+      "url": "/api/client/subscribe/",
+      "raw_pattern": "api/client/subscribe/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 15356.1
+    },
+    {
+      "num": 9,
+      "url": "/api/clients/",
+      "raw_pattern": "api/^clients/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 167.9
+    },
+    {
+      "num": 10,
+      "url": "/api/clients/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 51.2
+    },
+    {
+      "num": 11,
+      "url": "/api/clients/6a7579d1669924900e45b908/disconnect_meta/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/disconnect_meta/$",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 12,
+      "url": "/api/clients/6a7579d1669924900e45b908/get_whatsapp_business_profile/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/get_whatsapp_business_profile/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 99.2
+    },
+    {
+      "num": 13,
+      "url": "/api/clients/6a7579d1669924900e45b908/get_whatsapp_profile_picture/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/get_whatsapp_profile_picture/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 83.1
+    },
+    {
+      "num": 14,
+      "url": "/api/clients/6a7579d1669924900e45b908/reactivate/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/reactivate/$",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.5
+    },
+    {
+      "num": 15,
+      "url": "/api/clients/6a7579d1669924900e45b908/reset_ai/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/reset_ai/$",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 16,
+      "url": "/api/clients/6a7579d1669924900e45b908/reset_workflows/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/reset_workflows/$",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 17,
+      "url": "/api/clients/6a7579d1669924900e45b908/suspend/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/suspend/$",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 18,
+      "url": "/api/clients/6a7579d1669924900e45b908/toggle_feature/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/toggle_feature/$",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 19,
+      "url": "/api/clients/6a7579d1669924900e45b908/update_whatsapp_business_profile/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/update_whatsapp_business_profile/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 20,
+      "url": "/api/clients/6a7579d1669924900e45b908/update_whatsapp_profile_picture/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/update_whatsapp_profile_picture/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 21,
+      "url": "/api/automations/",
+      "raw_pattern": "api/^automations/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 719.7
+    },
+    {
+      "num": 22,
+      "url": "/api/automations/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^automations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 60.1
+    },
+    {
+      "num": 23,
+      "url": "/api/workflows/",
+      "raw_pattern": "api/^workflows/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 214.8
+    },
+    {
+      "num": 24,
+      "url": "/api/workflows/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^workflows/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 43.2
+    },
+    {
+      "num": 25,
+      "url": "/api/contacts/",
+      "raw_pattern": "api/^contacts/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 6191.2
+    },
+    {
+      "num": 26,
+      "url": "/api/contacts/export_csv/",
+      "raw_pattern": "api/^contacts/export_csv/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 136.7
+    },
+    {
+      "num": 27,
+      "url": "/api/contacts/import_csv/",
+      "raw_pattern": "api/^contacts/import_csv/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 28,
+      "url": "/api/contacts/upcoming_followups/",
+      "raw_pattern": "api/^contacts/upcoming_followups/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.0
+    },
+    {
+      "num": 29,
+      "url": "/api/contacts/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 276.1
+    },
+    {
+      "num": 30,
+      "url": "/api/contacts/6a7579d1669924900e45b908/follow_ups/create/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/follow_ups/create/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 31,
+      "url": "/api/contacts/6a7579d1669924900e45b908/follow_ups/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/follow_ups/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 112.6
+    },
+    {
+      "num": 32,
+      "url": "/api/contacts/6a7579d1669924900e45b908/follow_ups/6a7579d1669924900e45b908/update/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/follow_ups/(?P<fid>[^/.]+)/update/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 33,
+      "url": "/api/conversations/",
+      "raw_pattern": "api/^conversations/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 145.6
+    },
+    {
+      "num": 34,
+      "url": "/api/conversations/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 313.0
+    },
+    {
+      "num": 35,
+      "url": "/api/conversations/6a7579d1669924900e45b908/add_note/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/add_note/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 36,
+      "url": "/api/conversations/6a7579d1669924900e45b908/audit_logs/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/audit_logs/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 200.5
+    },
+    {
+      "num": 37,
+      "url": "/api/conversations/6a7579d1669924900e45b908/lock_toggle/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/lock_toggle/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 38,
+      "url": "/api/conversations/6a7579d1669924900e45b908/mark_read/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/mark_read/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 39,
+      "url": "/api/conversations/6a7579d1669924900e45b908/resume_bot/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/resume_bot/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 40,
+      "url": "/api/conversations/6a7579d1669924900e45b908/takeover/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/takeover/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 41,
+      "url": "/api/conversations/6a7579d1669924900e45b908/transfer/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/transfer/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 42,
+      "url": "/api/templates/",
+      "raw_pattern": "api/^templates/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 257.2
+    },
+    {
+      "num": 43,
+      "url": "/api/templates/sync_from_meta/",
+      "raw_pattern": "api/^templates/sync_from_meta/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 44,
+      "url": "/api/templates/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^templates/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 41.4
+    },
+    {
+      "num": 45,
+      "url": "/api/campaigns/",
+      "raw_pattern": "api/^campaigns/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 842.5
+    },
+    {
+      "num": 46,
+      "url": "/api/campaigns/ai_generate/",
+      "raw_pattern": "api/^campaigns/ai_generate/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 47,
+      "url": "/api/campaigns/parse_excel/",
+      "raw_pattern": "api/^campaigns/parse_excel/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 48,
+      "url": "/api/campaigns/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^campaigns/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 49,
+      "url": "/api/campaigns/6a7579d1669924900e45b908/retry_failed/",
+      "raw_pattern": "api/^campaigns/(?P<pk>[^/.]+)/retry_failed/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 50,
+      "url": "/api/support/messages/",
+      "raw_pattern": "api/^support/messages/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 246.7
+    },
+    {
+      "num": 51,
+      "url": "/api/support/messages/clients/",
+      "raw_pattern": "api/^support/messages/clients/$",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 52,
+      "url": "/api/support/messages/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^support/messages/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 39.5
+    },
+    {
+      "num": 53,
+      "url": "/api/audit-logs/",
+      "raw_pattern": "api/^audit-logs/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 54,
+      "url": "/api/audit-logs/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^audit-logs/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 55,
+      "url": "/api/team/members/",
+      "raw_pattern": "api/^team/members/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 166.0
+    },
+    {
+      "num": 56,
+      "url": "/api/team/members/connected_social_channels/",
+      "raw_pattern": "api/^team/members/connected_social_channels/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 57,
+      "url": "/api/team/members/live_activity/",
+      "raw_pattern": "api/^team/members/live_activity/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 46.5
+    },
+    {
+      "num": 58,
+      "url": "/api/team/members/login_monitoring/",
+      "raw_pattern": "api/^team/members/login_monitoring/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 39.0
+    },
+    {
+      "num": 59,
+      "url": "/api/team/members/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^team/members/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 97.7
+    },
+    {
+      "num": 60,
+      "url": "/api/team/members/6a7579d1669924900e45b908/suspend/",
+      "raw_pattern": "api/^team/members/(?P<pk>[^/.]+)/suspend/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 61,
+      "url": "/api/team/members/6a7579d1669924900e45b908/update_permissions/",
+      "raw_pattern": "api/^team/members/(?P<pk>[^/.]+)/update_permissions/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 62,
+      "url": "/api/team/projects/",
+      "raw_pattern": "api/^team/projects/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 310.5
+    },
+    {
+      "num": 63,
+      "url": "/api/team/projects/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^team/projects/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.9
+    },
+    {
+      "num": 64,
+      "url": "/api/team/tasks/",
+      "raw_pattern": "api/^team/tasks/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.1
+    },
+    {
+      "num": 65,
+      "url": "/api/team/tasks/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.6
+    },
+    {
+      "num": 66,
+      "url": "/api/team/tasks/6a7579d1669924900e45b908/add_comment/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/add_comment/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 67,
+      "url": "/api/team/tasks/6a7579d1669924900e45b908/clone/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/clone/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 68,
+      "url": "/api/team/tasks/6a7579d1669924900e45b908/submit_for_approval/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/submit_for_approval/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 69,
+      "url": "/api/team/tasks/6a7579d1669924900e45b908/toggle_checklist/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/toggle_checklist/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 70,
+      "url": "/api/team/attendance/",
+      "raw_pattern": "api/^team/attendance/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.4
+    },
+    {
+      "num": 71,
+      "url": "/api/team/attendance/clock_in/",
+      "raw_pattern": "api/^team/attendance/clock_in/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 72,
+      "url": "/api/team/attendance/clock_out/",
+      "raw_pattern": "api/^team/attendance/clock_out/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 73,
+      "url": "/api/team/attendance/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^team/attendance/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.8
+    },
+    {
+      "num": 74,
+      "url": "/api/team/leaves/",
+      "raw_pattern": "api/^team/leaves/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.9
+    },
+    {
+      "num": 75,
+      "url": "/api/team/leaves/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^team/leaves/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.8
+    },
+    {
+      "num": 76,
+      "url": "/api/team/leaves/6a7579d1669924900e45b908/approve/",
+      "raw_pattern": "api/^team/leaves/(?P<pk>[^/.]+)/approve/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 77,
+      "url": "/api/products/",
+      "raw_pattern": "api/^products/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 175.9
+    },
+    {
+      "num": 78,
+      "url": "/api/products/analytics/",
+      "raw_pattern": "api/^products/analytics/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.2
+    },
+    {
+      "num": 79,
+      "url": "/api/products/bulk_action/",
+      "raw_pattern": "api/^products/bulk_action/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 80,
+      "url": "/api/products/import_csv/",
+      "raw_pattern": "api/^products/import_csv/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 81,
+      "url": "/api/products/upload_image/",
+      "raw_pattern": "api/^products/upload_image/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 82,
+      "url": "/api/products/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^products/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.4
+    },
+    {
+      "num": 83,
+      "url": "/api/products/6a7579d1669924900e45b908/redirect_link/",
+      "raw_pattern": "api/^products/(?P<pk>[^/.]+)/redirect_link/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 83.0
+    },
+    {
+      "num": 84,
+      "url": "/api/products/6a7579d1669924900e45b908/track_click/",
+      "raw_pattern": "api/^products/(?P<pk>[^/.]+)/track_click/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 85,
+      "url": "/api/orders/",
+      "raw_pattern": "api/^orders/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.3
+    },
+    {
+      "num": 86,
+      "url": "/api/orders/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^orders/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.5
+    },
+    {
+      "num": 87,
+      "url": "/api/guides/",
+      "raw_pattern": "api/^guides/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 835.3
+    },
+    {
+      "num": 88,
+      "url": "/api/guides/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^guides/(?P<slug>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 49.4
+    },
+    {
+      "num": 89,
+      "url": "/api/guides/6a7579d1669924900e45b908/add_section/",
+      "raw_pattern": "api/^guides/(?P<slug>[^/.]+)/add_section/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 90,
+      "url": "/api/guides/6a7579d1669924900e45b908/add_step/",
+      "raw_pattern": "api/^guides/(?P<slug>[^/.]+)/add_step/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 91,
+      "url": "/api/email/accounts/",
+      "raw_pattern": "api/^email/accounts/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 286.4
+    },
+    {
+      "num": 92,
+      "url": "/api/email/accounts/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^email/accounts/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 41.9
+    },
+    {
+      "num": 93,
+      "url": "/api/email/messages/",
+      "raw_pattern": "api/^email/messages/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 20442.6
+    },
+    {
+      "num": 94,
+      "url": "/api/email/messages/process_scheduled/",
+      "raw_pattern": "api/^email/messages/process_scheduled/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 95,
+      "url": "/api/email/messages/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 39.7
+    },
+    {
+      "num": 96,
+      "url": "/api/email/messages/6a7579d1669924900e45b908/add_note/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/add_note/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 69.4
+    },
+    {
+      "num": 97,
+      "url": "/api/email/messages/6a7579d1669924900e45b908/delete_message/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/delete_message/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 98,
+      "url": "/api/email/messages/6a7579d1669924900e45b908/mark_read/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/mark_read/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 99,
+      "url": "/api/email/messages/6a7579d1669924900e45b908/move_folder/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/move_folder/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 100,
+      "url": "/api/email/messages/6a7579d1669924900e45b908/schedule_action/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/schedule_action/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 101,
+      "url": "/api/email/messages/6a7579d1669924900e45b908/toggle_star/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/toggle_star/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 102,
+      "url": "/api/email/auto-replies/",
+      "raw_pattern": "api/^email/auto-replies/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 196.0
+    },
+    {
+      "num": 103,
+      "url": "/api/email/auto-replies/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^email/auto-replies/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 49.0
+    },
+    {
+      "num": 104,
+      "url": "/api/email/automations/",
+      "raw_pattern": "api/^email/automations/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 40.4
+    },
+    {
+      "num": 105,
+      "url": "/api/email/automations/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^email/automations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 39.0
+    },
+    {
+      "num": 106,
+      "url": "/api/sales-documents/",
+      "raw_pattern": "api/^sales-documents/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 8100.4
+    },
+    {
+      "num": 107,
+      "url": "/api/sales-documents/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 45.9
+    },
+    {
+      "num": 108,
+      "url": "/api/sales-documents/6a7579d1669924900e45b908/activity/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/activity/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 45.8
+    },
+    {
+      "num": 109,
+      "url": "/api/sales-documents/6a7579d1669924900e45b908/convert_invoice/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/convert_invoice/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 110,
+      "url": "/api/sales-documents/6a7579d1669924900e45b908/duplicate/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/duplicate/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 111,
+      "url": "/api/sales-documents/6a7579d1669924900e45b908/pdf/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/pdf/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 43.3
+    },
+    {
+      "num": 112,
+      "url": "/api/sales-documents/6a7579d1669924900e45b908/send/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/send/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 113,
+      "url": "/api/sales-documents/6a7579d1669924900e45b908/versions/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/versions/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 48.4
+    },
+    {
+      "num": 114,
+      "url": "/api/sales-document-templates/",
+      "raw_pattern": "api/^sales-document-templates/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 171.6
+    },
+    {
+      "num": 115,
+      "url": "/api/sales-document-templates/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^sales-document-templates/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 41.9
+    },
+    {
+      "num": 116,
+      "url": "/api/invoices/",
+      "raw_pattern": "api/^invoices/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 482.6
+    },
+    {
+      "num": 117,
+      "url": "/api/invoices/by-customer/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^invoices/by-customer/(?P<customer_id>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 40.0
+    },
+    {
+      "num": 118,
+      "url": "/api/invoices/by-order/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^invoices/by-order/(?P<order_id>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.9
+    },
+    {
+      "num": 119,
+      "url": "/api/invoices/settings/",
+      "raw_pattern": "api/^invoices/settings/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.7
+    },
+    {
+      "num": 120,
+      "url": "/api/invoices/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^invoices/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 43.1
+    },
+    {
+      "num": 121,
+      "url": "/api/invoices/6a7579d1669924900e45b908/download/",
+      "raw_pattern": "api/^invoices/(?P<pk>[^/.]+)/download/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.6
+    },
+    {
+      "num": 122,
+      "url": "/api/invoices/6a7579d1669924900e45b908/regenerate/",
+      "raw_pattern": "api/^invoices/(?P<pk>[^/.]+)/regenerate/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 123,
+      "url": "/api/quotations/",
+      "raw_pattern": "api/^quotations/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 6207.1
+    },
+    {
+      "num": 124,
+      "url": "/api/quotations/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.1
+    },
+    {
+      "num": 125,
+      "url": "/api/quotations/6a7579d1669924900e45b908/activity/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/activity/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.2
+    },
+    {
+      "num": 126,
+      "url": "/api/quotations/6a7579d1669924900e45b908/convert_invoice/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/convert_invoice/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 127,
+      "url": "/api/quotations/6a7579d1669924900e45b908/duplicate/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/duplicate/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 128,
+      "url": "/api/quotations/6a7579d1669924900e45b908/pdf/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/pdf/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.4
+    },
+    {
+      "num": 129,
+      "url": "/api/quotations/6a7579d1669924900e45b908/send/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/send/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 130,
+      "url": "/api/quotations/6a7579d1669924900e45b908/versions/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/versions/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.9
+    },
+    {
+      "num": 131,
+      "url": "/api/proposals/",
+      "raw_pattern": "api/^proposals/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4915.3
+    },
+    {
+      "num": 132,
+      "url": "/api/proposals/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.1
+    },
+    {
+      "num": 133,
+      "url": "/api/proposals/6a7579d1669924900e45b908/activity/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/activity/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.2
+    },
+    {
+      "num": 134,
+      "url": "/api/proposals/6a7579d1669924900e45b908/convert_invoice/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/convert_invoice/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 135,
+      "url": "/api/proposals/6a7579d1669924900e45b908/duplicate/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/duplicate/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 136,
+      "url": "/api/proposals/6a7579d1669924900e45b908/pdf/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/pdf/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.8
+    },
+    {
+      "num": 137,
+      "url": "/api/proposals/6a7579d1669924900e45b908/send/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/send/$",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 138,
+      "url": "/api/proposals/6a7579d1669924900e45b908/versions/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/versions/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.6
+    },
+    {
+      "num": 139,
+      "url": "/api/features/",
+      "raw_pattern": "api/^features/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 75.2
+    },
+    {
+      "num": 140,
+      "url": "/api/features/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^features/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 40.7
+    },
+    {
+      "num": 141,
+      "url": "/api/plans/",
+      "raw_pattern": "api/^plans/$",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 87.3
+    },
+    {
+      "num": 142,
+      "url": "/api/plans/public_plans/",
+      "raw_pattern": "api/^plans/public_plans/$",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 86.1
+    },
+    {
+      "num": 143,
+      "url": "/api/plans/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^plans/(?P<pk>[^/.]+)/$",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 180.4
+    },
+    {
+      "num": 144,
+      "url": "/api/plans/6a7579d1669924900e45b908/monthly/",
+      "raw_pattern": "api/^plans/(?P<pk>[^/.]+)/monthly/$",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 145,
+      "url": "/api/plans/6a7579d1669924900e45b908/yearly/",
+      "raw_pattern": "api/^plans/(?P<pk>[^/.]+)/yearly/$",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 146,
+      "url": "/api/plan-features/",
+      "raw_pattern": "api/^plan-features/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 135.3
+    },
+    {
+      "num": 147,
+      "url": "/api/plan-features/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^plan-features/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.5
+    },
+    {
+      "num": 148,
+      "url": "/api/client-feature-overrides/",
+      "raw_pattern": "api/^client-feature-overrides/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.0
+    },
+    {
+      "num": 149,
+      "url": "/api/client-feature-overrides/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^client-feature-overrides/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.4
+    },
+    {
+      "num": 150,
+      "url": "/api/plan-audit-logs/",
+      "raw_pattern": "api/^plan-audit-logs/$",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 44.6
+    },
+    {
+      "num": 151,
+      "url": "/api/plan-audit-logs/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/^plan-audit-logs/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 59.1
+    },
+    {
+      "num": 152,
+      "url": "/api/",
+      "raw_pattern": "api/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 48.3
+    },
+    {
+      "num": 153,
+      "url": "/api/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/<drf_format_suffix:format>",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 12.9
+    },
+    {
+      "num": 154,
+      "url": "/api/health/",
+      "raw_pattern": "api/health",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 36.5
+    },
+    {
+      "num": 155,
+      "url": "/api/whitelabel/config/",
+      "raw_pattern": "api/whitelabel/config",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 156,
+      "url": "/api/email/analytics/",
+      "raw_pattern": "api/email/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 116.5
+    },
+    {
+      "num": 157,
+      "url": "/api/guides/progress/",
+      "raw_pattern": "api/guides/progress/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.3
+    },
+    {
+      "num": 158,
+      "url": "/api/guides/progress/getting-started/",
+      "raw_pattern": "api/guides/progress/<slug:slug>/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 44.4
+    },
+    {
+      "num": 159,
+      "url": "/api/guides/sections/1/",
+      "raw_pattern": "api/guides/sections/<int:section_id>/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 160,
+      "url": "/api/guides/steps/1/",
+      "raw_pattern": "api/guides/steps/<int:step_id>/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 161,
+      "url": "/api/monitoring/stats/",
+      "raw_pattern": "api/monitoring/stats/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 229.4
+    },
+    {
+      "num": 162,
+      "url": "/api/monitoring/analytics/",
+      "raw_pattern": "api/monitoring/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 110.1
+    },
+    {
+      "num": 163,
+      "url": "/api/team/invites/",
+      "raw_pattern": "api/team/invites/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 159.9
+    },
+    {
+      "num": 164,
+      "url": "/api/team/invites/generate-qr/",
+      "raw_pattern": "api/team/invites/generate-qr/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 36.9
+    },
+    {
+      "num": 165,
+      "url": "/api/team/invites/validate/",
+      "raw_pattern": "api/team/invites/validate/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 166,
+      "url": "/api/team/chat/",
+      "raw_pattern": "api/team/chat/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 36.8
+    },
+    {
+      "num": 167,
+      "url": "/api/team/reports/",
+      "raw_pattern": "api/team/reports/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 284.9
+    },
+    {
+      "num": 168,
+      "url": "/api/team/approvals/",
+      "raw_pattern": "api/team/approvals/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.0
+    },
+    {
+      "num": 169,
+      "url": "/api/team/channels/",
+      "raw_pattern": "api/team/channels/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1005.8
+    },
+    {
+      "num": 170,
+      "url": "/api/team/channel-messages/",
+      "raw_pattern": "api/team/channel-messages/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 171,
+      "url": "/api/team/analytics/",
+      "raw_pattern": "api/team/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 256.4
+    },
+    {
+      "num": 172,
+      "url": "/api/team/ai-copilot/",
+      "raw_pattern": "api/team/ai-copilot/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 173,
+      "url": "/api/auth/register/",
+      "raw_pattern": "api/auth/register",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 174,
+      "url": "/api/auth/login/",
+      "raw_pattern": "api/auth/login",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 175,
+      "url": "/api/auth/google/",
+      "raw_pattern": "api/auth/google",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 176,
+      "url": "/api/auth/google-login/",
+      "raw_pattern": "api/auth/google-login",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 177,
+      "url": "/api/auth/google-client-id/",
+      "raw_pattern": "api/auth/google-client-id",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 24.7
+    },
+    {
+      "num": 178,
+      "url": "/api/auth/apple/",
+      "raw_pattern": "api/auth/apple",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 179,
+      "url": "/api/auth/gmail/connect/",
+      "raw_pattern": "api/auth/gmail/connect",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 15.6
+    },
+    {
+      "num": 180,
+      "url": "/api/auth/gmail/callback/",
+      "raw_pattern": "api/auth/gmail/callback",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 12.2
+    },
+    {
+      "num": 181,
+      "url": "/api/auth/gmail/disconnect/",
+      "raw_pattern": "api/auth/gmail/disconnect",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 10.9
+    },
+    {
+      "num": 182,
+      "url": "/api/auth/google-calendar/connect/",
+      "raw_pattern": "api/auth/google-calendar/connect",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 10.0
+    },
+    {
+      "num": 183,
+      "url": "/api/auth/google-calendar/callback/",
+      "raw_pattern": "api/auth/google-calendar/callback",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 9.4
+    },
+    {
+      "num": 184,
+      "url": "/api/auth/gmail/sync/",
+      "raw_pattern": "api/auth/gmail/sync",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 9.2
+    },
+    {
+      "num": 185,
+      "url": "/api/auth/firebase-login/",
+      "raw_pattern": "api/auth/firebase-login",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 8.8
+    },
+    {
+      "num": 186,
+      "url": "/api/auth/uwo-login/",
+      "raw_pattern": "api/auth/uwo-login",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 8.6
+    },
+    {
+      "num": 187,
+      "url": "/api/auth/delete-account/",
+      "raw_pattern": "api/auth/delete-account",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 188,
+      "url": "/api/legal/documents/",
+      "raw_pattern": "api/legal/documents",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.9
+    },
+    {
+      "num": 189,
+      "url": "/api/legal/consent-status/",
+      "raw_pattern": "api/legal/consent-status",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 72.0
+    },
+    {
+      "num": 190,
+      "url": "/api/legal/consent/",
+      "raw_pattern": "api/legal/consent",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 191,
+      "url": "/api/auth/qr/create/",
+      "raw_pattern": "api/auth/qr/create",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 192,
+      "url": "/api/auth/qr/status/test_token_123/",
+      "raw_pattern": "api/auth/qr/status/<str:session_id>",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.6
+    },
+    {
+      "num": 193,
+      "url": "/api/auth/qr/scan/",
+      "raw_pattern": "api/auth/qr/scan",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 194,
+      "url": "/api/auth/qr/approve/",
+      "raw_pattern": "api/auth/qr/approve",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 195,
+      "url": "/api/auth/qr/reject/",
+      "raw_pattern": "api/auth/qr/reject",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 196,
+      "url": "/api/auth/linked-devices/",
+      "raw_pattern": "api/auth/linked-devices",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 197,
+      "url": "/api/auth/linked-devices/6a7579d1669924900e45b908/revoke/",
+      "raw_pattern": "api/auth/linked-devices/<str:pk>/revoke",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 198,
+      "url": "/api/auth/linked-devices/revoke-all/",
+      "raw_pattern": "api/auth/linked-devices/revoke-all",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 199,
+      "url": "/api/auth/forgot-password/send-otp/",
+      "raw_pattern": "api/auth/forgot-password/send-otp",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 200,
+      "url": "/api/auth/forgot-password/verify-otp/",
+      "raw_pattern": "api/auth/forgot-password/verify-otp",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 201,
+      "url": "/api/auth/forgot-password/reset/",
+      "raw_pattern": "api/auth/forgot-password/reset",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 202,
+      "url": "/api/auth/whatsapp/embedded-signup/",
+      "raw_pattern": "api/auth/whatsapp/embedded-signup",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 203,
+      "url": "/api/auth/instagram/embedded-signup/",
+      "raw_pattern": "api/auth/instagram/embedded-signup",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 12.0
+    },
+    {
+      "num": 204,
+      "url": "/api/auth/facebook/embedded-signup/",
+      "raw_pattern": "api/auth/facebook/embedded-signup",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 10.8
+    },
+    {
+      "num": 205,
+      "url": "/api/auth/instagram/oauth-callback/",
+      "raw_pattern": "api/auth/instagram/oauth-callback",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 9.8
+    },
+    {
+      "num": 206,
+      "url": "/api/client/instagram/sync/",
+      "raw_pattern": "api/client/instagram/sync",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 207,
+      "url": "/api/profile/",
+      "raw_pattern": "api/profile",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 174.6
+    },
+    {
+      "num": 208,
+      "url": "/api/media-proxy/",
+      "raw_pattern": "api/media-proxy/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 209,
+      "url": "/api/messages/",
+      "raw_pattern": "api/messages/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 64.0
+    },
+    {
+      "num": 210,
+      "url": "/api/messages/suggest_draft/",
+      "raw_pattern": "api/messages/suggest_draft/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 211,
+      "url": "/api/client/stats/",
+      "raw_pattern": "api/client/stats",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 221.8
+    },
+    {
+      "num": 212,
+      "url": "/api/admin/stats/",
+      "raw_pattern": "api/admin/stats",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 25.5
+    },
+    {
+      "num": 213,
+      "url": "/api/admin/clients/overview/",
+      "raw_pattern": "api/admin/clients/overview",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 710.5
+    },
+    {
+      "num": 214,
+      "url": "/api/admin/clients/6a7579d1669924900e45b908/details/",
+      "raw_pattern": "api/admin/clients/<str:client_id>/details",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.2
+    },
+    {
+      "num": 215,
+      "url": "/api/admin/client-intelligence/stats/",
+      "raw_pattern": "api/admin/client-intelligence/stats",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3573.0
+    },
+    {
+      "num": 216,
+      "url": "/api/admin/client-intelligence/clients/",
+      "raw_pattern": "api/admin/client-intelligence/clients",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 534.6
+    },
+    {
+      "num": 217,
+      "url": "/api/admin/client-intelligence/clients/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/client-intelligence/clients/<str:client_id>",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.4
+    },
+    {
+      "num": 218,
+      "url": "/api/admin/client-intelligence/clients/6a7579d1669924900e45b908/action/",
+      "raw_pattern": "api/admin/client-intelligence/clients/<str:client_id>/action",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 219,
+      "url": "/api/admin/client-intelligence/export/",
+      "raw_pattern": "api/admin/client-intelligence/export",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 261.2
+    },
+    {
+      "num": 220,
+      "url": "/api/admin/overview/",
+      "raw_pattern": "api/admin/overview",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 499.7
+    },
+    {
+      "num": 221,
+      "url": "/api/admin/clients-directory/",
+      "raw_pattern": "api/admin/clients-directory",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 8443.3
+    },
+    {
+      "num": 222,
+      "url": "/api/admin/clients/6a7579d1669924900e45b908/dashboard/",
+      "raw_pattern": "api/admin/clients/<str:client_id>/dashboard",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 223,
+      "url": "/api/admin/clients/6a7579d1669924900e45b908/action/",
+      "raw_pattern": "api/admin/clients/<str:client_id>/action",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 224,
+      "url": "/api/admin/all-team/",
+      "raw_pattern": "api/admin/all-team",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 153.0
+    },
+    {
+      "num": 225,
+      "url": "/api/admin/all-team/create/",
+      "raw_pattern": "api/admin/all-team/create",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 226,
+      "url": "/api/admin/all-team/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/all-team/<str:member_id>",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.3
+    },
+    {
+      "num": 227,
+      "url": "/api/admin/team-summary/",
+      "raw_pattern": "api/admin/team-summary",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1170.3
+    },
+    {
+      "num": 228,
+      "url": "/api/admin/team-analytics/",
+      "raw_pattern": "api/admin/team-analytics",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 314.4
+    },
+    {
+      "num": 229,
+      "url": "/api/admin/team/analytics/",
+      "raw_pattern": "api/admin/team/analytics",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 269.4
+    },
+    {
+      "num": 230,
+      "url": "/api/admin/all-projects/",
+      "raw_pattern": "api/admin/all-projects",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 186.0
+    },
+    {
+      "num": 231,
+      "url": "/api/admin/all-projects/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 39.8
+    },
+    {
+      "num": 232,
+      "url": "/api/admin/all-projects/6a7579d1669924900e45b908/assign-members/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/assign-members",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 233,
+      "url": "/api/admin/all-projects/6a7579d1669924900e45b908/members/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/members",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 234,
+      "url": "/api/admin/all-projects/6a7579d1669924900e45b908/members/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/members/<str:member_id>",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.2
+    },
+    {
+      "num": 235,
+      "url": "/api/admin/all-teams/",
+      "raw_pattern": "api/admin/all-teams",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 398.5
+    },
+    {
+      "num": 236,
+      "url": "/api/admin/all-teams/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/all-teams/<str:channel_id>",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 237,
+      "url": "/api/admin/all-teams/6a7579d1669924900e45b908/assign-members/",
+      "raw_pattern": "api/admin/all-teams/<str:channel_id>/assign-members",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 238,
+      "url": "/api/admin/all-channels/",
+      "raw_pattern": "api/admin/all-channels",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 705.4
+    },
+    {
+      "num": 239,
+      "url": "/api/admin/all-messages/",
+      "raw_pattern": "api/admin/all-messages",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 313.0
+    },
+    {
+      "num": 240,
+      "url": "/api/admin/all-sales/",
+      "raw_pattern": "api/admin/all-sales",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 155.8
+    },
+    {
+      "num": 241,
+      "url": "/api/admin/all-quotations/",
+      "raw_pattern": "api/admin/all-quotations",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 488.7
+    },
+    {
+      "num": 242,
+      "url": "/api/admin/all-proposals/",
+      "raw_pattern": "api/admin/all-proposals",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 505.4
+    },
+    {
+      "num": 243,
+      "url": "/api/admin/all-invoices/",
+      "raw_pattern": "api/admin/all-invoices",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 313.2
+    },
+    {
+      "num": 244,
+      "url": "/api/admin/all-reports/",
+      "raw_pattern": "api/admin/all-reports",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.4
+    },
+    {
+      "num": 245,
+      "url": "/api/admin/all-products/",
+      "raw_pattern": "api/admin/all-products",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 122.5
+    },
+    {
+      "num": 246,
+      "url": "/api/admin/global-search/",
+      "raw_pattern": "api/admin/global-search",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 247,
+      "url": "/api/admin/automations/",
+      "raw_pattern": "api/admin/automations",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 22.9
+    },
+    {
+      "num": 248,
+      "url": "/api/email/compose/",
+      "raw_pattern": "api/email/compose/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 249,
+      "url": "/api/admin/messages/",
+      "raw_pattern": "api/admin/messages",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 172.1
+    },
+    {
+      "num": 250,
+      "url": "/api/admin/users/",
+      "raw_pattern": "api/admin/users",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 23.2
+    },
+    {
+      "num": 251,
+      "url": "/api/admin/users/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/users/<str:pk>",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 15.8
+    },
+    {
+      "num": 252,
+      "url": "/api/platform-assistant/",
+      "raw_pattern": "api/platform-assistant/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 253,
+      "url": "/api/admin/settings/global/",
+      "raw_pattern": "api/admin/settings/global",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 12.2
+    },
+    {
+      "num": 254,
+      "url": "/api/webhook/whatsapp/",
+      "raw_pattern": "api/webhook/whatsapp",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 255,
+      "url": "/api/webhooks/whatsapp/",
+      "raw_pattern": "api/webhooks/whatsapp",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 256,
+      "url": "/api/webhook/facebook-instagram/",
+      "raw_pattern": "api/webhook/facebook-instagram",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 257,
+      "url": "/api/webhooks/facebook-instagram/",
+      "raw_pattern": "api/webhooks/facebook-instagram",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 258,
+      "url": "/api/knowledge/",
+      "raw_pattern": "api/knowledge/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 870.6
+    },
+    {
+      "num": 259,
+      "url": "/api/knowledge/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/knowledge/<str:pk>/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.4
+    },
+    {
+      "num": 260,
+      "url": "/api/admin/impersonate/",
+      "raw_pattern": "api/admin/impersonate",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 261,
+      "url": "/api/payments/create-order/",
+      "raw_pattern": "api/payments/create-order",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 262,
+      "url": "/api/payments/checkout/",
+      "raw_pattern": "api/payments/checkout",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 263,
+      "url": "/api/payments/checkout/callback/",
+      "raw_pattern": "api/payments/checkout/callback",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 264,
+      "url": "/api/payments/verify-order/",
+      "raw_pattern": "api/payments/verify-order",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 265,
+      "url": "/api/payments/history/",
+      "raw_pattern": "api/payments/history",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 58.6
+    },
+    {
+      "num": 266,
+      "url": "/api/payments/webhook/",
+      "raw_pattern": "api/payments/webhook",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 267,
+      "url": "/api/payments/apple/verify/",
+      "raw_pattern": "api/payments/apple/verify",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 268,
+      "url": "/api/payments/apple/restore/",
+      "raw_pattern": "api/payments/apple/restore",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 269,
+      "url": "/api/payments/apple/notifications/",
+      "raw_pattern": "api/payments/apple/notifications",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 270,
+      "url": "/api/wallet/dashboard/",
+      "raw_pattern": "api/wallet/dashboard",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 157.3
+    },
+    {
+      "num": 271,
+      "url": "/api/wallet/recharge/create/",
+      "raw_pattern": "api/wallet/recharge/create",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 272,
+      "url": "/api/wallet/recharge/checkout/",
+      "raw_pattern": "api/wallet/recharge/checkout",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 273,
+      "url": "/api/wallet/recharge/verify/",
+      "raw_pattern": "api/wallet/recharge/verify",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 274,
+      "url": "/api/wallet/webhook/",
+      "raw_pattern": "api/wallet/webhook",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 275,
+      "url": "/api/admin/wallet/overview/",
+      "raw_pattern": "api/admin/wallet/overview",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4350.6
+    },
+    {
+      "num": 276,
+      "url": "/api/admin/wallet/adjustment/",
+      "raw_pattern": "api/admin/wallet/adjustment",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 277,
+      "url": "/api/admin/wallet/rates/",
+      "raw_pattern": "api/admin/wallet/rates",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 278,
+      "url": "/api/broadcasts/entitlement/",
+      "raw_pattern": "api/broadcasts/entitlement",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 247.9
+    },
+    {
+      "num": 279,
+      "url": "/api/broadcasts/validate/",
+      "raw_pattern": "api/broadcasts/validate",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 280,
+      "url": "/api/broadcasts/consume/",
+      "raw_pattern": "api/broadcasts/consume",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 281,
+      "url": "/api/broadcasts/refund/",
+      "raw_pattern": "api/broadcasts/refund",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 282,
+      "url": "/api/onedrive/connect/",
+      "raw_pattern": "api/onedrive/connect",
+      "role": "CLIENT",
+      "status": 503,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 283,
+      "url": "/api/onedrive/callback/",
+      "raw_pattern": "api/onedrive/callback",
+      "role": "CLIENT",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 284,
+      "url": "/api/onedrive/status/",
+      "raw_pattern": "api/onedrive/status",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 931.4
+    },
+    {
+      "num": 285,
+      "url": "/api/onedrive/sync/",
+      "raw_pattern": "api/onedrive/sync",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 286,
+      "url": "/api/onedrive/disconnect/",
+      "raw_pattern": "api/onedrive/disconnect",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 287,
+      "url": "/api/google-calendar/connect/",
+      "raw_pattern": "api/google-calendar/connect",
+      "role": "CLIENT",
+      "status": 503,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 288,
+      "url": "/api/google-calendar/callback/",
+      "raw_pattern": "api/google-calendar/callback",
+      "role": "CLIENT",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 289,
+      "url": "/api/google-calendar/status/",
+      "raw_pattern": "api/google-calendar/status",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 860.8
+    },
+    {
+      "num": 290,
+      "url": "/api/google-calendar/sync/",
+      "raw_pattern": "api/google-calendar/sync",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 291,
+      "url": "/api/google-calendar/create-event/",
+      "raw_pattern": "api/google-calendar/create-event",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 5.2
+    },
+    {
+      "num": 292,
+      "url": "/api/google-calendar/disconnect/",
+      "raw_pattern": "api/google-calendar/disconnect",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 293,
+      "url": "/api/google-sheets/connect/",
+      "raw_pattern": "api/google-sheets/connect",
+      "role": "CLIENT",
+      "status": 503,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 294,
+      "url": "/api/google-sheets/callback/",
+      "raw_pattern": "api/google-sheets/callback",
+      "role": "CLIENT",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 295,
+      "url": "/api/google-sheets/status/",
+      "raw_pattern": "api/google-sheets/status",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1013.1
+    },
+    {
+      "num": 296,
+      "url": "/api/google-sheets/sync/",
+      "raw_pattern": "api/google-sheets/sync",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 297,
+      "url": "/api/google-sheets/append-row/",
+      "raw_pattern": "api/google-sheets/append-row",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.5
+    },
+    {
+      "num": 298,
+      "url": "/api/google-sheets/disconnect/",
+      "raw_pattern": "api/google-sheets/disconnect",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 299,
+      "url": "/api/google-docs/connect/",
+      "raw_pattern": "api/google-docs/connect",
+      "role": "CLIENT",
+      "status": 503,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 300,
+      "url": "/api/google-docs/callback/",
+      "raw_pattern": "api/google-docs/callback",
+      "role": "CLIENT",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 301,
+      "url": "/api/google-docs/status/",
+      "raw_pattern": "api/google-docs/status",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 302,
+      "url": "/api/google-docs/sync/",
+      "raw_pattern": "api/google-docs/sync",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 303,
+      "url": "/api/google-docs/create-doc/",
+      "raw_pattern": "api/google-docs/create-doc",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 304,
+      "url": "/api/google-docs/disconnect/",
+      "raw_pattern": "api/google-docs/disconnect",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 305,
+      "url": "/api/google-slides/connect/",
+      "raw_pattern": "api/google-slides/connect",
+      "role": "CLIENT",
+      "status": 503,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 306,
+      "url": "/api/google-slides/callback/",
+      "raw_pattern": "api/google-slides/callback",
+      "role": "CLIENT",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 307,
+      "url": "/api/google-slides/status/",
+      "raw_pattern": "api/google-slides/status",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 308,
+      "url": "/api/google-slides/sync/",
+      "raw_pattern": "api/google-slides/sync",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 309,
+      "url": "/api/google-slides/create-presentation/",
+      "raw_pattern": "api/google-slides/create-presentation",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 310,
+      "url": "/api/google-slides/disconnect/",
+      "raw_pattern": "api/google-slides/disconnect",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 311,
+      "url": "/api/auth/youtube/connect/",
+      "raw_pattern": "api/auth/youtube/connect",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 19.3
+    },
+    {
+      "num": 312,
+      "url": "/api/auth/youtube/callback/",
+      "raw_pattern": "api/auth/youtube/callback",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 13.7
+    },
+    {
+      "num": 313,
+      "url": "/api/auth/youtube/status/",
+      "raw_pattern": "api/auth/youtube/status",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 11.7
+    },
+    {
+      "num": 314,
+      "url": "/api/auth/youtube/sync/",
+      "raw_pattern": "api/auth/youtube/sync",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 11.0
+    },
+    {
+      "num": 315,
+      "url": "/api/youtube/analytics/",
+      "raw_pattern": "api/youtube/analytics",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 614.2
+    },
+    {
+      "num": 316,
+      "url": "/api/youtube/videos/",
+      "raw_pattern": "api/youtube/videos",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 662.3
+    },
+    {
+      "num": 317,
+      "url": "/api/youtube/comments/",
+      "raw_pattern": "api/youtube/comments",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1811.4
+    },
+    {
+      "num": 318,
+      "url": "/api/youtube/ai-suggest-reply/",
+      "raw_pattern": "api/youtube/ai-suggest-reply",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 319,
+      "url": "/api/youtube/settings/",
+      "raw_pattern": "api/youtube/settings",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 320,
+      "url": "/api/youtube/broadcast-check/",
+      "raw_pattern": "api/youtube/broadcast-check",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 4.6
+    },
+    {
+      "num": 321,
+      "url": "/api/youtube/upload/",
+      "raw_pattern": "api/youtube/upload",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 322,
+      "url": "/api/youtube/profile/",
+      "raw_pattern": "api/youtube/profile",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 323,
+      "url": "/api/youtube/delete/",
+      "raw_pattern": "api/youtube/delete",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 324,
+      "url": "/api/zoho/connect/",
+      "raw_pattern": "api/zoho/connect",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 325,
+      "url": "/api/zoho/callback/",
+      "raw_pattern": "api/zoho/callback",
+      "role": "CLIENT",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 326,
+      "url": "/api/zoho/disconnect/",
+      "raw_pattern": "api/zoho/disconnect",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 327,
+      "url": "/api/zoho/test-lead/",
+      "raw_pattern": "api/zoho/test-lead",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 328,
+      "url": "/api/google-news/settings/",
+      "raw_pattern": "api/google-news/settings",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 329,
+      "url": "/api/google-news/feed/",
+      "raw_pattern": "api/google-news/feed",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 418.5
+    },
+    {
+      "num": 330,
+      "url": "/api/google-news/summarize/",
+      "raw_pattern": "api/google-news/summarize",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 331,
+      "url": "/api/google-news/send-alert/",
+      "raw_pattern": "api/google-news/send-alert",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 332,
+      "url": "/api/public/calendar/6a7579d1669924900e45b908/slots/",
+      "raw_pattern": "api/public/calendar/<str:client_id>/slots",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 22.9
+    },
+    {
+      "num": 333,
+      "url": "/api/public/calendar/6a7579d1669924900e45b908/book/",
+      "raw_pattern": "api/public/calendar/<str:client_id>/book",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 15.3
+    },
+    {
+      "num": 334,
+      "url": "/api/auth/outlook/connect/",
+      "raw_pattern": "api/auth/outlook/connect",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 335,
+      "url": "/api/auth/outlook/callback/",
+      "raw_pattern": "api/auth/outlook/callback",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 336,
+      "url": "/api/auth/outlook/status/",
+      "raw_pattern": "api/auth/outlook/status",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 337,
+      "url": "/api/auth/outlook/sync/",
+      "raw_pattern": "api/auth/outlook/sync",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 338,
+      "url": "/api/auth/outlook/send-mail/",
+      "raw_pattern": "api/auth/outlook/send-mail",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 339,
+      "url": "/api/auth/outlook/disconnect/",
+      "raw_pattern": "api/auth/outlook/disconnect",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 340,
+      "url": "/api/auth/outlook/calendar/events/",
+      "raw_pattern": "api/auth/outlook/calendar/events",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 341,
+      "url": "/api/auth/outlook/teams/",
+      "raw_pattern": "api/auth/outlook/teams",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 342,
+      "url": "/api/auth/outlook/contacts/",
+      "raw_pattern": "api/auth/outlook/contacts",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 343,
+      "url": "/api/auth/outlook/excel/",
+      "raw_pattern": "api/auth/outlook/excel",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 344,
+      "url": "/api/webrtc/config/",
+      "raw_pattern": "api/webrtc/config",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 345,
+      "url": "/api/webrtc/history/",
+      "raw_pattern": "api/webrtc/history",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 36.0
+    },
+    {
+      "num": 346,
+      "url": "/api/webrtc/call/initiate/",
+      "raw_pattern": "api/webrtc/call/initiate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 347,
+      "url": "/api/webrtc/call/action/",
+      "raw_pattern": "api/webrtc/call/action/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 348,
+      "url": "/api/webrtc/call/signal/",
+      "raw_pattern": "api/webrtc/call/signal/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.4
+    },
+    {
+      "num": 349,
+      "url": "/api/webrtc/call/active-check/",
+      "raw_pattern": "api/webrtc/call/active-check",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.7
+    },
+    {
+      "num": 350,
+      "url": "/api/calls/schedule/",
+      "raw_pattern": "api/calls/schedule",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 351,
+      "url": "/api/calls/ai-summary/",
+      "raw_pattern": "api/calls/ai-summary",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.3
+    },
+    {
+      "num": 352,
+      "url": "/api/calls/analytics/",
+      "raw_pattern": "api/calls/analytics",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 104.9
+    },
+    {
+      "num": 353,
+      "url": "/api/razorpay/connect/",
+      "raw_pattern": "api/razorpay/connect",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.7
+    },
+    {
+      "num": 354,
+      "url": "/api/razorpay/callback/",
+      "raw_pattern": "api/razorpay/callback",
+      "role": "CLIENT",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 355,
+      "url": "/api/razorpay/status/",
+      "raw_pattern": "api/razorpay/status",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.3
+    },
+    {
+      "num": 356,
+      "url": "/api/razorpay/mode/",
+      "raw_pattern": "api/razorpay/mode",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 357,
+      "url": "/api/razorpay/checkout/create-order/",
+      "raw_pattern": "api/razorpay/checkout/create-order",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 358,
+      "url": "/api/razorpay/checkout/verify/",
+      "raw_pattern": "api/razorpay/checkout/verify",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 359,
+      "url": "/api/razorpay/product-webhook/",
+      "raw_pattern": "api/razorpay/product-webhook",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.9
+    },
+    {
+      "num": 360,
+      "url": "/api/razorpay/sales/",
+      "raw_pattern": "api/razorpay/sales",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 73.0
+    },
+    {
+      "num": 361,
+      "url": "/api/razorpay/sales/dashboard/",
+      "raw_pattern": "api/razorpay/sales/dashboard",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 257.1
+    },
+    {
+      "num": 362,
+      "url": "/api/razorpay/refund/",
+      "raw_pattern": "api/razorpay/refund",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.2
+    },
+    {
+      "num": 363,
+      "url": "/api/public/checkout/6aa2454732dedcadbd3ddef9/",
+      "raw_pattern": "api/public/checkout/<str:product_id>",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 39.2
+    },
+    {
+      "num": 364,
+      "url": "/api/sales/analytics/",
+      "raw_pattern": "api/sales/analytics",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 397.9
+    },
+    {
+      "num": 365,
+      "url": "/api/public/sales-documents/test_token_123/",
+      "raw_pattern": "api/public/sales-documents/<str:token>",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.6
+    },
+    {
+      "num": 366,
+      "url": "/api/public/sales-documents/test_token_123/accept/",
+      "raw_pattern": "api/public/sales-documents/<str:token>/accept",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 367,
+      "url": "/api/public/sales-documents/test_token_123/reject/",
+      "raw_pattern": "api/public/sales-documents/<str:token>/reject",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.5
+    },
+    {
+      "num": 368,
+      "url": "/api/public/sales-documents/test_token_123/pdf/",
+      "raw_pattern": "api/public/sales-documents/<str:token>/pdf",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 369,
+      "url": "/api/public/quotation/test_token_123/",
+      "raw_pattern": "api/public/quotation/<str:token>",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.4
+    },
+    {
+      "num": 370,
+      "url": "/api/public/quotation/test_token_123/accept/",
+      "raw_pattern": "api/public/quotation/<str:token>/accept",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 371,
+      "url": "/api/public/quotation/test_token_123/reject/",
+      "raw_pattern": "api/public/quotation/<str:token>/reject",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.8
+    },
+    {
+      "num": 372,
+      "url": "/api/public/proposal/test_token_123/",
+      "raw_pattern": "api/public/proposal/<str:token>",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.9
+    },
+    {
+      "num": 373,
+      "url": "/api/public/proposal/test_token_123/accept/",
+      "raw_pattern": "api/public/proposal/<str:token>/accept",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 374,
+      "url": "/api/public/proposal/test_token_123/reject/",
+      "raw_pattern": "api/public/proposal/<str:token>/reject",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 375,
+      "url": "/api/public/invoices/test_token_123/",
+      "raw_pattern": "api/public/invoices/<str:token>",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 376,
+      "url": "/api/public/invoices/test_token_123/pdf/",
+      "raw_pattern": "api/public/invoices/<str:token>/pdf",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.2
+    },
+    {
+      "num": 377,
+      "url": "/api/public/invoice/test_token_123/",
+      "raw_pattern": "api/public/invoice/<str:token>",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 378,
+      "url": "/api/public/invoice/test_token_123/pdf/",
+      "raw_pattern": "api/public/invoice/<str:token>/pdf",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.3
+    },
+    {
+      "num": 379,
+      "url": "/api/admin/channel-access/global/",
+      "raw_pattern": "api/admin/channel-access/global/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 756.7
+    },
+    {
+      "num": 380,
+      "url": "/api/admin/channel-access/global/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/channel-access/global/<str:connector_key>/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 215.7
+    },
+    {
+      "num": 381,
+      "url": "/api/admin/channel-access/matrix/",
+      "raw_pattern": "api/admin/channel-access/matrix/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1169.9
+    },
+    {
+      "num": 382,
+      "url": "/api/admin/channel-access/client/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/channel-access/client/<str:client_id>/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 72.5
+    },
+    {
+      "num": 383,
+      "url": "/api/admin/channel-access/bulk/",
+      "raw_pattern": "api/admin/channel-access/bulk/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 384,
+      "url": "/api/admin/channel-access/audit-logs/",
+      "raw_pattern": "api/admin/channel-access/audit-logs/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 388.7
+    },
+    {
+      "num": 385,
+      "url": "/api/connectors/effective/",
+      "raw_pattern": "api/connectors/effective/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 119.1
+    },
+    {
+      "num": 386,
+      "url": "/api/connectors/global-status/",
+      "raw_pattern": "api/connectors/global-status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.8
+    },
+    {
+      "num": 387,
+      "url": "/api/admin/all-projects/6a7579d1669924900e45b908/assign/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/assign/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 388,
+      "url": "/api/admin/teams-channels/",
+      "raw_pattern": "api/admin/teams-channels/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 340.2
+    },
+    {
+      "num": 389,
+      "url": "/api/agency/stats/",
+      "raw_pattern": "api/agency/stats/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 2.7
+    },
+    {
+      "num": 390,
+      "url": "/api/agency/sub-clients/",
+      "raw_pattern": "api/agency/sub-clients/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 391,
+      "url": "/api/agency/sub-clients/6a7579d1669924900e45b908/action/",
+      "raw_pattern": "api/agency/sub-clients/<str:pk>/action/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 392,
+      "url": "/api/agency/plans/",
+      "raw_pattern": "api/agency/plans/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 393,
+      "url": "/api/admin/whitelabel/revenue/",
+      "raw_pattern": "api/admin/whitelabel/revenue/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.6
+    },
+    {
+      "num": 394,
+      "url": "/api/user/preferences/",
+      "raw_pattern": "api/user/preferences/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.0
+    },
+    {
+      "num": 395,
+      "url": "/api/app/content/version/",
+      "raw_pattern": "api/app/content/version/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 110.4
+    },
+    {
+      "num": 396,
+      "url": "/api/app/content/",
+      "raw_pattern": "api/app/content/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 317.4
+    },
+    {
+      "num": 397,
+      "url": "/api/admin/content/",
+      "raw_pattern": "api/admin/content/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2650.2
+    },
+    {
+      "num": 398,
+      "url": "/api/admin/content/draft/",
+      "raw_pattern": "api/admin/content/draft/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 399,
+      "url": "/api/admin/content/publish/",
+      "raw_pattern": "api/admin/content/publish/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 400,
+      "url": "/api/admin/content/preview/",
+      "raw_pattern": "api/admin/content/preview/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 401,
+      "url": "/api/admin/content/rollback/",
+      "raw_pattern": "api/admin/content/rollback/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 402,
+      "url": "/api/admin/content/versions/",
+      "raw_pattern": "api/admin/content/versions/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 239.5
+    },
+    {
+      "num": 403,
+      "url": "/api/admin/content/banners/",
+      "raw_pattern": "api/admin/content/banners/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 42.2
+    },
+    {
+      "num": 404,
+      "url": "/api/admin/content/banners/6a7579d1669924900e45b908/",
+      "raw_pattern": "api/admin/content/banners/<str:pk>/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.4
+    },
+    {
+      "num": 405,
+      "url": "/api/admin/content/maintenance/",
+      "raw_pattern": "api/admin/content/maintenance/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 82.7
+    },
+    {
+      "num": 406,
+      "url": "/api/admin/content/feature-flags/",
+      "raw_pattern": "api/admin/content/feature-flags/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 41.2
+    },
+    {
+      "num": 407,
+      "url": "/api/admin/content/audit-logs/",
+      "raw_pattern": "api/admin/content/audit-logs/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 70.8
+    },
+    {
+      "num": 408,
+      "url": "/api/telemetry/app-install/",
+      "raw_pattern": "api/telemetry/app-install/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 409,
+      "url": "/api/admin/app-analytics/",
+      "raw_pattern": "api/admin/app-analytics/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2205.0
+    },
+    {
+      "num": 410,
+      "url": "/api/admin/client-platform-overview/",
+      "raw_pattern": "api/admin/client-platform-overview/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 191.8
+    },
+    {
+      "num": 411,
+      "url": "/api/admin/installations/",
+      "raw_pattern": "api/admin/installations/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 523.6
+    },
+    {
+      "num": 412,
+      "url": "/api/admin/installations/6a7579d1669924900e45b908/toggle-status/",
+      "raw_pattern": "api/admin/installations/<str:installation_id>/toggle-status/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 413,
+      "url": "/api/telemetry/app-uninstall/",
+      "raw_pattern": "api/telemetry/app-uninstall/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 64.6
+    },
+    {
+      "num": 414,
+      "url": "/api/client/update/",
+      "raw_pattern": "api/client/update/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 415,
+      "url": "/api/auth/qr/consume/",
+      "raw_pattern": "api/auth/qr/consume/",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 416,
+      "url": "/api/admin/logs/",
+      "raw_pattern": "api/admin/logs/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 93.1
+    },
+    {
+      "num": 417,
+      "url": "/api/admin/workflows/",
+      "raw_pattern": "api/admin/workflows/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 45.3
+    },
+    {
+      "num": 418,
+      "url": "/api/team/",
+      "raw_pattern": "api/team/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 166.7
+    },
+    {
+      "num": 419,
+      "url": "/media/test.jpg",
+      "raw_pattern": "^media/(?P<path>.*)$",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 3.6
+    }
+  ]
+}

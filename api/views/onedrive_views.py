@@ -297,7 +297,7 @@ class OneDriveConnectView(APIView):
         if not creds["client_id"] or not creds["client_secret"]:
             return Response(
                 {"error": "OneDrive OAuth credentials not configured on backend."},
-                status=500,
+                status=503,
             )
 
         # Generate state parameter

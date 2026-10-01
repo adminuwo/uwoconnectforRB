@@ -32,15 +32,7 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except (Client.DoesNotExist, ValueError):
                 pass
-        # Fallback to user's client if present
-        c = safe_get_client(request.user)
-        if c:
-            return c
-        # Fallback to first available client
-        try:
-            return ClientRepository.get_all_clients().first()
-        except Exception:
-            return None
+        return safe_get_client(request.user)
     return safe_get_client(request.user)
 
 class RegisterView(views.APIView):
@@ -48,7 +40,7 @@ class RegisterView(views.APIView):
     authentication_classes = []
 
     def post(self, req):
-        serializer = RegisterSerializer(data=req.data)
+        serializer = RegisterSerializer(data=req.data, context={'request': req})
         if serializer.is_valid():
             from ..services.auth_service import AuthService
             result = AuthService.register_user(serializer)
@@ -77,15 +69,17 @@ class LoginView(views.APIView):
         email = req.data.get('email', '').strip().lower()
         password = req.data.get('password', '')
 
-        # Extract client IP address
+        # Extract client IP address and user agent
         x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
             ip_address = x_forwarded_for.split(',')[0].strip()
         else:
             ip_address = req.META.get('REMOTE_ADDR')
 
+        user_agent = req.META.get('HTTP_USER_AGENT', '')
+
         from ..services.auth_service import AuthService
-        result = AuthService.login_user(email, password, ip_address=ip_address)
+        result = AuthService.login_user(email, password, ip_address=ip_address, user_agent=user_agent, request=req, payload=req.data)
         
         if "error" in result:
             return Response({"message": result["error"]}, status=result["status_code"])
@@ -125,7 +119,15 @@ class GoogleLoginView(views.APIView):
                 ip_address = req.META.get('REMOTE_ADDR')
 
             from ..services.auth_service import AuthService
-            result = AuthService.process_google_login(id_token, name=name, invite_token=invite_token, business_name=business_name, ip_address=ip_address)
+            result = AuthService.process_google_login(
+                id_token, 
+                name=name, 
+                invite_token=invite_token, 
+                business_name=business_name, 
+                ip_address=ip_address,
+                request=req,
+                payload=req.data
+            )
 
             if "error" in result:
                 return Response({"message": result["error"]}, status=result.get("status_code", 400))
@@ -165,6 +167,53 @@ class GoogleClientIdView(views.APIView):
 @method_decorator(csrf_exempt, name='dispatch')
 
 
+class AppleLoginView(views.APIView):
+    """
+    POST /api/auth/apple/
+    Verifies Apple Sign-In identity token, links or registers user, and returns JWT session.
+    Body: { identity_token: str, name?: str, invite_token?: str }
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, req):
+        try:
+            identity_token = req.data.get('identity_token') or req.data.get('id_token')
+            if not identity_token or not isinstance(identity_token, str):
+                return Response({"message": "Valid Apple identity_token string is required."}, status=status.HTTP_400_BAD_REQUEST)
+            identity_token = identity_token.strip()
+
+            name = str(req.data.get('name') or '').strip()
+            invite_token = str(req.data.get('invite_token') or '').strip()
+
+            x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
+            ip_address = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else req.META.get('REMOTE_ADDR')
+
+            from ..services.auth_service import AuthService
+            result = AuthService.process_apple_login(
+                identity_token,
+                name=name or None,
+                invite_token=invite_token or None,
+                ip_address=ip_address,
+                request=req,
+                payload=req.data,
+            )
+
+            if "error" in result:
+                return Response({"message": result["error"]}, status=result.get("status_code", 400))
+
+            if result.get("is_created"):
+                return Response({"user": result["user"], "token": result["token"]}, status=status.HTTP_201_CREATED)
+
+            return Response({"user": result["user"], "token": result["token"]}, status=status.HTTP_200_OK)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("Apple login unhandled error")
+            return Response({"message": f"Apple authentication failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+@method_decorator(csrf_exempt, name='dispatch')
+
+
 class FirebaseLoginView(views.APIView):
     permission_classes = []
     authentication_classes = []
@@ -191,7 +240,7 @@ class FirebaseLoginView(views.APIView):
 
             from ..services.auth_service import AuthService
             result = AuthService.process_firebase_login(
-                id_token, name, invite_token, business_name, ip_address=ip_address, meta_portfolio_name=meta_portfolio_name
+                id_token, name, invite_token, business_name, ip_address=ip_address, meta_portfolio_name=meta_portfolio_name, request=req, payload=req.data
             )
 
             if "error" in result:
@@ -260,22 +309,42 @@ class ProfileView(APIView):
         user_serializer = UserSerializer(request.user)
         user_data = user_serializer.data
 
-        client_data = {}
-        global_map = {}
+        from api.utils.channel_permissions import ensure_default_global_connectors
+        from api.models import GlobalConnector
+        ensure_default_global_connectors()
+        global_map = {gc.connector_key: gc.is_active for gc in GlobalConnector.objects.all()}
         effective_map = {}
 
-        if getattr(request.user, 'client', None):
-            serializer = ClientSerializer(request.user.client)
+        client = safe_get_client(request.user)
+        if not client and getattr(request.user, 'role', '') == 'CLIENT':
+            # Auto-provision or link a dedicated workspace for this client so they aren't orphaned
+            try:
+                from api.models import Client
+                name = request.user.first_name or (request.user.email.split('@')[0] if request.user.email else 'User')
+                workspace_name = f"{name.capitalize()}'s Workspace"
+                client = Client.objects.create(
+                    business_name=workspace_name,
+                    plan="ADVANCED"
+                )
+                request.user.client = client
+                request.user.save(update_fields=['client'])
+            except Exception:
+                pass
+
+        if client:
+            serializer = ClientSerializer(client)
             client_data = dict(serializer.data)
             try:
                 from api.utils.channel_permissions import get_user_effective_connectors
-                effective_map = get_user_effective_connectors(request.user, client=request.user.client)
-                global_map = {k: v['global_active'] for k, v in effective_map.items()}
+                effective_map = get_user_effective_connectors(request.user, client=client)
+                for k, v in effective_map.items():
+                    if 'global_active' in v:
+                        global_map[k] = v['global_active']
                 client_data['global_connectors'] = global_map
                 client_data['effective_connectors'] = effective_map
             except Exception as e:
-                global_map = {}
-                effective_map = {}
+                client_data['global_connectors'] = global_map
+                client_data['effective_connectors'] = effective_map
         else:
             # Super Admin or staff user without a direct client tenant
             client_data = {
@@ -283,7 +352,9 @@ class ProfileView(APIView):
                 "email": request.user.email,
                 "plan": "Super Admin",
                 "plan_name": "Super Admin",
-                "status": "ACTIVE"
+                "status": "ACTIVE",
+                "global_connectors": global_map,
+                "effective_connectors": effective_map,
             }
 
         client_plan = client_data.get('plan') or ('Super Admin' if request.user.role == 'ADMIN' else 'ADVANCED')
@@ -1266,9 +1337,12 @@ class QrAuthStatusView(views.APIView):
     """
     permission_classes = [AllowAny]
 
-    def get(self, request, session_id):
+    def get(self, request, session_id=None):
+        sess_id = session_id or request.GET.get('session_id')
+        if not sess_id:
+            return Response({"error": "session_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            qr_session = QrAuthSession.objects.get(session_id=session_id)
+            qr_session = QrAuthSession.objects.get(session_id=sess_id)
         except QrAuthSession.DoesNotExist:
             return Response({"error": "QR Session not found"}, status=status.HTTP_404_NOT_FOUND)
 

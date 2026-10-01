@@ -16,8 +16,8 @@ from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocum
 import requests
 import os
 import json
-from rest_framework.permissions import BasePermission
 import logging
+from ..utils.channel_permissions import safe_get_client
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,8 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except Exception:
                 pass
-        return getattr(request.user, 'client', None)
-    return getattr(request.user, 'client', None)
+        return safe_get_client(request.user)
+    return safe_get_client(request.user)
 
 
 from ..repositories.product_repository import ProductRepository

@@ -39,7 +39,7 @@ def test_email(target_email):
         email = target_email
 
     import time
-    WelcomeEmailService.send_welcome_email(DummyUser(), login_url="https://app.uwoconnect.com")
+    WelcomeEmailService.send_welcome_email(DummyUser(), login_url="https://uwoconnect.aisa24.com")
     time.sleep(1)
     print("\n[INFO] WelcomeEmailService.send_welcome_email completed.")
     print("=" * 65)

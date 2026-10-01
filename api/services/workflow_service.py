@@ -1,55 +1,65 @@
-from ..models import WorkflowSession, Workflow
+import re
 import json
+import logging
+from ..models import WorkflowSession, Workflow
 from ..repositories.automation_repository import WorkflowSessionRepository
 from ..repositories.workflow_repository import WorkflowRepository
 from ..repositories.contact_repository import ContactRepository
 
+logger = logging.getLogger(__name__)
+
 class WorkflowEngine:
     @staticmethod
-    def process_workflow(client, phone_number, incoming_text, channel='WHATSAPP'):
+    def process_workflow(client, phone_number, incoming_text, channel='WHATSAPP', allow_catch_all=True, check_active_session=True):
         """
         Process the incoming text to advance an active workflow session,
         or start a new workflow session if a trigger matches.
-        Returns a list of dicts representing messages to send:
-        [
-          {
-            "type": "text" | "buttons" | "image" | "video",
-            "body": "...",
-            "buttons": ["...", ...],
-            "media_url": "..."
-          }
-        ]
-        Or returns None if no workflow logic applies.
+        
+        channel: 'WHATSAPP' | 'FACEBOOK' | 'INSTAGRAM'
+        allow_catch_all: If True, matches '*' / 'all' wildcard workflows.
+                         If False, only matches workflows with specific keywords.
+        check_active_session: If True, checks and advances an existing active session.
+        
+        Returns a list of dicts representing messages to send, or None.
         """
-        incoming_text_lower = incoming_text.lower().strip()
-        channel_upper = channel.upper()
+        incoming_text_lower = (incoming_text or '').lower().strip()
+        channel_upper = (channel or 'WHATSAPP').upper()
 
-        # 1. Check for active session
-        session = WorkflowSessionRepository.filter_workflowsessions(
-            client=client, 
-            phone_number=phone_number, 
-            is_active=True
-        ).first()
+        # 1. Check for active session on this channel
+        if check_active_session:
+            sessions = WorkflowSessionRepository.filter_workflowsessions(
+                client=client, 
+                phone_number=phone_number, 
+                is_active=True
+            )
+            session = None
+            for s in sessions:
+                s_chan = ((s.variables or {}).get('channel') or 'WHATSAPP').upper()
+                if s_chan == channel_upper:
+                    session = s
+                    break
 
-        if session:
-            wf_channels = session.workflow.channels or []
-            is_match = False
-            if len(wf_channels) > 0 and channel_upper in wf_channels:
-                is_match = True
-            elif len(wf_channels) == 0:
-                is_match = True
-            
-            if is_match:
-                res = WorkflowEngine._advance_session(session, incoming_text)
-                if res:
-                    return res
-                session.is_active = False
-                session.save()
+            if session:
+                wf_channels = [c.upper() for c in (session.workflow.channels or [])]
+                is_match = False
+                if len(wf_channels) > 0 and channel_upper in wf_channels:
+                    is_match = True
+                elif len(wf_channels) == 0:
+                    is_match = True
+                
+                if is_match:
+                    res = WorkflowEngine._advance_session(session, incoming_text)
+                    if res:
+                        return res
+                    session.is_active = False
+                    session.save()
 
         # 2. Check for new workflow triggers
         workflows = WorkflowRepository.filter_workflows(client=client, enabled=True)
         for wf in workflows:
-            wf_channels = wf.channels or []
+            wf_channels = [c.upper() for c in (wf.channels or [])]
+            # Strict channel filtering:
+            # If channels are configured, incoming channel MUST be in the list
             if len(wf_channels) > 0 and channel_upper not in wf_channels:
                 continue
 
@@ -57,30 +67,46 @@ class WorkflowEngine:
             reserved_commercial_keywords = {'catalog', 'product', 'products', 'browse products', 'shop', 'items', 'store', 'samaan', 'buy now', 'order now'}
             is_reserved_command = any(rc in incoming_text_lower for rc in reserved_commercial_keywords)
 
-            # Catch-all trigger: any incoming message
             catch_all_tokens = {'*', 'all', 'any', 'anything'}
+            is_catch_all = False
+            has_keyword_match = False
+
             if wf.trigger_type in ['ALL', 'ANY', 'ANYTHING']:
-                if not is_reserved_command:
-                    return WorkflowEngine._start_workflow(client, phone_number, wf)
+                is_catch_all = True
 
             if isinstance(wf.trigger_value, list):
-                trigger_keywords = [t.lower().strip() for t in wf.trigger_value if isinstance(t, str)]
-                has_catch_all = any(t in catch_all_tokens for t in trigger_keywords)
-                has_keyword_match = any(kw and (kw == incoming_text_lower or kw in incoming_text_lower) for kw in trigger_keywords if kw not in catch_all_tokens)
-                if has_keyword_match or (has_catch_all and not is_reserved_command):
-                    return WorkflowEngine._start_workflow(client, phone_number, wf)
+                trigger_keywords = [str(t).lower().strip() for t in wf.trigger_value if t]
+                if any(t in catch_all_tokens for t in trigger_keywords):
+                    is_catch_all = True
+                for kw in trigger_keywords:
+                    if kw not in catch_all_tokens and kw:
+                        pattern = r'(?<!\w)' + re.escape(kw) + r'(?!\w)'
+                        if re.search(pattern, incoming_text_lower, re.IGNORECASE) or kw == incoming_text_lower:
+                            has_keyword_match = True
+                            break
             elif isinstance(wf.trigger_value, str):
                 kw = wf.trigger_value.lower().strip()
                 if kw in catch_all_tokens:
-                    if not is_reserved_command:
-                        return WorkflowEngine._start_workflow(client, phone_number, wf)
-                elif kw and (kw == incoming_text_lower or kw in incoming_text_lower):
-                    return WorkflowEngine._start_workflow(client, phone_number, wf)
+                    is_catch_all = True
+                elif kw:
+                    pattern = r'(?<!\w)' + re.escape(kw) + r'(?!\w)'
+                    if re.search(pattern, incoming_text_lower, re.IGNORECASE) or kw == incoming_text_lower:
+                        has_keyword_match = True
+
+            # Specific keyword match takes precedence
+            if has_keyword_match:
+                logger.info(f"[WORKFLOW MATCH] Specific keyword match for workflow '{wf.name}' (#{wf.id}) on {channel_upper}")
+                return WorkflowEngine._start_workflow(client, phone_number, wf, channel=channel_upper)
+
+            # Catch-all wildcard trigger (only if allowed and not a reserved command)
+            if is_catch_all and allow_catch_all and not is_reserved_command:
+                logger.info(f"[WORKFLOW MATCH] Catch-all wildcard trigger for workflow '{wf.name}' (#{wf.id}) on {channel_upper}")
+                return WorkflowEngine._start_workflow(client, phone_number, wf, channel=channel_upper)
 
         return None
 
     @staticmethod
-    def _start_workflow(client, phone_number, workflow):
+    def _start_workflow(client, phone_number, workflow, channel='WHATSAPP'):
         # Parse the JSON steps
         steps = workflow.steps
         if not steps or 'nodes' not in steps:
@@ -93,12 +119,13 @@ class WorkflowEngine:
         if not start_node:
             return None
 
-        # Create session
+        # Create session with channel context in variables
         session = WorkflowSessionRepository.create_workflowsession(
             client=client,
             phone_number=phone_number,
             workflow=workflow,
-            current_node_id=start_node.get('id')
+            current_node_id=start_node.get('id'),
+            variables={'channel': (channel or 'WHATSAPP').upper()}
         )
 
         # Advance it immediately to get the first real message node

@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import requests
 from django.http import HttpResponse
 from ..models import Client, Contact, Message, Automation, KnowledgeChunk
@@ -175,20 +176,56 @@ class MetaWebhookService:
                             try:
                                 from django.utils import timezone
                                 from ..models import Conversation
+
+                                # Extract lead contact details from body if available
+                                extracted_wa_phone = None
+                                extracted_wa_email = None
+                                if body:
+                                    m_lead_name = re.search(r'(?:Full\s*name|Name)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                                    if m_lead_name and m_lead_name.group(1).strip() and m_lead_name.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                                        contact_name = m_lead_name.group(1).strip()
+                                    m_lead_p = re.search(r'(?:Phone\s*(?:number)?|Mobile)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                                    if m_lead_p and m_lead_p.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                                        extracted_wa_phone = m_lead_p.group(1).strip()
+                                    m_lead_e = re.search(r'(?:Email|E-mail)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                                    if m_lead_e and m_lead_e.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                                        extracted_wa_email = m_lead_e.group(1).strip()
+
+                                # If contact_name is still generic or Unknown, default to phone number
+                                is_wa_generic = lambda n: not n or str(n).strip().upper() in ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL', '']
+                                if is_wa_generic(contact_name):
+                                    contact_name = f"+{from_number}" if from_number else "Customer"
+
                                 contact, _ = ContactRepository.get_contact_or_create(
                                     client=client,
                                     platform_id=from_number,
                                     defaults={
-                                        'phone_number': from_number,
+                                        'phone_number': extracted_wa_phone or from_number,
+                                        'email': extracted_wa_email,
                                         'name': contact_name,
                                         'stage': 'NEW'
                                     }
                                 )
                                 if contact:
                                     contact.updated_at = timezone.now()
-                                    if contact_name and contact_name != 'Unknown' and (not contact.name or contact.name == 'Unknown'):
+                                    ct_updated = False
+                                    if is_wa_generic(contact.name) and not is_wa_generic(contact_name):
                                         contact.name = contact_name
-                                    contact.save()
+                                        ct_updated = True
+                                    elif not is_wa_generic(contact_name) and contact.name != contact_name:
+                                        contact.name = contact_name
+                                        ct_updated = True
+                                    elif is_wa_generic(contact.name) and from_number:
+                                        contact.name = f"+{from_number}"
+                                        ct_updated = True
+                                    if extracted_wa_phone and not contact.phone_number:
+                                        contact.phone_number = extracted_wa_phone
+                                        ct_updated = True
+                                    if extracted_wa_email and not contact.email:
+                                        contact.email = extracted_wa_email
+                                        ct_updated = True
+                                    if ct_updated:
+                                        contact.save()
 
                                 # Ensure Conversation record is kept fresh
                                 try:
@@ -334,6 +371,30 @@ class MetaWebhookService:
 
                                         if new_rank >= curr_rank or status_raw == 'FAILED':
                                             msg_to_update.status = status_raw
+                                            
+                                            if status_raw == 'FAILED':
+                                                err_list = st.get('errors') or []
+                                                if not err_list and st.get('error'):
+                                                    err_list = [st.get('error')]
+                                                err_item = err_list[0] if isinstance(err_list, list) and len(err_list) > 0 else (err_list if isinstance(err_list, dict) else {})
+                                                err_c = err_item.get('code')
+                                                err_m = err_item.get('message') or err_item.get('title') or ''
+                                                
+                                                if err_c == 131047 or '24 hours' in err_m.lower() or 're-engagement' in err_m.lower():
+                                                    human_reason = "24-Hour Window Closed: Customer has not replied in 24h. Send an approved template instead."
+                                                elif err_c == 131009 or 'not registered' in err_m.lower():
+                                                    human_reason = "Recipient is not registered on WhatsApp or has an invalid phone number."
+                                                elif err_m:
+                                                    human_reason = err_m
+                                                else:
+                                                    human_reason = "24-Hour Window Closed: Customer has not replied in 24h. Send an approved template instead."
+                                                
+                                                meta = msg_to_update.metadata or {}
+                                                meta['error'] = human_reason
+                                                meta['error_code'] = err_c or 131047
+                                                meta['raw_error'] = err_item
+                                                msg_to_update.metadata = meta
+
                                             msg_to_update.save()
 
                                             # Real-time WebSocket event broadcast to inbox group
@@ -349,6 +410,8 @@ class MetaWebhookService:
                                                             "message_id": str(msg_to_update.id),
                                                             "whatsapp_message_id": wamid,
                                                             "status": status_raw,
+                                                            "error": human_reason,
+                                                            "error_code": err_c,
                                                             "from_address": msg_to_update.from_address,
                                                             "to_address": msg_to_update.to_address
                                                         }
@@ -502,7 +565,22 @@ class MetaWebhookService:
                     if not body:
                         body = "📎 [Attachment / Media]"
                     
-                    contact_name = f"{platform} User"
+                    extracted_lead_name = None
+                    extracted_lead_phone = None
+                    extracted_lead_email = None
+
+                    if body:
+                        m_lead_n = re.search(r'(?:Full\s*name|Name)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                        if m_lead_n and m_lead_n.group(1).strip() and m_lead_n.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                            extracted_lead_name = m_lead_n.group(1).strip()
+                        m_lead_p = re.search(r'(?:Phone\s*(?:number)?|Mobile)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                        if m_lead_p and m_lead_p.group(1).strip() and m_lead_p.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                            extracted_lead_phone = m_lead_p.group(1).strip()
+                        m_lead_e = re.search(r'(?:Email|E-mail)\s*:\s*([^\n\r]+)', body, re.IGNORECASE)
+                        if m_lead_e and m_lead_e.group(1).strip() and m_lead_e.group(1).strip().lower() not in ['none', 'null', 'n/a', '-']:
+                            extracted_lead_email = m_lead_e.group(1).strip()
+
+                    contact_name = extracted_lead_name or f"{platform} User"
                     access_token = None
                     if platform == 'INSTAGRAM':
                         access_token = (client.instagram_config or {}).get('access_token') or (client.facebook_config or {}).get('access_token')
@@ -510,7 +588,7 @@ class MetaWebhookService:
                         access_token = (client.facebook_config or {}).get('access_token') or (client.instagram_config or {}).get('access_token')
 
                     profile_pic_url = None
-                    if access_token:
+                    if not extracted_lead_name and access_token:
                         try:
                             import requests
                             if platform == 'INSTAGRAM':
@@ -560,19 +638,29 @@ class MetaWebhookService:
                         client=client,
                         platform_id=sender_id,
                         defaults={
-                            'phone_number': sender_id,
+                            'phone_number': extracted_lead_phone or sender_id,
+                            'email': extracted_lead_email,
                             'name': contact_name,
                             'stage': 'NEW'
                         }
                     )
                     
-                    is_generic_name = lambda n: not n or n.upper().strip() in ['INSTAGRAM USER', 'FACEBOOK USER', 'UNKNOWN', 'USER']
+                    is_generic_name = lambda n: not n or n.upper().strip() in ['INSTAGRAM USER', 'FACEBOOK USER', 'UNKNOWN', 'USER', 'CUSTOMER', 'NONE', 'NULL']
                     if not created:
+                        updated_fields = []
                         if is_generic_name(contact.name) and not is_generic_name(contact_name):
                             contact.name = contact_name
-                            contact.save()
+                            updated_fields.append('name')
                         elif contact_name and not is_generic_name(contact_name) and contact.name != contact_name:
                             contact.name = contact_name
+                            updated_fields.append('name')
+                        if extracted_lead_phone and (not contact.phone_number or contact.phone_number == sender_id):
+                            contact.phone_number = extracted_lead_phone
+                            updated_fields.append('phone_number')
+                        if extracted_lead_email and not contact.email:
+                            contact.email = extracted_lead_email
+                            updated_fields.append('email')
+                        if updated_fields:
                             contact.save()
 
                     # Keep Conversation record fresh for unified Live Inbox display
@@ -847,97 +935,354 @@ class MetaWebhookService:
         return True
 
     @staticmethod
-    def handle_automations_whatsapp(client, to_number, incoming_text, phone_number_id):
-        # Quick safety check: if contact bot is paused, do not proceed
+    def match_trigger_keyword(incoming_text, keywords):
+        """
+        Robust trigger keyword matching:
+        - Case-insensitive
+        - Exact match or word-boundary match (e.g. 'what is the price?' matches 'price')
+        - Prevents false substring matches inside unrelated words (e.g. 'cat' in 'catch')
+        - Handles multi-word phrases and wildcard '*' tokens
+        Returns (matched: bool, matched_kw: str or None)
+        """
+        if not incoming_text or not keywords:
+            return False, None
+
+        if isinstance(keywords, str):
+            keywords = [k.strip() for k in keywords.split(',') if k.strip()]
+
+        clean_text = incoming_text.strip().lower()
+        catch_all_tokens = {'*', 'all', 'any', 'anything'}
+
+        import re
+        for kw in keywords:
+            if not kw or not isinstance(kw, str):
+                continue
+            clean_kw = kw.strip().lower()
+            if not clean_kw:
+                continue
+
+            if clean_kw in catch_all_tokens:
+                return True, clean_kw
+
+            # 1. Exact match
+            if clean_text == clean_kw:
+                return True, clean_kw
+
+            # 2. Word boundary match (handles punctuation like 'price?', 'price!', 'price please')
+            pattern = r'(?<!\w)' + re.escape(clean_kw) + r'(?!\w)'
+            if re.search(pattern, clean_text, re.IGNORECASE):
+                return True, clean_kw
+
+        return False, None
+
+    @staticmethod
+    def get_platform_greeting(client, platform):
+        """
+        Retrieves the platform-specific greeting message for a given channel.
+        Rule:
+        1. Checks for an Automation where trigger_type='START_CHAT' and channels contains platform.
+        2. Fallback to an Automation where trigger_type='START_CHAT' and channels is empty (all platforms).
+        3. If no Automation exists, fallback to Client.greeting_enabled and Client.greeting_message.
+        Returns dict: {"enabled": bool, "message": str or None, "buttons": list}
+        """
+        if not client:
+            return {"enabled": False, "message": None, "buttons": []}
+
+        platform_upper = (platform or 'WHATSAPP').upper()
+        
+        try:
+            from ..models import Automation
+            start_automations = Automation.objects.filter(client=client, trigger_type='START_CHAT')
+            
+            # Platform-specific automation first
+            matched_auto = None
+            for auto in start_automations:
+                auto_chs = [c.upper() for c in (auto.channels or [])]
+                if platform_upper in auto_chs:
+                    matched_auto = auto
+                    break
+
+            # Fallback to shared START_CHAT automation (empty channels list = all channels)
+            if not matched_auto:
+                for auto in start_automations:
+                    if len(auto.channels or []) == 0:
+                        matched_auto = auto
+                        break
+
+            if matched_auto:
+                if matched_auto.enabled and matched_auto.response:
+                    return {
+                        "enabled": True,
+                        "message": matched_auto.response,
+                        "buttons": matched_auto.buttons or []
+                    }
+                else:
+                    # Explicitly configured as disabled for this platform
+                    return {"enabled": False, "message": None, "buttons": []}
+        except Exception as e:
+            logger.warning(f"Error checking platform greeting automation: {e}")
+
+        # Fallback to global Client greeting setting
+        if getattr(client, 'greeting_enabled', False):
+            msg = getattr(client, 'greeting_message', None) or f"Hello! Welcome to {client.business_name}. Thank you for contacting us! How can we assist you today?"
+            return {
+                "enabled": True,
+                "message": msg,
+                "buttons": getattr(client, 'greeting_buttons', None) or []
+            }
+
+        return {"enabled": False, "message": None, "buttons": []}
+
+    @staticmethod
+    def send_automated_reply(client, platform, contact_id, text_body, buttons=None, media_url=None, media_type=None, phone_number_id=None):
+        """
+        Central platform-aware message sender for automated responses.
+        Validates platform and prevents cross-platform delivery.
+        """
+        platform_upper = (platform or '').upper()
+
+        if platform_upper == 'WHATSAPP':
+            return MetaWebhookService.send_whatsapp_message(
+                client=client,
+                to_number=contact_id,
+                text_body=text_body,
+                phone_number_id=phone_number_id,
+                buttons=buttons,
+                media_url=media_url,
+                media_type=media_type
+            )
+        elif platform_upper in ['FACEBOOK', 'INSTAGRAM']:
+            return MetaWebhookService.send_fb_ig_message(
+                client=client,
+                platform=platform_upper,
+                recipient_id=contact_id,
+                text_body=text_body,
+                buttons=buttons,
+                media_url=media_url,
+                media_type=media_type
+            )
+        else:
+            logger.error(f"[CROSS-PLATFORM BLOCKED] Cannot send message: Unknown or unsupported platform '{platform}' for recipient {contact_id}")
+            return None
+
+    @staticmethod
+    def dispatch_automations(client, platform, contact_id, incoming_text, phone_number_id=None):
+        """
+        Unified, platform-isolated automation processing engine for WhatsApp, Facebook, and Instagram.
+        Order of priority:
+        1. Safety checks (bot loop protection, contact bot paused)
+        2. Active Hybrid AI session check
+        3. Greeting Message (platform-specific, 1st incoming message or pure greeting keyword)
+        4. Specific Keyword Auto Replies (Automations)
+        5. Specific Keyword Workflows
+        6. Active Workflow Session advancement
+        7. Catch-All / Wildcard Workflows (*)
+        8. Commercial System Commands (Industrial Lead Qualification, Buy Now, Catalog, Location)
+        9. AI Smart Assistant (RAG / Knowledge base)
+        """
+        platform = (platform or 'WHATSAPP').upper()
+        contact_id_str = str(contact_id or '').strip()
+        incoming_clean = (incoming_text or '').strip().lower()
+
+        logger.info(f"\n[AUTOMATION ENGINE] ──── Incoming Message ────\n  Platform: {platform}\n  Contact: {contact_id_str}\n  Text: \"{incoming_text}\"")
+
+        # 0. Safety check: Contact bot paused
         if client:
             from ..models import Contact
             from django.db.models import Q
-            _contact = Contact.objects.filter(Q(client=client) & (Q(platform_id=to_number) | Q(phone_number=to_number))).first()
+            _contact = Contact.objects.filter(
+                Q(client=client) & (Q(platform_id=contact_id_str) | Q(phone_number=contact_id_str))
+            ).first()
             if _contact and _contact.bot_paused:
-                logger.info(f"Bot paused for WhatsApp contact {to_number}. Bypassing automations.")
+                logger.info(f"[AUTOMATION HALTED] Bot paused for {platform} contact {contact_id_str}. Bypassing automations.")
                 return
 
-        # Check for active Hybrid AI Session or Talk to AI trigger
-        if MetaWebhookService.handle_ai_session_check(client, to_number, incoming_text, 'WHATSAPP', phone_number_id):
+        # 1. Check for active Hybrid AI Session or "Talk to AI" trigger
+        if MetaWebhookService.handle_ai_session_check(client, contact_id_str, incoming_text, platform, phone_number_id):
+            logger.info(f"[AUTOMATION COMPLETED] Handled by active AI chat session for {platform} contact {contact_id_str}")
             return
 
-        # 1st Time Incoming Message check for Greeting Message
-        msg_count = MessageRepository.filter_messages(client=client, channel='WHATSAPP', from_address=to_number, message_type='INCOMING').count()
-        if (msg_count <= 1 and client.greeting_enabled) or (client.greeting_enabled and client.greeting_message and incoming_text.lower().strip() in ['hi', 'hello', 'hey', 'start']):
-            greeting_text = client.greeting_message or f"Hello! Welcome to {client.business_name}. Thank you for contacting us! How can we assist you today?"
-            MetaWebhookService.send_whatsapp_message(
-                client=client,
-                to_number=to_number,
-                text_body=greeting_text,
-                phone_number_id=phone_number_id,
-                buttons=client.greeting_buttons or None
-            )
+        # 2. Platform-Specific Greeting Message
+        msg_count = MessageRepository.filter_messages(
+            client=client,
+            channel=platform,
+            from_address=contact_id_str,
+            message_type='INCOMING'
+        ).count()
 
-        from .workflow_service import WorkflowEngine
-        wf_messages = WorkflowEngine.process_workflow(client, to_number, incoming_text)
-        if wf_messages:
-            for msg in wf_messages:
-                MetaWebhookService.send_whatsapp_message(
+        greeting_info = MetaWebhookService.get_platform_greeting(client, platform)
+        is_greeting_kw = incoming_clean in ['hi', 'hello', 'hey', 'start']
+        is_first_msg = (msg_count <= 1)
+
+        if (is_first_msg and greeting_info.get('enabled')) or (is_greeting_kw and greeting_info.get('enabled') and greeting_info.get('message')):
+            greeting_text = greeting_info.get('message')
+            if greeting_text:
+                logger.info(
+                    f"\n[GREETING SEND] Platform: {platform} | Contact: {contact_id_str}\n"
+                    f"  Reason: {'First incoming message' if is_first_msg else 'Greeting keyword'}\n"
+                    f"  Message: \"{greeting_text[:50]}...\"\n"
+                    f"  Sending through: {platform}"
+                )
+                MetaWebhookService.send_automated_reply(
                     client=client,
-                    to_number=to_number,
+                    platform=platform,
+                    contact_id=contact_id_str,
+                    text_body=greeting_text,
+                    buttons=greeting_info.get('buttons'),
+                    phone_number_id=phone_number_id
+                )
+                if is_greeting_kw:
+                    # Pure greeting keyword, nothing further to process
+                    return
+
+        # 3. Specific Keyword Auto Replies (Automations)
+        # Evaluated BEFORE wildcard workflows so specific trigger words are never hijacked!
+        automations = AutomationRepository.filter_automations(client=client, enabled=True, trigger_type='KEYWORD')
+        for auto in automations:
+            auto_channels = [c.upper() for c in (auto.channels or [])]
+            is_platform_match = (len(auto_channels) == 0 or platform in auto_channels)
+
+            is_kw_match, matched_kw = MetaWebhookService.match_trigger_keyword(incoming_text, auto.keywords)
+            if is_kw_match:
+                if not is_platform_match:
+                    logger.info(
+                        f"\n[AUTOMATION SKIP] Platform mismatch!\n"
+                        f"  Incoming platform: {platform} | Contact: {contact_id_str}\n"
+                        f"  Matched keyword: '{matched_kw}' | Auto: '{auto.name}' (#{auto.id})\n"
+                        f"  Configured platforms: {auto_channels}\n"
+                        f"  Platform match: NO\n"
+                        f"  Action: SKIP"
+                    )
+                    continue
+
+                logger.info(
+                    f"\n[AUTOMATION SEND] Auto Reply Triggered!\n"
+                    f"  Incoming platform: {platform} | Contact: {contact_id_str}\n"
+                    f"  Incoming message: \"{incoming_text}\"\n"
+                    f"  Matched keyword: '{matched_kw}' | Auto: '{auto.name}' (#{auto.id})\n"
+                    f"  Configured platforms: {auto_channels or 'ALL'}\n"
+                    f"  Platform match: YES\n"
+                    f"  Action: SEND\n"
+                    f"  Sending through: {platform}"
+                )
+                MetaWebhookService.send_automated_reply(
+                    client=client,
+                    platform=platform,
+                    contact_id=contact_id_str,
+                    text_body=auto.response,
+                    buttons=auto.buttons,
+                    phone_number_id=phone_number_id
+                )
+                return  # Stop execution - Auto Reply successfully sent
+
+        # 4. Specific Keyword Workflows (workflows configured with specific trigger words, not '*')
+        from .workflow_service import WorkflowEngine
+        wf_specific = WorkflowEngine.process_workflow(
+            client=client,
+            phone_number=contact_id_str,
+            incoming_text=incoming_text,
+            channel=platform,
+            allow_catch_all=False,
+            check_active_session=False
+        )
+        if wf_specific:
+            logger.info(f"[WORKFLOW SEND] Specific keyword workflow triggered for {platform} contact {contact_id_str}")
+            for msg in wf_specific:
+                MetaWebhookService.send_automated_reply(
+                    client=client,
+                    platform=platform,
+                    contact_id=contact_id_str,
                     text_body=msg.get('body', ''),
-                    phone_number_id=phone_number_id,
                     buttons=msg.get('buttons'),
                     media_url=msg.get('media_url'),
-                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None)
+                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
+                    phone_number_id=phone_number_id
                 )
             return
 
-        automations = AutomationRepository.filter_automations(client=client, enabled=True, trigger_type='KEYWORD')
-        incoming_text_lower = incoming_text.lower().strip()
-        
-        match_found = False
-        for auto in automations:
-            auto_channels = auto.channels or []
-            if len(auto_channels) > 0 and 'WHATSAPP' not in auto_channels:
-                continue
+        # 5. Active Workflow Session Advancement
+        wf_active = WorkflowEngine.process_workflow(
+            client=client,
+            phone_number=contact_id_str,
+            incoming_text=incoming_text,
+            channel=platform,
+            allow_catch_all=False,
+            check_active_session=True
+        )
+        if wf_active:
+            logger.info(f"[WORKFLOW SESSION ADVANCE] Advanced active workflow session for {platform} contact {contact_id_str}")
+            for msg in wf_active:
+                MetaWebhookService.send_automated_reply(
+                    client=client,
+                    platform=platform,
+                    contact_id=contact_id_str,
+                    text_body=msg.get('body', ''),
+                    buttons=msg.get('buttons'),
+                    media_url=msg.get('media_url'),
+                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
+                    phone_number_id=phone_number_id
+                )
+            return
 
-            if auto.keywords:
-                for keyword in auto.keywords:
-                    kw = keyword.lower().strip()
-                    if kw in ['*', 'all', 'any', 'anything'] or (kw and (kw == incoming_text_lower or kw in incoming_text_lower)):
-                        MetaWebhookService.send_whatsapp_message(client, to_number, auto.response, phone_number_id, auto.buttons)
-                        match_found = True
-                        break
-        incoming_lower = incoming_text.lower().strip()
+        # 6. Catch-All / Wildcard Workflows ('*')
+        # Only triggered if no specific Auto Reply or specific Workflow matched
+        wf_catchall = WorkflowEngine.process_workflow(
+            client=client,
+            phone_number=contact_id_str,
+            incoming_text=incoming_text,
+            channel=platform,
+            allow_catch_all=True,
+            check_active_session=False
+        )
+        if wf_catchall:
+            logger.info(f"[WORKFLOW CATCH-ALL] Wildcard workflow triggered for {platform} contact {contact_id_str}")
+            for msg in wf_catchall:
+                MetaWebhookService.send_automated_reply(
+                    client=client,
+                    platform=platform,
+                    contact_id=contact_id_str,
+                    text_body=msg.get('body', ''),
+                    buttons=msg.get('buttons'),
+                    media_url=msg.get('media_url'),
+                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
+                    phone_number_id=phone_number_id
+                )
+            return
 
-        # Automated Industrial Lead Qualification (Product & Pricing Intent Detection)
+        # 7. Commercial System Commands
+        # Industrial Lead Qualification (Product & Pricing Intent Detection)
         from .lead_qualification_service import LeadQualificationService
-        qualification = LeadQualificationService.qualify_and_update_contact(client, to_number, incoming_text)
+        qualification = LeadQualificationService.qualify_and_update_contact(client, contact_id_str, incoming_text)
         if qualification and qualification.get('matched_product') and qualification.get('intent') == 'PRICING':
             pricing_reply = LeadQualificationService.generate_pricing_reply(client, qualification['matched_product'])
             if pricing_reply:
-                MetaWebhookService.send_whatsapp_message(client, to_number, pricing_reply, phone_number_id)
+                MetaWebhookService.send_automated_reply(client, platform, contact_id_str, pricing_reply, phone_number_id=phone_number_id)
                 return
 
         # Check for Buy Now action
         buy_keywords = ['buy now', '🛒 buy now', 'order now', 'buy product', 'purchase']
-        if any(kw in incoming_lower for kw in buy_keywords):
-            MetaWebhookService.handle_buy_now(client, to_number, 'WHATSAPP', phone_number_id)
+        if any(kw in incoming_clean for kw in buy_keywords):
+            MetaWebhookService.handle_buy_now(client, contact_id_str, platform, phone_number_id=phone_number_id)
             return
 
         # Check for Product Catalog queries
         catalog_keywords = ['product', 'products', 'catalog', 'browse products', 'shop', 'items', 'store', 'samaan']
-        if any(kw in incoming_lower for kw in catalog_keywords):
-            MetaWebhookService.send_catalog_products(client, to_number, 'WHATSAPP', phone_number_id)
+        if any(kw in incoming_clean for kw in catalog_keywords):
+            MetaWebhookService.send_catalog_products(client, contact_id_str, platform, phone_number_id=phone_number_id)
             return
 
         # Check for address / location queries
         address_keywords = ['address', 'location', 'path', 'map', 'directions', 'dukaan', 'shop location', 'kaha par', 'kaha h', 'where are you located']
-        if client.address and any(kw in incoming_lower for kw in address_keywords):
+        if client.address and any(kw in incoming_clean for kw in address_keywords):
             import urllib.parse
             encoded_addr = urllib.parse.quote(client.address)
             maps_link = f"https://www.google.com/maps/dir/?api=1&destination={encoded_addr}"
             loc_msg = f"📍 *{client.business_name} Address & Location*:\n\n🏢 *Address*: {client.address}\n\n🗺️ *Get Directions / Map Path*:\n{maps_link}"
-            MetaWebhookService.send_whatsapp_message(client, to_number, loc_msg, phone_number_id)
+            MetaWebhookService.send_automated_reply(client, platform, contact_id_str, loc_msg, phone_number_id=phone_number_id)
             return
 
-        if not match_found and client.ai_enabled:
+        # 8. AI Smart Assistant
+        if client.ai_enabled:
             ai_reply = None
             chunks = KnowledgeRepository.filter_chunks(client=client).exclude(embedding=[])
             if chunks.exists():
@@ -949,140 +1294,35 @@ class MetaWebhookService:
                         'doc_title': c.document.title
                     } for c in chunks.select_related('document')]
                     relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5)
-                    
                     if relevant and relevant[0]['score'] > 0.3:
                         ai_reply = get_rag_response(incoming_text, relevant, client_model=client)
-                    else:
-                        ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
-                else:
-                    ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
-            else:
+
+            if not ai_reply:
                 ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
 
             if ai_reply:
-                MetaWebhookService.send_whatsapp_message(client, to_number, ai_reply, phone_number_id)
-                match_found = True
+                logger.info(f"[AI ASSISTANT SEND] AI generated response sent through {platform} for contact {contact_id_str}")
+                MetaWebhookService.send_automated_reply(client, platform, contact_id_str, ai_reply, phone_number_id=phone_number_id)
+                return
 
-        if not match_found and client.greeting_enabled:
-            greeting_text = client.greeting_message or f"Hello! Welcome to {client.business_name}. Thank you for contacting us! How can we assist you today?"
-            MetaWebhookService.send_whatsapp_message(client, to_number, greeting_text, phone_number_id, client.greeting_buttons or None)
+    @staticmethod
+    def handle_automations_whatsapp(client, to_number, incoming_text, phone_number_id):
+        return MetaWebhookService.dispatch_automations(
+            client=client,
+            platform='WHATSAPP',
+            contact_id=to_number,
+            incoming_text=incoming_text,
+            phone_number_id=phone_number_id
+        )
 
     @staticmethod
     def handle_automations_fb_ig(client, platform, sender_id, incoming_text):
-        # Quick safety check: if contact bot is paused, do not proceed
-        if client:
-            from ..models import Contact
-            _contact = Contact.objects.filter(client=client, platform_id=sender_id).first()
-            if _contact and _contact.bot_paused:
-                logger.info(f"Bot paused for {platform} contact {sender_id}. Bypassing automations.")
-                return
-
-        # Check for active Hybrid AI Session or Talk to AI trigger
-        if MetaWebhookService.handle_ai_session_check(client, sender_id, incoming_text, platform):
-            return
-
-        msg_count = MessageRepository.filter_messages(client=client, channel=platform, from_address=sender_id, message_type='INCOMING').count()
-        if (msg_count <= 1 and client.greeting_enabled) or (client.greeting_enabled and client.greeting_message and incoming_text.lower().strip() in ['hi', 'hello', 'hey', 'start']):
-            greeting_text = client.greeting_message or f"Hello! Welcome to {client.business_name}. Thank you for contacting us! How can we assist you today?"
-            MetaWebhookService.send_fb_ig_message(
-                client=client,
-                platform=platform,
-                recipient_id=sender_id,
-                text_body=greeting_text,
-                buttons=client.greeting_buttons or None
-            )
-
-        from .workflow_service import WorkflowEngine
-        wf_messages = WorkflowEngine.process_workflow(client, sender_id, incoming_text, platform)
-        if wf_messages:
-            for msg in wf_messages:
-                MetaWebhookService.send_fb_ig_message(
-                    client=client,
-                    platform=platform,
-                    recipient_id=sender_id,
-                    text_body=msg.get('body', ''),
-                    buttons=msg.get('buttons'),
-                    media_url=msg.get('media_url'),
-                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None)
-                )
-            return
-
-        automations = AutomationRepository.filter_automations(client=client, enabled=True, trigger_type='KEYWORD')
-        incoming_text_lower = incoming_text.lower().strip()
-        
-        match_found = False
-        for auto in automations:
-            auto_channels = auto.channels or []
-            if len(auto_channels) > 0 and platform not in auto_channels:
-                continue
-            if len(auto_channels) == 0 and platform != 'WHATSAPP':
-                continue
-
-            if auto.keywords:
-                for keyword in auto.keywords:
-                    kw = keyword.lower().strip()
-                    if kw in ['*', 'all', 'any', 'anything'] or (kw and (kw == incoming_text_lower or kw in incoming_text_lower)):
-                        MetaWebhookService.send_fb_ig_message(client, platform, sender_id, auto.response, auto.buttons)
-                        match_found = True
-                        break
-        incoming_lower = incoming_text.lower().strip()
-
-        # Automated Industrial Lead Qualification (Product & Pricing Intent Detection)
-        from .lead_qualification_service import LeadQualificationService
-        qualification = LeadQualificationService.qualify_and_update_contact(client, sender_id, incoming_text)
-        if qualification and qualification.get('matched_product') and qualification.get('intent') == 'PRICING':
-            pricing_reply = LeadQualificationService.generate_pricing_reply(client, qualification['matched_product'])
-            if pricing_reply:
-                MetaWebhookService.send_fb_ig_message(client, platform, sender_id, pricing_reply)
-                return
-
-        # Check for Buy Now action
-        buy_keywords = ['buy now', '🛒 buy now', 'order now', 'buy product', 'purchase']
-        if any(kw in incoming_lower for kw in buy_keywords):
-            MetaWebhookService.handle_buy_now(client, sender_id, platform)
-            return
-
-        # Check for Product Catalog queries
-        catalog_keywords = ['product', 'products', 'catalog', 'browse products', 'shop', 'items', 'store', 'samaan']
-        if any(kw in incoming_lower for kw in catalog_keywords):
-            MetaWebhookService.send_catalog_products(client, sender_id, platform)
-            return
-
-        # Check for address / location queries
-        address_keywords = ['address', 'location', 'path', 'map', 'directions', 'dukaan', 'shop location', 'kaha par', 'kaha h', 'where are you located']
-        if client.address and any(kw in incoming_lower for kw in address_keywords):
-            import urllib.parse
-            encoded_addr = urllib.parse.quote(client.address)
-            maps_link = f"https://www.google.com/maps/dir/?api=1&destination={encoded_addr}"
-            loc_msg = f"📍 {client.business_name} Address & Location:\n\n🏢 Address: {client.address}\n\n🗺️ Get Directions / Map Path:\n{maps_link}"
-            MetaWebhookService.send_fb_ig_message(client, platform, sender_id, loc_msg)
-            return
-
-        if not match_found and client.ai_enabled:
-            ai_reply = None
-            chunks = KnowledgeRepository.filter_chunks(client=client).exclude(embedding=[])
-            if chunks.exists():
-                query_embedding = get_embedding(incoming_text)
-                if query_embedding:
-                    chunks_data = [{
-                        'text': c.chunk_text,
-                        'embedding': c.embedding,
-                        'doc_title': c.document.title
-                    } for c in chunks.select_related('document')]
-                    relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5)
-                    if relevant and relevant[0]['score'] > 0.3:
-                        ai_reply = get_rag_response(incoming_text, relevant, client_model=client)
-            
-            if not ai_reply:
-                ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
-                
-            if ai_reply:
-                MetaWebhookService.send_fb_ig_message(client, platform, sender_id, ai_reply)
-                match_found = True
-
-        if not match_found and client.greeting_enabled:
-            greeting_text = client.greeting_message or f"Hello! Welcome to {client.business_name}. Thank you for contacting us! How can we assist you today?"
-            MetaWebhookService.send_fb_ig_message(client, platform, sender_id, greeting_text, client.greeting_buttons or None)
+        return MetaWebhookService.dispatch_automations(
+            client=client,
+            platform=platform,
+            contact_id=sender_id,
+            incoming_text=incoming_text
+        )
 
     @staticmethod
     def send_whatsapp_message(client, to_number, text_body, phone_number_id=None, buttons=None, media_url=None, media_type=None):
@@ -1093,6 +1333,8 @@ class MetaWebhookService:
         clean_num = re.sub(r'\D', '', raw_to)
         if len(clean_num) == 10:
             clean_num = '91' + clean_num
+        elif len(clean_num) == 11 and clean_num.startswith('0'):
+            clean_num = '91' + clean_num[1:]
         formatted_to = clean_num or raw_to
 
         if text_body:
@@ -1212,7 +1454,7 @@ class MetaWebhookService:
                 client=client,
                 channel='WHATSAPP',
                 from_address=phone_number_id or 'WHATSAPP_SYSTEM',
-                to_address=raw_to,
+                to_address=formatted_to,
                 body=text_body or f"[{media_type or 'Media'} Message]",
                 message_type='OUTGOING',
                 whatsapp_message_id=res_data.get('messages', [{}])[0].get('id') if 'messages' in res_data else None,
@@ -1226,10 +1468,10 @@ class MetaWebhookService:
                     client=client,
                     channel='WHATSAPP',
                     from_address=phone_number_id or 'WHATSAPP_SYSTEM',
-                    to_address=raw_to,
+                    to_address=formatted_to,
                     body=text_body or '[Message]',
                     message_type='OUTGOING',
-                    status='SENT',
+                    status='FAILED',
                     metadata={"error": str(e)}
                 )
             except Exception:
@@ -1265,8 +1507,12 @@ class MetaWebhookService:
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
             text_body = text_body.replace('{{calendar_link}}', f"{frontend_url}/book/{client.id}")
             
-        config = client.facebook_config if platform == 'FACEBOOK' else (client.instagram_config or {})
-        access_token = config.get('access_token') or (client.facebook_config or {}).get('access_token') or client.whatsapp_access_token
+        if platform == 'FACEBOOK':
+            access_token = (client.facebook_config or {}).get('access_token')
+        elif platform == 'INSTAGRAM':
+            access_token = (client.instagram_config or {}).get('access_token') or (client.facebook_config or {}).get('access_token')
+        else:
+            access_token = None
         
         if not access_token:
             print(f"No access token found for {platform} messaging")

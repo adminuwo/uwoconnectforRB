@@ -20,6 +20,7 @@ import os
 import json
 from ..services.ai_service import get_ai_response, get_platform_assistance, get_rag_response, get_embedding, chunk_text, find_relevant_chunks
 from rest_framework.permissions import BasePermission
+from ..utils.channel_permissions import safe_get_client
 
 def get_tenant_client(request):
     if not request.user or not request.user.is_authenticated:
@@ -33,8 +34,8 @@ def get_tenant_client(request):
                 return ClientRepository.get_client(id=client_id)
             except Exception:
                 pass
-        return getattr(request.user, 'client', None)
-    return getattr(request.user, 'client', None)
+        return safe_get_client(request.user)
+    return safe_get_client(request.user)
 
 class AutomationViewSet(viewsets.ModelViewSet):
     serializer_class = AutomationSerializer
@@ -42,12 +43,15 @@ class AutomationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         client = get_tenant_client(self.request)
-        if self.request.user.role == 'ADMIN' and not client:
+        if not client:
             return Automation.objects.none()
         return AutomationRepository.filter_automations(client=client)
 
     def perform_create(self, serializer):
         client = get_tenant_client(self.request)
+        if not client:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"client": "No active client workspace found for this account."})
         instance = serializer.save(client=client)
         AdminService.log_admin_action(self.request, instance, 'Automations', 'CREATE', after_value=str(serializer.data))
 
@@ -69,12 +73,15 @@ class WorkflowViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         client = get_tenant_client(self.request)
-        if self.request.user.role == 'ADMIN' and not client:
+        if not client:
             return Workflow.objects.none()
         return WorkflowRepository.filter_workflows(client=client)
 
     def perform_create(self, serializer):
         client = get_tenant_client(self.request)
+        if not client:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"client": "No active client workspace found for this account."})
         instance = serializer.save(client=client)
         AdminService.log_admin_action(self.request, instance, 'Workflows', 'CREATE', after_value=str(serializer.data))
 

@@ -9,12 +9,34 @@ Level 3: TEAM MEMBER CONNECTOR ASSIGNMENT
 from django.utils import timezone
 
 def safe_get_client(user):
-    if not user:
+    if not user or not getattr(user, 'is_authenticated', False):
         return None
     try:
-        return getattr(user, 'client', None)
+        if getattr(user, 'client_id', None):
+            client = getattr(user, 'client', None)
+            if client:
+                return client
     except Exception:
-        return None
+        pass
+
+    # If client is missing or unlinked, and user is an authenticated CLIENT or ADMIN
+    role = getattr(user, 'role', '')
+    if role in ['CLIENT', 'ADMIN']:
+        try:
+            from api.models import Client
+            name = getattr(user, 'first_name', '') or (user.email.split('@')[0] if getattr(user, 'email', None) else 'User')
+            workspace_name = f"{name.capitalize()}'s Workspace"
+            client = Client.objects.create(
+                business_name=workspace_name,
+                plan="ADVANCED"
+            )
+            user.client = client
+            user.save(update_fields=['client'])
+            return client
+        except Exception:
+            pass
+
+    return None
 
 
 DEFAULT_CONNECTORS = [
@@ -130,15 +152,179 @@ DEFAULT_CONNECTORS = [
         'description': 'Sync video comments, live stream chat moderation, and automated community replies.'
     },
     {
+        'key': 'calls',
+        'name': 'Voice & Video Calls',
+        'short_name': 'Calls',
+        'category': 'CORE',
+        'item_type': 'channel',
+        'is_core': True,
+        'is_active': True,
+        'description': 'Real-time WebRTC customer voice calls, video meetings, and call recording.'
+    },
+    {
+        'key': 'telegram',
+        'name': 'Telegram Bot API',
+        'short_name': 'Telegram',
+        'category': 'MESSAGING',
+        'item_type': 'channel',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Telegram customer communication bot for announcements, notifications, and group support.'
+    },
+    {
         'key': 'google_news',
         'name': 'Google News Feed',
-        'short_name': 'G-News',
+        'short_name': 'Google News',
         'category': 'MEDIA',
+        'item_type': 'channel',
         'is_core': False,
         'is_active': True,
         'description': 'Monitor brand keywords, press releases, and market intelligence alerts.'
     },
+
+    # ─────────────────────────────────────────────────────────────
+    # PLATFORM FEATURES & AUTOMATION
+    # ─────────────────────────────────────────────────────────────
+    {
+        'key': 'broadcasts',
+        'name': 'Broadcast Campaigns',
+        'short_name': 'Broadcasts',
+        'category': 'MARKETING',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Bulk WhatsApp & multi-channel marketing campaigns, promotional broadcasts, and scheduled sequences.'
+    },
+    {
+        'key': 'workflows',
+        'name': 'Automated Workflows',
+        'short_name': 'Workflows',
+        'category': 'AUTOMATION',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Visual drag-and-drop workflow canvas with branching condition nodes, webhook triggers, and bots.'
+    },
+    {
+        'key': 'automations',
+        'name': 'Keyword Auto-Replies',
+        'short_name': 'Auto-Replies',
+        'category': 'AUTOMATION',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Smart keyword rules and 24/7 instant auto-responders across all customer channels.'
+    },
+    {
+        'key': 'knowledge',
+        'name': 'AI Knowledge Base',
+        'short_name': 'Knowledge Base',
+        'category': 'AI',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Custom trained AI knowledge documents and automated FAQ answering bots.'
+    },
+    {
+        'key': 'crm',
+        'name': 'Leads & CRM',
+        'short_name': 'CRM',
+        'category': 'CRM',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Centralized contact management, pipeline stages, customer tags, and custom fields.'
+    },
+    {
+        'key': 'proposals',
+        'name': 'Proposals & Estimates',
+        'short_name': 'Proposals',
+        'category': 'SALES',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Create and send client proposals with digital approval and real-time viewing tracking.'
+    },
+    {
+        'key': 'quotations',
+        'name': 'Sales Quotations',
+        'short_name': 'Quotations',
+        'category': 'SALES',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Generate professional sales quotations with line items, tax breakdowns, and discounts.'
+    },
+    {
+        'key': 'invoices',
+        'name': 'GST Invoices & Billing',
+        'short_name': 'Invoices',
+        'category': 'SALES',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'GST-compliant tax invoices, automatic numbering, payment links, and PDF downloads.'
+    },
+    {
+        'key': 'catalog',
+        'name': 'Products & Services Catalog',
+        'short_name': 'Catalog',
+        'category': 'SALES',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Manage items, pricing, inventory, categories, and direct checkout links.'
+    },
+    {
+        'key': 'orders',
+        'name': 'Sales Orders & Checkout',
+        'short_name': 'Orders',
+        'category': 'SALES',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Track customer orders, fulfillment statuses, and payment verifications.'
+    },
+    {
+        'key': 'reports',
+        'name': 'Daily Work Reports',
+        'short_name': 'Work Reports',
+        'category': 'OPERATIONS',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Daily staff check-ins, task reports, activity logging, and team accountability.'
+    },
+    {
+        'key': 'team',
+        'name': 'Team Management & QR Hub',
+        'short_name': 'Team Hub',
+        'category': 'OPERATIONS',
+        'item_type': 'feature',
+        'is_core': False,
+        'is_active': True,
+        'description': 'Invite agents, assign roles, generate QR employee invites, and manage access rights.'
+    },
 ]
+
+def get_item_type(key, category='', is_core=False):
+    k = str(key).lower().replace('channel_', '').replace('connector_', '').replace('feature_', '').strip()
+    if k in ['whatsapp', 'facebook', 'instagram', 'calls', 'voice_video_call', 'google_news', 'telegram']:
+        return 'channel'
+    if k in ['gmail', 'outlook', 'onedrive', 'google_calendar', 'google_sheets', 'google_docs', 'google_slides', 'zoho', 'youtube']:
+        return 'connector'
+    if k in [
+        'broadcasts', 'broadcast', 'workflows', 'workflow', 'automations', 'autoreply',
+        'knowledge', 'knowledge_base', 'crm', 'crm_leads', 'proposals', 'proposal',
+        'quotations', 'quotation', 'invoices', 'invoice', 'catalog', 'products',
+        'orders', 'order', 'reports', 'team'
+    ]:
+        return 'feature'
+    if is_core or category in ['CORE', 'COMMUNICATION']:
+        return 'channel'
+    if category in ['EMAIL', 'STORAGE', 'CONNECTOR', 'PRODUCTIVITY']:
+        return 'connector'
+    return 'feature'
 
 GLOBAL_ALL_CHANNELS = [c['key'] for c in DEFAULT_CONNECTORS]
 GLOBAL_AVAILABLE_CHANNELS = ['whatsapp', 'facebook', 'instagram']
@@ -487,11 +673,14 @@ def get_user_effective_connectors(user, client=None):
             'key': key,
             'name': item['name'],
             'category': item.get('category', 'MESSAGING'),
+            'item_type': item.get('item_type', get_item_type(key, item.get('category', ''))),
             'is_core': item.get('is_core', False),
             'global_active': is_global_active,
             'client_enabled': is_client_enabled,
             'team_member_assigned': is_member_assigned,
-            'effective_access': effective
+            'effective_access': effective,
+            'is_coming_soon': not is_global_active,
+            'effective_status': 'AVAILABLE' if effective else ('COMING_SOON' if not is_global_active else 'DISABLED')
         }
 
     return result

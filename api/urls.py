@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    RegisterView, LoginView, GoogleLoginView, GoogleClientIdView, FirebaseLoginView, UWOLoginView, ClientViewSet, AutomationViewSet, WorkflowViewSet, 
+    RegisterView, LoginView, GoogleLoginView, GoogleClientIdView, AppleLoginView, FirebaseLoginView, UWOLoginView, ClientViewSet, AutomationViewSet, WorkflowViewSet, 
     QrAuthCreateView, QrAuthStatusView, QrAuthScanView, QrAuthApproveView, QrAuthRejectView,
     LinkedDeviceListView, LinkedDeviceRevokeView, LinkedDeviceRevokeAllView, 
 
@@ -12,6 +12,7 @@ from .views import (
     SupportMessageViewSet, AdminImpersonateView, AuditLogViewSet,
     SuggestDraftView, TeamMemberViewSet, TeamInviteView, TeamInviteQRView, TeamInviteValidateView, TeamChatView, ProductViewSet, OrderViewSet,
     CreatePaymentOrderView, VerifyPaymentView, PaymentHistoryView, CashfreeWebhookView, RazorpayWebhookView,
+    PlanUpgradeCheckoutView, PlanUpgradeCallbackView,
     WhatsAppEmbeddedSignupView, GmailConnectView, GmailCallbackView, GmailSyncView, GmailDisconnectView, YouTubeConnectView, YouTubeCallbackView, YouTubeStatusView, YouTubeSyncView, YouTubeAnalyticsView, YouTubeVideosView, YouTubeCommentsView, YouTubeSettingsView, YouTubeCheckNewView, YouTubeUploadView, YouTubeChannelProfileView, YouTubeDeleteView, YouTubeAISuggestReplyView,
     InstagramEmbeddedSignupView, FacebookEmbeddedSignupView, InstagramOAuthCallbackView, InstagramSyncMessagesView,
     ProjectViewSet, TaskViewSet, WorkReportView, WorkApprovalView, TeamChannelView,
@@ -56,8 +57,9 @@ from .views import (
     AdminContentPreviewView, AdminContentRollbackView, AdminContentVersionsListView,
     AdminBannerManagementView, AdminMaintenanceConfigView, AdminFeatureFlagManagementView,
     AdminCMSAuditLogsView,
-    AppInstallTelemetryView, AdminAppAnalyticsView,
-    PlatformAIAssistantChatView
+    AppInstallTelemetryView, AdminAppAnalyticsView, ClientPlatformOverviewView,
+    AdminInstallationsDetailView, AdminInstallationToggleStatusView, AppUninstallTelemetryView,
+    ClientUpdateSelfView, PlatformAIAssistantChatView
 )
 from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
 from .views.agency_views import (
@@ -77,6 +79,7 @@ from .views.sales_document_views import (
 from .views.invoice_views import InvoiceViewSet, PublicInvoiceView, PublicInvoicePDFView
 from .views.wallet_views import (
     ClientWalletDashboardView, WalletRechargeCreateView, WalletRechargeVerifyView,
+    WalletRechargeCheckoutView,
     WalletWebhookView, AdminWalletOverviewView, AdminWalletAdjustmentView, AdminRateConfigView
 )
 from .views.broadcast_entitlement_views import (
@@ -84,6 +87,9 @@ from .views.broadcast_entitlement_views import (
     BroadcastConsumeView, BroadcastRefundView
 )
 from .views.competitor_analysis_views import CompetitorAnalysisViewSet
+from .views.apple_iap_views import (
+    AppleIAPVerifyView, AppleIAPRestoreView, AppleIAPNotificationWebhookView
+)
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -159,6 +165,8 @@ urlpatterns = [
     path('auth/google-login', GoogleLoginView.as_view(), name='google-login'),
     path('auth/google-login/', GoogleLoginView.as_view()),
     path('auth/google-client-id', GoogleClientIdView.as_view(), name='google-client-id'),
+    path('auth/apple', AppleLoginView.as_view(), name='apple-auth'),
+    path('auth/apple/', AppleLoginView.as_view()),
     path('auth/gmail/connect', GmailConnectView.as_view(), name='gmail-connect'),
     path('auth/gmail/callback', GmailCallbackView.as_view(), name='gmail-callback'),
     path('auth/gmail/disconnect', GmailDisconnectView.as_view(), name='gmail-disconnect'),
@@ -197,8 +205,11 @@ urlpatterns = [
     path('auth/linked-devices/revoke-all/', LinkedDeviceRevokeAllView.as_view()),
 
     path('auth/forgot-password/send-otp', ForgotPasswordSendOTPView.as_view(), name='forgot-password-send-otp'),
+    path('auth/forgot-password/send-otp/', ForgotPasswordSendOTPView.as_view()),
     path('auth/forgot-password/verify-otp', ForgotPasswordVerifyOTPView.as_view(), name='forgot-password-verify-otp'),
+    path('auth/forgot-password/verify-otp/', ForgotPasswordVerifyOTPView.as_view()),
     path('auth/forgot-password/reset', ForgotPasswordResetView.as_view(), name='forgot-password-reset'),
+    path('auth/forgot-password/reset/', ForgotPasswordResetView.as_view()),
     path('auth/whatsapp/embedded-signup', WhatsAppEmbeddedSignupView.as_view(), name='whatsapp-embedded-signup'),
     path('auth/whatsapp/embedded-signup/', WhatsAppEmbeddedSignupView.as_view()),
     path('auth/instagram/embedded-signup', InstagramEmbeddedSignupView.as_view(), name='instagram-embedded-signup'),
@@ -315,17 +326,30 @@ urlpatterns = [
     # Razorpay / Cashfree Payments
     path('payments/create-order', CreatePaymentOrderView.as_view(), name='payment-create-order'),
     path('payments/create-order/', CreatePaymentOrderView.as_view()),
+    path('payments/checkout', PlanUpgradeCheckoutView.as_view(), name='plan-upgrade-checkout'),
+    path('payments/checkout/', PlanUpgradeCheckoutView.as_view()),
+    path('payments/checkout/callback', PlanUpgradeCallbackView.as_view(), name='plan-upgrade-callback'),
+    path('payments/checkout/callback/', PlanUpgradeCallbackView.as_view()),
     path('payments/verify-order', VerifyPaymentView.as_view(), name='payment-verify-order'),
     path('payments/verify-order/', VerifyPaymentView.as_view()),
     path('payments/history', PaymentHistoryView.as_view(), name='payment-history'),
     path('payments/history/', PaymentHistoryView.as_view()),
     path('payments/webhook', RazorpayWebhookView.as_view(), name='payment-webhook'),
     path('payments/webhook/', RazorpayWebhookView.as_view()),
+    # Apple In-App Purchases (iOS StoreKit)
+    path('payments/apple/verify', AppleIAPVerifyView.as_view(), name='apple-iap-verify'),
+    path('payments/apple/verify/', AppleIAPVerifyView.as_view()),
+    path('payments/apple/restore', AppleIAPRestoreView.as_view(), name='apple-iap-restore'),
+    path('payments/apple/restore/', AppleIAPRestoreView.as_view()),
+    path('payments/apple/notifications', AppleIAPNotificationWebhookView.as_view(), name='apple-iap-notifications'),
+    path('payments/apple/notifications/', AppleIAPNotificationWebhookView.as_view()),
     # Prepaid Usage Wallet & Billing System
     path('wallet/dashboard', ClientWalletDashboardView.as_view(), name='wallet-dashboard'),
     path('wallet/dashboard/', ClientWalletDashboardView.as_view()),
     path('wallet/recharge/create', WalletRechargeCreateView.as_view(), name='wallet-recharge-create'),
     path('wallet/recharge/create/', WalletRechargeCreateView.as_view()),
+    path('wallet/recharge/checkout', WalletRechargeCheckoutView.as_view(), name='wallet-recharge-checkout'),
+    path('wallet/recharge/checkout/', WalletRechargeCheckoutView.as_view()),
     path('wallet/recharge/verify', WalletRechargeVerifyView.as_view(), name='wallet-recharge-verify'),
     path('wallet/recharge/verify/', WalletRechargeVerifyView.as_view()),
     path('wallet/webhook', WalletWebhookView.as_view(), name='wallet-webhook'),
@@ -652,4 +676,24 @@ urlpatterns = [
     path('telemetry/app-install', AppInstallTelemetryView.as_view()),
     path('admin/app-analytics/', AdminAppAnalyticsView.as_view(), name='admin-app-analytics'),
     path('admin/app-analytics', AdminAppAnalyticsView.as_view()),
+    path('admin/client-platform-overview/', ClientPlatformOverviewView.as_view(), name='admin-client-platform-overview'),
+    path('admin/client-platform-overview', ClientPlatformOverviewView.as_view()),
+    path('admin/installations/', AdminInstallationsDetailView.as_view(), name='admin-installations-detail'),
+    path('admin/installations', AdminInstallationsDetailView.as_view()),
+    path('admin/installations/<str:installation_id>/toggle-status/', AdminInstallationToggleStatusView.as_view(), name='admin-installation-toggle-status'),
+    path('admin/installations/<str:installation_id>/toggle-status', AdminInstallationToggleStatusView.as_view()),
+    path('telemetry/app-uninstall/', AppUninstallTelemetryView.as_view(), name='telemetry-app-uninstall'),
+    path('telemetry/app-uninstall', AppUninstallTelemetryView.as_view()),
+
+    # ── Platform Compatibility & Unified Endpoint Aliases ──
+    path('client/update/', ClientUpdateSelfView.as_view(), name='client-update-self'),
+    path('client/update', ClientUpdateSelfView.as_view()),
+    path('auth/qr/consume/', QrAuthStatusView.as_view(), name='qr-auth-consume'),
+    path('auth/qr/consume', QrAuthStatusView.as_view()),
+    path('admin/logs/', AuditLogViewSet.as_view({'get': 'list'}), name='admin-logs-alias'),
+    path('admin/logs', AuditLogViewSet.as_view({'get': 'list'})),
+    path('admin/workflows/', WorkflowViewSet.as_view({'get': 'list'}), name='admin-workflows-alias'),
+    path('admin/workflows', WorkflowViewSet.as_view({'get': 'list'})),
+    path('team/', TeamMemberViewSet.as_view({'get': 'list'}), name='team-list-alias'),
+    path('team', TeamMemberViewSet.as_view({'get': 'list'})),
 ]

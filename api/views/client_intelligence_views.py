@@ -477,6 +477,9 @@ class ClientIntelligenceListView(APIView):
         plan_filter = request.query_params.get('plan', 'ALL').upper()
         sort_by = request.query_params.get('sort_by', 'created_at')
         sort_order = request.query_params.get('sort_order', 'desc')
+        platform_filter = request.query_params.get('platform', 'ALL').lower().strip()
+        country_filter = request.query_params.get('country', 'ALL').strip()
+        date_range_filter = request.query_params.get('date_range', 'ALL').upper().strip()
         page = max(1, int(request.query_params.get('page', 1)))
         page_size = min(100, max(1, int(request.query_params.get('page_size', 25))))
 
@@ -498,6 +501,19 @@ class ClientIntelligenceListView(APIView):
 
         if plan_filter != 'ALL':
             qs = qs.filter(plan=plan_filter)
+
+        if platform_filter != 'all':
+            qs = qs.filter(users__registration_platform=platform_filter).distinct()
+
+        if country_filter != 'ALL':
+            qs = qs.filter(users__registration_country__iexact=country_filter).distinct()
+
+        if date_range_filter == 'TODAY':
+            qs = qs.filter(users__registered_at__date=timezone.now().date()).distinct()
+        elif date_range_filter == '7D':
+            qs = qs.filter(users__registered_at__gte=timezone.now() - timedelta(days=7)).distinct()
+        elif date_range_filter == '30D':
+            qs = qs.filter(users__registered_at__gte=timezone.now() - timedelta(days=30)).distinct()
 
         agency_type = request.query_params.get('agency_type', 'ALL').upper()
         if agency_type == 'AGENCIES':
@@ -525,7 +541,13 @@ class ClientIntelligenceListView(APIView):
         # 3. Bounded Scoped Lookups (Only for the ~25 clients in current page)
         users_lookup = defaultdict(list)
         if page_cids:
-            for u in User.objects.filter(client_id__in=page_cids).values('id', 'client_id', 'role', 'enterprise_role', 'status', 'first_name', 'last_name', 'username', 'email'):
+            for u in User.objects.filter(client_id__in=page_cids).values(
+                'id', 'client_id', 'role', 'enterprise_role', 'status', 'first_name', 'last_name', 'username', 'email',
+                'registration_platform', 'registration_country', 'registration_country_code', 'registration_region', 'registration_city',
+                'registered_at', 'registration_device_type', 'registration_device_model', 'registration_os', 'registration_os_version',
+                'registration_app_version', 'registration_method',
+                'last_login_platform', 'last_login_country', 'last_login_city', 'last_login_device', 'last_login_app_version', 'last_login_at'
+            ):
                 users_lookup[str(u['client_id'])].append(u)
 
         projects_lookup = defaultdict(list)
@@ -666,24 +688,54 @@ class ClientIntelligenceListView(APIView):
                     'total': len(quotations),
                     'converted': len([q for q in quotations if q['status'] in ['ACCEPTED', 'CONVERTED']])
                 },
-                'last_activity_formatted': client.updated_at.strftime('%b %d, %H:%M') if client.updated_at else 'Recent'
+                'last_activity_formatted': client.updated_at.strftime('%b %d, %H:%M') if client.updated_at else 'Recent',
+                'registration_platform': primary_user.get('registration_platform', 'web') if primary_user else 'web',
+                'registration_country': primary_user.get('registration_country', 'Unknown') if primary_user else 'Unknown',
+                'registration_country_code': primary_user.get('registration_country_code', 'Unknown') if primary_user else 'Unknown',
+                'registration_region': primary_user.get('registration_region', 'Unknown') if primary_user else 'Unknown',
+                'registration_city': primary_user.get('registration_city', 'Unknown') if primary_user else 'Unknown',
+                'registered_at': primary_user['registered_at'].isoformat() if (primary_user and primary_user.get('registered_at')) else None,
+                'registration_device_type': primary_user.get('registration_device_type', 'unknown') if primary_user else 'unknown',
+                'registration_device_model': primary_user.get('registration_device_model', 'Unknown') if primary_user else 'Unknown',
+                'registration_os': primary_user.get('registration_os', 'Unknown') if primary_user else 'Unknown',
+                'registration_os_version': primary_user.get('registration_os_version', 'Unknown') if primary_user else 'Unknown',
+                'registration_app_version': primary_user.get('registration_app_version', 'Unknown') if primary_user else 'Unknown',
+                'registration_method': primary_user.get('registration_method', 'email') if primary_user else 'email',
+                'last_login_platform': primary_user.get('last_login_platform', 'web') if primary_user else 'web',
+                'last_login_country': primary_user.get('last_login_country', 'Unknown') if primary_user else 'Unknown',
+                'last_login_city': primary_user.get('last_login_city', 'Unknown') if primary_user else 'Unknown',
+                'last_login_device': primary_user.get('last_login_device', 'Unknown') if primary_user else 'Unknown',
+                'last_login_app_version': primary_user.get('last_login_app_version', 'Unknown') if primary_user else 'Unknown',
+                'last_login_at': primary_user['last_login_at'].isoformat() if (primary_user and primary_user.get('last_login_at')) else None,
             })
 
         # 5. Cached Summary Telemetry
-        summary_cache_key = 'admin_clients_overview_summary_cache'
+        summary_cache_key = 'admin_clients_overview_summary_cache_v2'
         summary_data = cache.get(summary_cache_key)
         if not summary_data:
             all_clients_count = Client.objects.count()
-            users_all = list(User.objects.values('client_id', 'role', 'status'))
+            users_all = list(User.objects.values('client_id', 'role', 'status', 'registration_platform'))
             approved_cnt = sum(1 for u in users_all if u.get('status') == 'APPROVED' and u.get('role') == 'CLIENT')
             pending_cnt = sum(1 for u in users_all if u.get('status') == 'PENDING' and u.get('role') == 'CLIENT')
             rejected_cnt = sum(1 for u in users_all if u.get('status') == 'REJECTED' and u.get('role') == 'CLIENT')
+
+            total_users_count = len(users_all)
+            ios_users_count = sum(1 for u in users_all if u.get('registration_platform') == 'ios')
+            android_users_count = sum(1 for u in users_all if u.get('registration_platform') == 'android')
+            web_users_count = sum(1 for u in users_all if u.get('registration_platform') == 'web')
 
             summary_data = {
                 'totalClients': all_clients_count,
                 'approved': max(approved_cnt, all_clients_count - pending_cnt - rejected_cnt),
                 'pending': pending_cnt,
-                'rejected': rejected_cnt
+                'rejected': rejected_cnt,
+                'totalUsers': total_users_count,
+                'platformCounts': {
+                    'total': total_users_count,
+                    'ios': ios_users_count,
+                    'android': android_users_count,
+                    'web': web_users_count
+                }
             }
             cache.set(summary_cache_key, summary_data, 45)
 
@@ -716,6 +768,9 @@ class ClientIntelligenceDetailView(APIView):
         try:
             client = ClientRepository.get_client(id=client_id)
         except Exception:
+            client = None
+
+        if not client:
             return Response({'error': 'Client not found'}, status=status.HTTP_404_NOT_FOUND)
 
         now = timezone.now()
@@ -731,7 +786,7 @@ class ClientIntelligenceDetailView(APIView):
         approval_status = primary_user.status if primary_user else 'APPROVED'
 
         # ── 2. Projects & Mapping ──
-        projects = list(Project.objects.filter(client=client).prefetch_related('members'))
+        projects = list(Project.objects.filter(client=client))
         project_list = []
         for p in projects:
             assigned_members = []
@@ -1058,6 +1113,9 @@ class ClientIntelligenceActionView(APIView):
         try:
             client = ClientRepository.get_client(id=client_id)
         except Exception:
+            client = None
+
+        if not client:
             return Response({'error': 'Client not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # ── 1. Add Team Member to Client ──
