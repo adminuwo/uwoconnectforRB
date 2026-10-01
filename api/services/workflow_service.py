@@ -150,34 +150,41 @@ class WorkflowEngine:
             session.save()
             return None
 
-        # 1. If currently at a buttons node, select branch based on incoming_text
-        if current_node.get('type') == 'buttons':
-            buttons = current_node.get('data', {}).get('buttons', [])
+        # 1. If currently at a buttons or list node, select branch based on incoming_text
+        if current_node.get('type') in ['buttons', 'list', 'interactive_list']:
+            is_list = current_node.get('type') in ['list', 'interactive_list']
+            if is_list:
+                raw_items = current_node.get('data', {}).get('rows') or current_node.get('data', {}).get('items') or []
+                options = [r.get('title') if isinstance(r, dict) else str(r) for r in raw_items]
+            else:
+                options = current_node.get('data', {}).get('buttons', [])
+
             matched_index = -1
             import re
             input_clean = incoming_text.strip().lower()
             input_words = re.sub(r'[^\w\s]', '', input_clean).strip()
 
-            for i, btn_text in enumerate(buttons):
-                btn_clean = btn_text.strip().lower()
-                btn_words = re.sub(r'[^\w\s]', '', btn_clean).strip()
+            for i, opt_text in enumerate(options):
+                opt_clean = opt_text.strip().lower()
+                opt_words = re.sub(r'[^\w\s]', '', opt_clean).strip()
 
                 # 1. Exact match
-                if input_clean == btn_clean:
+                if input_clean == opt_clean:
                     matched_index = i
                     break
-                # 2. Number index match (e.g., user types "1" for 1st button)
+                # 2. Number index match (e.g., user types "1" for 1st option)
                 if input_clean in [str(i + 1), f"#{i + 1}", f"option {i + 1}"]:
                     matched_index = i
                     break
                 # 3. Clean word / substring match (ignoring emojis)
-                if btn_words and input_words and (btn_words == input_words or input_words in btn_words or btn_words in input_words):
+                if opt_words and input_words and (opt_words == input_words or input_words in opt_words or opt_words in input_words):
                     matched_index = i
                     break
             
             if matched_index != -1:
-                source_handle = f"btn-{matched_index}"
-                next_edge = next((e for e in edges if e.get('source') == current_node_id and e.get('sourceHandle') == source_handle), None)
+                prefix = "list" if is_list else "btn"
+                valid_handles = [f"{prefix}-{matched_index}", f"btn-{matched_index}", f"list-{matched_index}"]
+                next_edge = next((e for e in edges if e.get('source') == current_node_id and e.get('sourceHandle') in valid_handles), None)
                 if next_edge:
                     current_node_id = next_edge.get('target')
                 else:
@@ -299,7 +306,7 @@ class WorkflowEngine:
                     session.save()
                     break
 
-            elif node_type in ['plain', 'default', 'image', 'video', 'buttons', 'catalog_product', 'ai_chat']:
+            elif node_type in ['plain', 'default', 'image', 'video', 'buttons', 'list', 'interactive_list', 'catalog_product', 'ai_chat']:
                 if node_type == 'ai_chat':
                     import time
                     session.variables = session.variables or {}
@@ -317,7 +324,7 @@ class WorkflowEngine:
                 session.current_node_id = current_node_id
                 session.save()
 
-                if node_type in ['buttons', 'catalog_product']:
+                if node_type in ['buttons', 'list', 'interactive_list', 'catalog_product']:
                     # Stop traversing: wait for user action / selection
                     break
 
@@ -388,6 +395,13 @@ class WorkflowEngine:
         
         if node_type == 'buttons':
             res["buttons"] = data.get('buttons', [])
+        elif node_type in ['list', 'interactive_list']:
+            raw_rows = data.get('rows') or data.get('items') or []
+            res["type"] = "list"
+            res["button_text"] = data.get('buttonText') or data.get('button_text') or "Select Option"
+            res["rows"] = raw_rows
+            res["items"] = raw_rows
+            res["list_items"] = raw_rows
         elif node_type in ['image', 'video']:
             res["media_url"] = data.get('mediaUrl')
             res["media_type"] = node_type

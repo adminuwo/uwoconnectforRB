@@ -871,7 +871,9 @@ class MetaWebhookService:
                             phone_number_id=phone_number_id,
                             buttons=msg.get('buttons'),
                             media_url=msg.get('media_url'),
-                            media_type=msg.get('media_type') or msg.get('type')
+                            media_type=msg.get('media_type') or msg.get('type'),
+                            list_button_text=msg.get('button_text'),
+                            list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
                         )
                     else:
                         MetaWebhookService.send_fb_ig_message(
@@ -1034,7 +1036,7 @@ class MetaWebhookService:
         return {"enabled": False, "message": None, "buttons": []}
 
     @staticmethod
-    def send_automated_reply(client, platform, contact_id, text_body, buttons=None, media_url=None, media_type=None, phone_number_id=None):
+    def send_automated_reply(client, platform, contact_id, text_body, buttons=None, media_url=None, media_type=None, phone_number_id=None, list_button_text=None, list_items=None):
         """
         Central platform-aware message sender for automated responses.
         Validates platform and prevents cross-platform delivery.
@@ -1049,9 +1051,14 @@ class MetaWebhookService:
                 phone_number_id=phone_number_id,
                 buttons=buttons,
                 media_url=media_url,
-                media_type=media_type
+                media_type=media_type,
+                list_button_text=list_button_text,
+                list_items=list_items
             )
         elif platform_upper in ['FACEBOOK', 'INSTAGRAM']:
+            # If list_items provided on FB/IG, convert first 3 to buttons as fallback
+            if list_items and not buttons:
+                buttons = [str(item.get('title') if isinstance(item, dict) else item)[:20] for item in list_items[:3]]
             return MetaWebhookService.send_fb_ig_message(
                 client=client,
                 platform=platform_upper,
@@ -1196,7 +1203,9 @@ class MetaWebhookService:
                     buttons=msg.get('buttons'),
                     media_url=msg.get('media_url'),
                     media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
-                    phone_number_id=phone_number_id
+                    phone_number_id=phone_number_id,
+                    list_button_text=msg.get('button_text'),
+                    list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
                 )
             return
 
@@ -1220,7 +1229,9 @@ class MetaWebhookService:
                     buttons=msg.get('buttons'),
                     media_url=msg.get('media_url'),
                     media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
-                    phone_number_id=phone_number_id
+                    phone_number_id=phone_number_id,
+                    list_button_text=msg.get('button_text'),
+                    list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
                 )
             return
 
@@ -1245,7 +1256,9 @@ class MetaWebhookService:
                     buttons=msg.get('buttons'),
                     media_url=msg.get('media_url'),
                     media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
-                    phone_number_id=phone_number_id
+                    phone_number_id=phone_number_id,
+                    list_button_text=msg.get('button_text'),
+                    list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
                 )
             return
 
@@ -1325,7 +1338,7 @@ class MetaWebhookService:
         )
 
     @staticmethod
-    def send_whatsapp_message(client, to_number, text_body, phone_number_id=None, buttons=None, media_url=None, media_type=None):
+    def send_whatsapp_message(client, to_number, text_body, phone_number_id=None, buttons=None, media_url=None, media_type=None, list_button_text=None, list_items=None):
         import re
         if not phone_number_id:
             phone_number_id = getattr(client, 'whatsapp_phone_number_id', None) or '100000000000000'
@@ -1391,6 +1404,7 @@ class MetaWebhookService:
                 "messaging_product": "whatsapp",
                 "to": formatted_to,
                 "type": m_type,
+                "type": m_type,
                 m_type: {
                     "link": media_url
                 }
@@ -1416,6 +1430,45 @@ class MetaWebhookService:
                     "type": "button",
                     "body": {"text": text_body or "Select an option:"},
                     "action": {"buttons": buttons_payload}
+                }
+            }
+        elif list_items and len(list_items) > 0:
+            rows_payload = []
+            for idx, item in enumerate(list_items[:10]):
+                if isinstance(item, dict):
+                    t = str(item.get('title') or f"Option {idx+1}").strip()[:24]
+                    d = str(item.get('description') or '').strip()[:72]
+                    r_id = str(item.get('id') or f"row_{idx}")[:200]
+                else:
+                    t = str(item).strip()[:24]
+                    d = ""
+                    r_id = f"row_{idx}"
+                row_dict = {
+                    "id": r_id,
+                    "title": t
+                }
+                if d:
+                    row_dict["description"] = d
+                rows_payload.append(row_dict)
+
+            btn_label = str(list_button_text or "Select Option").strip()[:20] or "Select Option"
+
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": formatted_to,
+                "type": "interactive",
+                "interactive": {
+                    "type": "list",
+                    "body": {"text": text_body or "Please select an option from the list below:"},
+                    "action": {
+                        "button": btn_label,
+                        "sections": [
+                            {
+                                "title": "Options",
+                                "rows": rows_payload
+                            }
+                        ]
+                    }
                 }
             }
         else:
