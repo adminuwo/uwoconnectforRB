@@ -871,7 +871,7 @@ class MetaWebhookService:
                             phone_number_id=phone_number_id,
                             buttons=msg.get('buttons'),
                             media_url=msg.get('media_url'),
-                            media_type=msg.get('type')
+                            media_type=msg.get('media_type') or msg.get('type')
                         )
                     else:
                         MetaWebhookService.send_fb_ig_message(
@@ -881,7 +881,7 @@ class MetaWebhookService:
                             text_body=msg.get('body', ''),
                             buttons=msg.get('buttons'),
                             media_url=msg.get('media_url'),
-                            media_type=msg.get('type')
+                            media_type=msg.get('media_type') or msg.get('type')
                         )
                 return True
 
