@@ -28,6 +28,7 @@ from .razorpay_gateway_views import (
     RazorpayOAuthCallbackView,
     RazorpayConnectionStatusView,
     RazorpayModeSwitchView,
+    RazorpayManualKeysView,
     PublicProductCheckoutInfoView,
     ProductCheckoutCreateOrderView,
     ProductCheckoutVerifyView,
@@ -80,5 +81,9 @@ from .telemetry_views import (
     AppInstallTelemetryView,
     AdminAppAnalyticsView
 )
+from .platform_ai_assistant_views import (
+    PlatformAIAssistantChatView
+)
+from .competitor_analysis_views import CompetitorAnalysisViewSet
 
 

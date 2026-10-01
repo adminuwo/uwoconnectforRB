@@ -32,7 +32,7 @@ from .views import (
     WebRTCActiveCallCheckView, WebRTCCallActionView,
     CallScheduleView, CallAISummaryView, CallAnalyticsView, HealthCheckView,
     RazorpayOAuthInitiateView, RazorpayOAuthCallbackView, RazorpayConnectionStatusView,
-    RazorpayModeSwitchView, PublicProductCheckoutInfoView, ProductCheckoutCreateOrderView,
+    RazorpayModeSwitchView, RazorpayManualKeysView, PublicProductCheckoutInfoView, ProductCheckoutCreateOrderView,
     ProductCheckoutVerifyView, ProductCheckoutWebhookView, ClientProductSalesView,
     ClientSalesDashboardView, ClientRefundView,
     SuperAdminOverviewView, SuperAdminClientsListView, SuperAdminClientDetailDashboardView,
@@ -56,7 +56,8 @@ from .views import (
     AdminContentPreviewView, AdminContentRollbackView, AdminContentVersionsListView,
     AdminBannerManagementView, AdminMaintenanceConfigView, AdminFeatureFlagManagementView,
     AdminCMSAuditLogsView,
-    AppInstallTelemetryView, AdminAppAnalyticsView
+    AppInstallTelemetryView, AdminAppAnalyticsView,
+    PlatformAIAssistantChatView
 )
 from .views.whitelabel_views import WhiteLabelConfigView, SuperAdminWhiteLabelRevenueView
 from .views.agency_views import (
@@ -82,9 +83,11 @@ from .views.broadcast_entitlement_views import (
     BroadcastEntitlementSummaryView, BroadcastValidateView,
     BroadcastConsumeView, BroadcastRefundView
 )
+from .views.competitor_analysis_views import CompetitorAnalysisViewSet
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
+router.register(r'competitor-analysis', CompetitorAnalysisViewSet, basename='competitor-analysis')
 router.register(r'automations', AutomationViewSet, basename='automation')
 router.register(r'workflows', WorkflowViewSet, basename='workflow')
 router.register(r'contacts', ContactViewSet, basename='contact')
@@ -290,6 +293,9 @@ urlpatterns = [
     path('admin/users', AdminUsersView.as_view(), name='admin-users'),
     path('admin/users/<str:pk>', AdminUsersView.as_view(), name='admin-user-detail'),
     path('platform-assistant/', PlatformAssistantView.as_view(), name='platform-assistant'),
+    # Platform AI Assistant (Dedicated In-App Copilot)
+    path('platform/ai-assistant/chat', PlatformAIAssistantChatView.as_view(), name='platform-ai-assistant-chat'),
+    path('platform/ai-assistant/chat/', PlatformAIAssistantChatView.as_view()),
     path('admin/settings/global', GlobalSettingsView.as_view(), name='global-settings'),
     path('webhook/whatsapp', WhatsAppWebhookView.as_view(), name='whatsapp-webhook'),
     path('webhook/whatsapp/', WhatsAppWebhookView.as_view()),
@@ -499,6 +505,9 @@ urlpatterns = [
     path('razorpay/status/', RazorpayConnectionStatusView.as_view()),
     path('razorpay/mode', RazorpayModeSwitchView.as_view(), name='razorpay-mode'),
     path('razorpay/mode/', RazorpayModeSwitchView.as_view()),
+    # Direct API Keys Connection (Key ID & Secret)
+    path('razorpay/keys', RazorpayManualKeysView.as_view(), name='razorpay-manual-keys'),
+    path('razorpay/keys/', RazorpayManualKeysView.as_view()),
     # Product checkout (public — no auth needed for customer)
     path('razorpay/checkout/create-order', ProductCheckoutCreateOrderView.as_view(), name='razorpay-checkout-create'),
     path('razorpay/checkout/create-order/', ProductCheckoutCreateOrderView.as_view()),

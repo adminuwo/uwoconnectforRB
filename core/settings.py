@@ -284,6 +284,7 @@ elif os.getenv('AZURE_ACCOUNT_NAME'):
     AZURE_ACCOUNT_NAME = os.getenv('AZURE_ACCOUNT_NAME')
     AZURE_ACCOUNT_KEY = os.getenv('AZURE_ACCOUNT_KEY')
     AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
+    AZURE_URL_EXPIRATION_SECS = int(os.getenv('AZURE_URL_EXPIRATION_SECS', 86400 * 365 * 10))
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

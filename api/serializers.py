@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion
+from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion, CompetitorAnalysis
 from .repositories.contact_repository import ContactRepository
 from .repositories.workflow_repository import WorkflowRepository
 from .repositories.automation_repository import AutomationRepository
@@ -561,6 +561,13 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('client',)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('image_url'):
+            from .services.media_storage_service import sign_azure_url
+            data['image_url'] = sign_azure_url(data['image_url'])
+        return data
+
 
 class OrderSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
@@ -1117,10 +1124,36 @@ class SalesDocumentSerializer(serializers.ModelSerializer):
 class InvoiceSerializer(serializers.ModelSerializer):
     id = ObjectIdField(read_only=True)
     client = ObjectIdField(read_only=True)
-    order = serializers.CharField(source='order_id', required=False, allow_null=True)
-    contact = serializers.CharField(source='contact_id', required=False, allow_null=True)
-    payment_record = serializers.CharField(source='payment_record_id', required=False, allow_null=True)
+    order = serializers.CharField(source='order_id', required=False, allow_null=True, allow_blank=True)
+    contact = serializers.CharField(source='contact_id', required=False, allow_null=True, allow_blank=True)
+    payment_record = serializers.CharField(source='payment_record_id', required=False, allow_null=True, allow_blank=True)
     invoice_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate_order(self, value):
+        if not value or not str(value).strip():
+            return None
+        return value
+
+    def validate_contact(self, value):
+        if not value or not str(value).strip():
+            return None
+        return value
+
+    def validate_payment_record(self, value):
+        if not value or not str(value).strip():
+            return None
+        return value
+
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, 'copy') else dict(data)
+        decimal_fields = ['subtotal', 'discount', 'shipping', 'tax', 'total', 'amount_paid', 'balance_due']
+        for f in decimal_fields:
+            if f in data and data[f] is not None:
+                try:
+                    data[f] = round(float(data[f]), 2)
+                except (ValueError, TypeError):
+                    pass
+        return super().to_internal_value(data)
 
     class Meta:
         model = Invoice
@@ -1135,6 +1168,21 @@ class InvoiceSettingsSerializer(serializers.ModelSerializer):
             'invoice_prefix', 'invoice_next_number', 'company_logo_url',
             'tax_id_gstin', 'invoice_default_notes', 'payment_terms', 'invoice_footer'
         ]
+
+
+class CompetitorAnalysisSerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    _id = serializers.SerializerMethodField()
+    client_name = serializers.CharField(source='client.business_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = CompetitorAnalysis
+        fields = '__all__'
+        read_only_fields = ('client', 'created_by', 'status', 'created_at', 'updated_at')
+
+    def get__id(self, obj):
+        return str(obj.id)
 
 
 

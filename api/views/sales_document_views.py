@@ -320,15 +320,27 @@ class SalesDocumentViewSet(viewsets.ModelViewSet):
             segment = 'quote'
             
         secure_link = f"{frontend_url}/public/{segment}/{doc.secure_token}"
-        company_name = doc.client.business_name if (doc.client and doc.client.business_name) else "UWOConnect"
+        company_details = doc.company_details if isinstance(doc.company_details, dict) else {}
+        company_name = (
+            company_details.get('business_name')
+            or company_details.get('company_name')
+            or (doc.client.business_name if (doc.client and doc.client.business_name and doc.client.business_name.lower() != 'test') else None)
+            or (doc.client.business_name if doc.client else None)
+            or "UWOConnect"
+        )
         customer_name = doc.customer_name or "Valued Customer"
+        
+        try:
+            formatted_total = f"{float(doc.grand_total):.2f}"
+        except (ValueError, TypeError):
+            formatted_total = str(doc.grand_total)
         
         if doc_type == 'PROPOSAL':
             subject = f"{company_name} - Proposal #{doc.document_number}"
             message_body = (
                 f"Dear {customer_name},\n\n"
                 f"Please find your proposal #{doc.document_number} from {company_name} for your review.\n\n"
-                f"Total Amount: {doc.currency_symbol}{doc.grand_total}\n"
+                f"Total Amount: {doc.currency_symbol}{formatted_total}\n"
                 f"Validity: {doc.valid_until or 'N/A'}\n\n"
                 f"View, download, accept, or reject the proposal:\n"
                 f"{secure_link}\n\n"
@@ -340,7 +352,7 @@ class SalesDocumentViewSet(viewsets.ModelViewSet):
             message_body = (
                 f"Dear {customer_name},\n\n"
                 f"Please find quotation #{doc.document_number} from {company_name}.\n\n"
-                f"Total Amount: {doc.currency_symbol}{doc.grand_total}\n\n"
+                f"Total Amount: {doc.currency_symbol}{formatted_total}\n\n"
                 f"View and download the quotation:\n"
                 f"{secure_link}\n\n"
                 f"Regards,\n"
@@ -352,7 +364,7 @@ class SalesDocumentViewSet(viewsets.ModelViewSet):
             message_body = (
                 f"Dear {customer_name},\n\n"
                 f"Your invoice #{doc.document_number} from {company_name} is ready.\n\n"
-                f"Amount: {doc.currency_symbol}{doc.grand_total}\n"
+                f"Amount: {doc.currency_symbol}{formatted_total}\n"
                 f"Payment Status: {status_display}\n\n"
                 f"View and download your invoice:\n"
                 f"{secure_link}\n\n"

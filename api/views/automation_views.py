@@ -89,4 +89,42 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         AdminService.log_admin_action(self.request, instance, 'Workflows', 'DELETE', before_value=before_data)
         instance.delete()
 
+    @action(detail=False, methods=['post'], url_path='upload_media')
+    def upload_media(self, request):
+        """
+        POST /api/workflows/upload_media/
+        Uploads image or video for workflow steps directly to Azure Blob Storage under:
+        clients/client_{client_id}/workflows/{uuid}.{ext}
+        """
+        client = get_tenant_client(self.request)
+        if not client:
+            return Response({'error': 'Unauthorized tenant'}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES.get('file') or request.FILES.get('media') or request.FILES.get('image') or request.FILES.get('video')
+        if not file:
+            return Response({'error': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from ..services.media_storage_service import upload_tenant_media
+
+        try:
+            file_url, media_type, orig_name = upload_tenant_media(
+                client_id=client.id,
+                folder_name='workflows',
+                file=file,
+                max_size_mb=50
+            )
+
+            return Response({
+                'status': 'success',
+                'media_url': file_url,
+                'media_type': media_type,
+                'name': orig_name,
+                'size': file.size
+            }, status=status.HTTP_200_OK)
+        except ValueError as val_err:
+            return Response({'error': str(val_err)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f'Workflow media upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 

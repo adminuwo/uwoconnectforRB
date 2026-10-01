@@ -165,4 +165,6 @@ yt_data.json
 
 .git-rewrite/
 firebase-service-account.json
+firebase_service_account.json
+serviceAccountKey.json
 .env

@@ -59,6 +59,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         client = get_tenant_client(self.request)
+        if not client:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'No active client workspace associated with this user.'})
+
         inv_num = serializer.validated_data.get('invoice_number')
         if not inv_num:
             inv_num = InvoiceService.generate_next_invoice_number(client)
@@ -90,7 +94,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         if logo_in_details and logo_in_details != client.company_logo_url:
             client.company_logo_url = logo_in_details
             updated = True
-        if seller_details.get('company_name') and seller_details.get('company_name') != client.business_name:
+        if not client.business_name and seller_details.get('company_name'):
             client.business_name = seller_details.get('company_name')
             updated = True
         if seller_details.get('address') and seller_details.get('address') != client.address:
@@ -181,6 +185,121 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             })
         else:
             return Response({'error': 'PDF generation failed: ' + (invoice.error_log or 'Unknown error')}, status=500)
+
+    @action(detail=True, methods=['post'], url_path='send')
+    def send(self, request, pk=None):
+        """
+        POST /api/invoices/<id>/send/
+        Dispatch invoice link and details to customer via EMAIL or WHATSAPP.
+        """
+        client = get_tenant_client(request)
+        if not client:
+            return Response({'error': 'No associated client found'}, status=400)
+
+        try:
+            invoice = Invoice.objects.get(pk=pk, client=client)
+        except (Invoice.DoesNotExist, ValueError):
+            return Response({'error': 'Invoice not found'}, status=404)
+
+        channel = (request.data.get('channel') or 'EMAIL').upper()
+        recipient = request.data.get('recipient')
+
+        # Build secure link
+        env_frontend_url = os.getenv('NEXT_PUBLIC_APP_URL') or os.getenv('FRONTEND_URL') or os.getenv('PUBLIC_APP_URL')
+        request_frontend = request.data.get('frontend_url')
+
+        if env_frontend_url:
+            frontend_url = env_frontend_url.rstrip('/')
+        elif request_frontend:
+            frontend_url = request_frontend.rstrip('/')
+        else:
+            frontend_url = 'https://uwoconnect.aisa24.com'
+
+        secure_link = f"{frontend_url}/public/invoice/{invoice.secure_token}"
+
+        seller_details = invoice.seller_details if isinstance(invoice.seller_details, dict) else {}
+        company_name = (
+            seller_details.get('company_name')
+            or seller_details.get('business_name')
+            or (client.business_name if (client and client.business_name and client.business_name.lower() != 'test') else None)
+            or (client.business_name if client else None)
+            or "UWOConnect"
+        )
+
+        billing_details = invoice.billing_details if isinstance(invoice.billing_details, dict) else {}
+        customer_name = billing_details.get('name') or "Valued Customer"
+
+        try:
+            formatted_total = f"{float(invoice.total):.2f}"
+        except (ValueError, TypeError):
+            formatted_total = str(invoice.total)
+
+        status_display = invoice.payment_status or 'PAID'
+
+        subject = f"{company_name} - Invoice #{invoice.invoice_number}"
+        message_body = (
+            f"Dear {customer_name},\n\n"
+            f"Your invoice #{invoice.invoice_number} from {company_name} is ready.\n\n"
+            f"Amount: {invoice.currency_symbol}{formatted_total} {invoice.currency}\n"
+            f"Payment Status: {status_display}\n\n"
+            f"View and download your official invoice:\n"
+            f"{secure_link}\n\n"
+            f"Regards,\n"
+            f"{company_name}"
+        )
+
+        try:
+            from api.services.notification_service import SalesDocumentNotificationService
+            if channel == 'EMAIL':
+                if not recipient:
+                    recipient = billing_details.get('email')
+                if not recipient:
+                    return Response({'error': 'Recipient email address is required.'}, status=400)
+                SalesDocumentNotificationService.send_document_email(invoice, recipient, subject, message_body)
+            elif channel == 'WHATSAPP':
+                phone = request.data.get('phone') or recipient or billing_details.get('phone')
+                if not phone:
+                    return Response({'error': 'Recipient phone number is required.'}, status=400)
+                SalesDocumentNotificationService.send_document_whatsapp(invoice, phone, message_body)
+            else:
+                return Response({'error': f'Unsupported communication channel: {channel}'}, status=400)
+
+            return Response({
+                'success': True,
+                'message': f"Invoice #{invoice.invoice_number} sent via {channel.title()} successfully.",
+                'channel': channel,
+                'recipient': recipient or phone
+            })
+        except Exception as e:
+            logger.error(f"[InvoiceSendError] Failed to send invoice #{invoice.invoice_number}: {e}")
+            return Response({'error': str(e)}, status=500)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        DELETE /api/invoices/<id>/
+        Safely delete an invoice for the authenticated tenant and clean up any physical PDF files.
+        """
+        client = get_tenant_client(request)
+        if not client:
+            return Response({'error': 'No associated client found'}, status=400)
+
+        try:
+            invoice = Invoice.objects.get(pk=kwargs.get('pk'), client=client)
+        except (Invoice.DoesNotExist, ValueError):
+            return Response({'error': 'Invoice not found'}, status=404)
+
+        inv_number = invoice.invoice_number
+        if invoice.pdf_file_path and os.path.exists(invoice.pdf_file_path):
+            try:
+                os.remove(invoice.pdf_file_path)
+            except Exception as e:
+                logger.warning(f"Could not remove PDF file for invoice {inv_number}: {e}")
+
+        invoice.delete()
+        return Response({
+            'success': True,
+            'message': f"Invoice #{inv_number} deleted successfully."
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get', 'post'], url_path='settings')
     def settings_view(self, request):

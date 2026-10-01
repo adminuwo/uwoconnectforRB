@@ -38,10 +38,15 @@ class AuthService:
         if not email or not password:
             return {"error": "Email and password are required.", "status_code": 400}
 
-        user = authenticate(username=email, password=password)
+        clean_email = email.strip().lower()
+        user = authenticate(username=clean_email, password=password) or authenticate(username=email.strip(), password=password)
         
         if not user:
-            user_obj = UserRepository.filter_users(email=email).first()
+            user_obj = (
+                UserRepository.filter_users(email__iexact=clean_email).first() or
+                UserRepository.filter_users(email=clean_email).first() or
+                UserRepository.filter_users(email=email.strip()).first()
+            )
             if user_obj and user_obj.check_password(password):
                 user = user_obj
         

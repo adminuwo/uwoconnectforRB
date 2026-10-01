@@ -210,7 +210,7 @@ class GoogleCalendarService:
             res = create_calendar_event(
                 client_obj=client,
                 summary=f"Meeting with {customer_name}",
-                description="Booked automatically via UwoConnect AI.",
+                description="Booked automatically via UWO Connect™ AI.",
                 start_iso=start_iso,
                 duration_minutes=30
             )

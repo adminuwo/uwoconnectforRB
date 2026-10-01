@@ -363,6 +363,7 @@ class WorkflowEngine:
             res["buttons"] = data.get('buttons', [])
         elif node_type in ['image', 'video']:
             res["media_url"] = data.get('mediaUrl')
+            res["media_type"] = node_type
         elif node_type == 'catalog_product':
             product_id = data.get('productId')
             product = None
@@ -393,7 +394,9 @@ class WorkflowEngine:
 
             body_lines = [f"🛍️ *{name}*"]
             if price:
-                body_lines.append(f"💰 *Price*: ${price}")
+                curr_code = getattr(product, 'currency', 'INR') if product else 'INR'
+                sym = {'INR': '₹', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'AED '}.get((curr_code or '').upper(), f"{curr_code} ")
+                body_lines.append(f"💰 *Price*: {sym}{price}")
             if desc:
                 body_lines.append(f"_{desc}_")
 

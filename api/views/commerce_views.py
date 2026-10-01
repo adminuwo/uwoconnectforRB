@@ -16,8 +16,10 @@ from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocum
 import requests
 import os
 import json
-from ..services.ai_service import get_ai_response, get_platform_assistance, get_rag_response, get_embedding, chunk_text, find_relevant_chunks
 from rest_framework.permissions import BasePermission
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_tenant_client(request):
     if not request.user or not request.user.is_authenticated:
@@ -148,34 +150,26 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not file:
             return Response({'error': 'No image file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if file.size > 10 * 1024 * 1024:
-            return Response({'error': 'Image size must be under 10MB'}, status=status.HTTP_400_BAD_REQUEST)
-
-        import uuid
-        import os
-        from django.conf import settings
-        from django.core.files.storage import FileSystemStorage
-
-        ext = os.path.splitext(file.name)[1].lower()
-        if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg']:
-            ext = '.jpg'
-
-        client_id_str = str(getattr(client, 'id', 'default'))
-        fs = FileSystemStorage(location=settings.MEDIA_ROOT, base_url=settings.MEDIA_URL)
-        filename = f"products/{client_id_str}/{uuid.uuid4().hex}{ext}"
+        from ..services.media_storage_service import upload_tenant_media, ALLOWED_IMAGE_EXTS
 
         try:
-            saved_path = fs.save(filename, file)
-            file_url = fs.url(saved_path)
-            if not file_url.startswith('http'):
-                file_url = request.build_absolute_uri(file_url)
+            file_url, media_type, orig_name = upload_tenant_media(
+                client_id=client.id,
+                folder_name='catalog',
+                file=file,
+                allowed_exts=ALLOWED_IMAGE_EXTS,
+                max_size_mb=10
+            )
 
             return Response({
                 'status': 'success',
                 'image_url': file_url,
-                'name': file.name
+                'name': orig_name
             }, status=status.HTTP_200_OK)
+        except ValueError as val_err:
+            return Response({'error': str(val_err)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            logger.error(f"[CatalogImageUploadError] {e}")
             return Response({'error': f'Upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'])

@@ -24,7 +24,7 @@ class WelcomeEmailService:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to UwoConnect</title>
+  <title>Welcome to UWO Connect™</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f5f7;padding:36px 12px;">
@@ -37,7 +37,7 @@ class WelcomeEmailService:
               <div style="display:inline-block;background:rgba(255,255,255,0.18);padding:10px 22px;border-radius:30px;backdrop-filter:blur(4px);margin-bottom:14px;">
                 <span style="color:#ffffff;font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">⚡ Business Automation</span>
               </div>
-              <h1 style="color:#ffffff;margin:0;font-size:30px;font-weight:800;letter-spacing:-0.5px;">Welcome to UwoConnect!</h1>
+              <h1 style="color:#ffffff;margin:0;font-size:30px;font-weight:800;letter-spacing:-0.5px;">Welcome to UWO Connect™!</h1>
               <p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:15px;font-weight:400;">Your all-in-one customer communication powerhouse</p>
             </td>
           </tr>
@@ -47,7 +47,7 @@ class WelcomeEmailService:
             <td style="padding:36px 36px 28px;">
               <p style="margin:0 0 16px;font-size:17px;font-weight:600;color:#111827;">Hi {first_name},</p>
               <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#4b5563;">
-                We're absolutely thrilled to welcome you to <strong>UwoConnect</strong>! Your account is officially set up and ready to transform how you communicate with your customers, close deals, and automate day-to-day operations.
+                We're absolutely thrilled to welcome you to <strong>UWO Connect™</strong>! Your account is officially set up and ready to transform how you communicate with your customers, close deals, and automate day-to-day operations.
               </p>
 
               {credentials_block}
@@ -100,10 +100,10 @@ class WelcomeEmailService:
           <!-- Footer -->
           <tr>
             <td style="background-color:#f9fafb;padding:24px 36px;border-top:1px solid #f3f4f6;text-align:center;">
-              <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#111827;">UwoConnect</p>
+              <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#111827;">UWO Connect™</p>
               <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
                 Unified Communication &amp; Business Automation Platform<br>
-                &copy; 2026 UwoConnect. All rights reserved.
+                &copy; 2026 UWO Connect™. All rights reserved.
               </p>
             </td>
           </tr>
@@ -132,22 +132,22 @@ class WelcomeEmailService:
 
         def _dispatch():
             try:
-                subject = "Welcome to UwoConnect! 🚀 Let's Automate Your Business"
+                subject = "Welcome to UWO Connect™! 🚀 Let's Automate Your Business"
                 plain_text = (
                     f"Hi {name},\n\n"
-                    f"Welcome to UwoConnect!\n\n"
-                    f"Your account has been successfully created. UwoConnect is your all-in-one platform for "
+                    f"Welcome to UWO Connect™!\n\n"
+                    f"Your account has been successfully created. UWO Connect™ is your all-in-one platform for "
                     f"Unified Customer Messaging (WhatsApp, Instagram, Facebook), AI Automation, and CRM.\n\n"
                     f"{'Temporary Password: ' + temp_password + chr(10) if temp_password else ''}"
                     f"Access your dashboard here: {login_url}\n\n"
                     f"If you have any questions, reach us at support@uwoconnect.com.\n\n"
-                    f"Best regards,\nThe UwoConnect Team"
+                    f"Best regards,\nThe UWO Connect™ Team"
                 )
 
                 html_content = cls._build_html_template(name, login_url=login_url, temp_password=temp_password)
 
                 from_email = (
-                    f"UwoConnect <{settings.EMAIL_HOST_USER}>"
+                    f"UWO Connect™ <{settings.EMAIL_HOST_USER}>"
                     if getattr(settings, 'EMAIL_HOST_USER', None)
                     else getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@uwoconnect.app')
                 )

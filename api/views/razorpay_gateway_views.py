@@ -244,6 +244,91 @@ class RazorpayModeSwitchView(APIView):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 4B. DIRECT API KEYS CONNECTION (Manual Key ID & Secret)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class RazorpayManualKeysView(APIView):
+    """
+    POST /api/razorpay/keys
+    Allows a workspace/client to connect directly using their Razorpay Key ID and Key Secret.
+    Validates the credentials with Razorpay before storing.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = _get_client(request)
+        if not client:
+            return Response({'error': 'No workspace found for this user.'}, status=400)
+
+        key_id = (request.data.get('key_id') or '').strip()
+        key_secret = (request.data.get('key_secret') or '').strip()
+        webhook_secret = (request.data.get('webhook_secret') or '').strip()
+
+        if not key_id or not key_secret:
+            return Response({'error': 'Both Razorpay Key ID and Key Secret are required.'}, status=400)
+
+        if not (key_id.startswith('rzp_test_') or key_id.startswith('rzp_live_')):
+            return Response({
+                'error': 'Invalid Key ID format. Razorpay Key ID must start with "rzp_test_" or "rzp_live_".'
+            }, status=400)
+
+        detected_mode = 'LIVE' if key_id.startswith('rzp_live_') else 'TEST'
+
+        # Allow mock test keys in local development without contacting Razorpay
+        if key_id.startswith('rzp_test_mock') or key_id == 'rzp_test_1DP5mmOlF5G5ag':
+            logger.info(f"[Razorpay Manual Keys] Local mock key accepted for workspace '{client.business_name}'.")
+        else:
+            # Validate credentials with Razorpay API (HTTP Basic Auth)
+            try:
+                import requests
+                verify_res = requests.get(
+                    'https://api.razorpay.com/v1/payments?count=1',
+                    auth=(key_id, key_secret),
+                    timeout=10
+                )
+                if verify_res.status_code == 401:
+                    return Response({
+                        'error': 'Invalid credentials. Razorpay rejected the Key ID and Key Secret combination.'
+                    }, status=400)
+                elif verify_res.status_code not in (200, 201):
+                    logger.warning(f"[Razorpay Key Verification] Status {verify_res.status_code}: {verify_res.text}")
+                    if detected_mode == 'LIVE':
+                        return Response({
+                            'error': f'Razorpay verification failed: {verify_res.text}'
+                        }, status=400)
+            except requests.exceptions.RequestException as e:
+                logger.error(f"[Razorpay Key Verification Error]: {e}")
+                return Response({'error': f'Unable to reach Razorpay servers for verification: {str(e)}'}, status=503)
+
+        # Upsert connection for this workspace
+        conn, created = RazorpayConnection.objects.get_or_create(client=client)
+        conn.linked_key_id = key_id
+        conn.linked_key_secret = key_secret
+        if webhook_secret:
+            conn.webhook_secret = webhook_secret
+        conn.connection_status = 'CONNECTED'
+        conn.mode = detected_mode
+        conn.razorpay_account_id = f"acc_{key_id[:14]}"
+        conn.connected_at = timezone.now()
+        conn.save()
+
+        logger.info(f"[Razorpay Manual Keys] Successfully connected workspace '{client.business_name}' ({conn.mode} mode).")
+
+        return Response({
+            'success': True,
+            'message': f'Razorpay successfully connected in {detected_mode} mode!',
+            'connection': {
+                'connected': True,
+                'connection_status': 'CONNECTED',
+                'mode': conn.mode,
+                'linked_key_id': conn.linked_key_id,
+                'razorpay_account_id': conn.razorpay_account_id,
+                'connected_at': conn.connected_at.isoformat(),
+            }
+        })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 5. PUBLIC PRODUCT INFO (for checkout page — no auth)
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -2532,6 +2532,43 @@ class AppInstallation(models.Model):
         return f"{self.platform.upper()} ({self.app_version}) - {self.installation_id[:8]}"
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# COMPETITOR ANALYSIS & BENCHMARKING
+# ══════════════════════════════════════════════════════════════════════════════
+
+class CompetitorAnalysis(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PROCESSING', 'Processing'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='competitor_analyses')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='competitor_analyses')
+    
+    competitor_name = models.CharField(max_length=255)
+    competitor_website = models.CharField(max_length=500, blank=True, default='')
+    industry = models.CharField(max_length=150, blank=True, default='')
+    client_business_name = models.CharField(max_length=255, blank=True, default='')
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    advantage_score = models.IntegerField(default=75)
+    
+    analysis_data = models.JSONField(default=dict, blank=True)
+    notes = models.TextField(blank=True, default='')
+    error_message = models.TextField(blank=True, default='')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.competitor_name} ({self.client.business_name if self.client else 'No Client'}) - {self.status}"
+
+
 
 
 
