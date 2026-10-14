@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone as dt_timezone
 from collections import defaultdict
 from django.utils import timezone
 from django.db.models import Count, Q
@@ -499,15 +499,15 @@ class ClientPlatformOverviewView(APIView):
         def sort_key_fn(item):
             val = item.get(sort_field)
             if val is None:
-                return timezone.datetime.min.replace(tzinfo=timezone.utc) if 'dt' in sort_field or 'at' in sort_field else ''
+                return datetime.min.replace(tzinfo=dt_timezone.utc) if 'dt' in sort_field or 'at' in sort_field else ''
             return val
 
         if sort_field == 'last_active_at':
-            filtered.sort(key=lambda x: x['last_active_dt'] or timezone.datetime.min.replace(tzinfo=timezone.utc), reverse=reverse_sort)
+            filtered.sort(key=lambda x: x['last_active_dt'] or datetime.min.replace(tzinfo=dt_timezone.utc), reverse=reverse_sort)
         elif sort_field in ['business_name', 'owner_name', 'status', 'primary_platform']:
             filtered.sort(key=lambda x: (x.get(sort_field) or '').lower(), reverse=reverse_sort)
         else:
-            filtered.sort(key=lambda x: x['last_active_dt'] or timezone.datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+            filtered.sort(key=lambda x: x['last_active_dt'] or datetime.min.replace(tzinfo=dt_timezone.utc), reverse=True)
 
         # Pagination
         total_filtered = len(filtered)

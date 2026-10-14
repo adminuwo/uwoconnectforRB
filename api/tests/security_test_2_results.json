@@ -16,7 +16,7 @@
     },
     {
       "name": "CRM Contact Detail (Own)",
-      "url": "/api/contacts/6a9a64f4b527a15c607c8b36/",
+      "url": "/api/contacts/6ac620ae069a6dd7928e3e5f/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -30,7 +30,7 @@
     },
     {
       "name": "Conversation Detail (Own)",
-      "url": "/api/conversations/6a9a64f4b527a15c607c8b37/",
+      "url": "/api/conversations/6ac620ae069a6dd7928e3e60/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -44,7 +44,7 @@
     },
     {
       "name": "Workflow Detail (Own)",
-      "url": "/api/workflows/6a9a64f4b527a15c607c8b39/",
+      "url": "/api/workflows/6ac620ae069a6dd7928e3e62/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -58,7 +58,7 @@
     },
     {
       "name": "Invoice Detail (Own)",
-      "url": "/api/invoices/6a9a64f4b527a15c607c8b3d/",
+      "url": "/api/invoices/6ac620ae069a6dd7928e3e66/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -72,7 +72,7 @@
     },
     {
       "name": "Quotation Detail (Own)",
-      "url": "/api/quotations/6a9a64f4b527a15c607c8b3e/",
+      "url": "/api/quotations/6ac620ae069a6dd7928e3e67/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -86,7 +86,7 @@
     },
     {
       "name": "Product Detail (Own)",
-      "url": "/api/products/6a9a64f4b527a15c607c8b3b/",
+      "url": "/api/products/6ac620ae069a6dd7928e3e64/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -100,7 +100,7 @@
     },
     {
       "name": "Order Detail (Own)",
-      "url": "/api/orders/6a9a64f4b527a15c607c8b3c/",
+      "url": "/api/orders/6ac620ae069a6dd7928e3e65/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -114,7 +114,7 @@
     },
     {
       "name": "Project Detail (Own)",
-      "url": "/api/team/projects/6a9a64f4b527a15c607c8b3f/",
+      "url": "/api/team/projects/6ac620af069a6dd7928e3e68/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -128,7 +128,7 @@
     },
     {
       "name": "Task Detail (Own)",
-      "url": "/api/team/tasks/6a9a64f4b527a15c607c8b40/",
+      "url": "/api/team/tasks/6ac620af069a6dd7928e3e69/",
       "expected": 200,
       "actual": 200,
       "passed": true
@@ -188,11 +188,11 @@
     {
       "name": "Admin Bulk Channel Access",
       "url": "/api/admin/channel-access/bulk/",
-      "super_admin": 405,
-      "client_admin": 405,
-      "agent": 405,
+      "super_admin": 200,
+      "client_admin": 403,
+      "agent": 403,
       "guest": 401,
-      "passed": false
+      "passed": true
     },
     {
       "name": "Admin All Team Directory",
@@ -226,9 +226,9 @@
       "url": "/api/audit-logs/",
       "super_admin": 200,
       "client_admin": 200,
-      "agent": 200,
+      "agent": 403,
       "guest": 401,
-      "passed": false
+      "passed": true
     },
     {
       "name": "Team Attendance Management",
@@ -271,7 +271,7 @@
     {
       "scenario": "BOLA: Read Tenant B Contact",
       "method": "GET",
-      "url": "/api/contacts/6a9a64f4b527a15c607c8b41/",
+      "url": "/api/contacts/6ac620af069a6dd7928e3e6a/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -279,7 +279,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Contact",
       "method": "PATCH",
-      "url": "/api/contacts/6a9a64f4b527a15c607c8b41/",
+      "url": "/api/contacts/6ac620af069a6dd7928e3e6a/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -287,7 +287,7 @@
     {
       "scenario": "BOLA: Delete Tenant B Contact",
       "method": "DELETE",
-      "url": "/api/contacts/6a9a64f4b527a15c607c8b41/",
+      "url": "/api/contacts/6ac620af069a6dd7928e3e6a/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -295,7 +295,7 @@
     {
       "scenario": "BOLA: Read Tenant B Conversation",
       "method": "GET",
-      "url": "/api/conversations/6a9a64f4b527a15c607c8b42/",
+      "url": "/api/conversations/6ac620af069a6dd7928e3e6b/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -303,7 +303,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Conversation",
       "method": "PATCH",
-      "url": "/api/conversations/6a9a64f4b527a15c607c8b42/",
+      "url": "/api/conversations/6ac620af069a6dd7928e3e6b/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -311,7 +311,7 @@
     {
       "scenario": "BOLA: Read Tenant B Workflow",
       "method": "GET",
-      "url": "/api/workflows/6a9a64f5b527a15c607c8b44/",
+      "url": "/api/workflows/6ac620af069a6dd7928e3e6d/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -319,7 +319,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Workflow",
       "method": "PATCH",
-      "url": "/api/workflows/6a9a64f5b527a15c607c8b44/",
+      "url": "/api/workflows/6ac620af069a6dd7928e3e6d/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -327,7 +327,7 @@
     {
       "scenario": "BOLA: Read Tenant B Automation",
       "method": "GET",
-      "url": "/api/automations/6a9a64f5b527a15c607c8b45/",
+      "url": "/api/automations/6ac620af069a6dd7928e3e6e/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -335,7 +335,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Automation",
       "method": "PATCH",
-      "url": "/api/automations/6a9a64f5b527a15c607c8b45/",
+      "url": "/api/automations/6ac620af069a6dd7928e3e6e/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -343,7 +343,7 @@
     {
       "scenario": "BOLA: Read Tenant B Invoice",
       "method": "GET",
-      "url": "/api/invoices/6a9a64f5b527a15c607c8b48/",
+      "url": "/api/invoices/6ac620af069a6dd7928e3e71/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -351,7 +351,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Invoice",
       "method": "PATCH",
-      "url": "/api/invoices/6a9a64f5b527a15c607c8b48/",
+      "url": "/api/invoices/6ac620af069a6dd7928e3e71/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -359,7 +359,7 @@
     {
       "scenario": "BOLA: Read Tenant B Quotation",
       "method": "GET",
-      "url": "/api/quotations/6a9a64f5b527a15c607c8b49/",
+      "url": "/api/quotations/6ac620af069a6dd7928e3e72/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -367,7 +367,7 @@
     {
       "scenario": "BOLA: Read Tenant B Proposal",
       "method": "GET",
-      "url": "/api/proposals/6a9a64f5b527a15c607c8b49/",
+      "url": "/api/proposals/6ac620af069a6dd7928e3e72/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -375,7 +375,7 @@
     {
       "scenario": "BOLA: Read Tenant B Product",
       "method": "GET",
-      "url": "/api/products/6a9a64f5b527a15c607c8b46/",
+      "url": "/api/products/6ac620af069a6dd7928e3e6f/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -383,7 +383,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Product",
       "method": "PATCH",
-      "url": "/api/products/6a9a64f5b527a15c607c8b46/",
+      "url": "/api/products/6ac620af069a6dd7928e3e6f/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -391,7 +391,7 @@
     {
       "scenario": "BOLA: Read Tenant B Order",
       "method": "GET",
-      "url": "/api/orders/6a9a64f5b527a15c607c8b47/",
+      "url": "/api/orders/6ac620af069a6dd7928e3e70/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -399,7 +399,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Order",
       "method": "PATCH",
-      "url": "/api/orders/6a9a64f5b527a15c607c8b47/",
+      "url": "/api/orders/6ac620af069a6dd7928e3e70/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -407,7 +407,7 @@
     {
       "scenario": "BOLA: Read Tenant B Project",
       "method": "GET",
-      "url": "/api/team/projects/6a9a64f5b527a15c607c8b4a/",
+      "url": "/api/team/projects/6ac620af069a6dd7928e3e73/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -415,7 +415,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Project",
       "method": "PATCH",
-      "url": "/api/team/projects/6a9a64f5b527a15c607c8b4a/",
+      "url": "/api/team/projects/6ac620af069a6dd7928e3e73/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -423,7 +423,7 @@
     {
       "scenario": "BOLA: Read Tenant B Task",
       "method": "GET",
-      "url": "/api/team/tasks/6a9a64f5b527a15c607c8b4b/",
+      "url": "/api/team/tasks/6ac620af069a6dd7928e3e74/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true
@@ -431,7 +431,7 @@
     {
       "scenario": "BOLA: Mutate Tenant B Task",
       "method": "PATCH",
-      "url": "/api/team/tasks/6a9a64f5b527a15c607c8b4b/",
+      "url": "/api/team/tasks/6ac620af069a6dd7928e3e74/",
       "status_code": 404,
       "confidential_data_leaked": false,
       "is_safe": true

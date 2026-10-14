@@ -1,0 +1,4426 @@
+{
+  "total_registered_patterns": 819,
+  "total_evaluated_endpoints": 428,
+  "healthy_endpoints": 428,
+  "crashed_500_endpoints": 0,
+  "health_percentage": 100.0,
+  "average_latency_ms": 312.8,
+  "total_duration_seconds": 134.63,
+  "status_distribution": {
+    "200": 187,
+    "301": 92,
+    "400": 67,
+    "403": 3,
+    "404": 48,
+    "405": 3,
+    "401": 17,
+    "201": 2,
+    "302": 8,
+    "415": 1
+  },
+  "top_slow_endpoints": [
+    {
+      "url": "/api/admin/clients/6a5338debec6daea1165d2b3/dashboard/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 10868.8
+    },
+    {
+      "url": "/api/email/messages/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 10707.0
+    },
+    {
+      "url": "/api/client/entitlements/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 9902.3
+    },
+    {
+      "url": "/api/client/select-channel/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 9320.1
+    },
+    {
+      "url": "/api/client/subscribe/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 9096.3
+    },
+    {
+      "url": "/api/admin/clients-directory/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 8246.0
+    },
+    {
+      "url": "/api/competitor-analysis/discover/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 6697.8
+    },
+    {
+      "url": "/api/quotations/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 4556.0
+    },
+    {
+      "url": "/api/sales-documents/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 4313.3
+    },
+    {
+      "url": "/api/proposals/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 4106.7
+    },
+    {
+      "url": "/api/admin/client-intelligence/stats/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 3538.4
+    },
+    {
+      "url": "/api/contacts/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 3473.4
+    },
+    {
+      "url": "/api/admin/wallet/overview/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 2408.3
+    },
+    {
+      "url": "/api/admin/app-analytics/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 1951.4
+    },
+    {
+      "url": "/api/admin/clients/6a5338debec6daea1165d2b3/details/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 1718.7
+    },
+    {
+      "url": "/api/admin/client-intelligence/clients/6a5338debec6daea1165d2b3/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 1677.0
+    },
+    {
+      "url": "/api/youtube/videos/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 1672.6
+    },
+    {
+      "url": "/api/youtube/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "duration_ms": 1641.3
+    },
+    {
+      "url": "/api/admin/content/",
+      "role": "ADMIN",
+      "status": 200,
+      "duration_ms": 1598.6
+    },
+    {
+      "url": "/api/payments/create-order/",
+      "role": "CLIENT",
+      "status": 201,
+      "duration_ms": 1459.8
+    }
+  ],
+  "timestamp": "2026-10-07 16:30:17",
+  "endpoints": [
+    {
+      "num": 1,
+      "url": "/",
+      "raw_pattern": "",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 2,
+      "url": "/health/",
+      "raw_pattern": "health",
+      "role": "ANON",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 43.9
+    },
+    {
+      "num": 3,
+      "url": "/robots.txt",
+      "raw_pattern": "robots.txt",
+      "role": "ANON",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 4,
+      "url": "/sitemap.xml",
+      "raw_pattern": "sitemap.xml",
+      "role": "ANON",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 5,
+      "url": "/api/plans/public/",
+      "raw_pattern": "api/plans/public/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 139.8
+    },
+    {
+      "num": 6,
+      "url": "/api/client/entitlements/",
+      "raw_pattern": "api/client/entitlements/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 9902.3
+    },
+    {
+      "num": 7,
+      "url": "/api/client/select-channel/",
+      "raw_pattern": "api/client/select-channel/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 9320.1
+    },
+    {
+      "num": 8,
+      "url": "/api/client/subscribe/",
+      "raw_pattern": "api/client/subscribe/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 9096.3
+    },
+    {
+      "num": 9,
+      "url": "/api/clients/",
+      "raw_pattern": "api/^clients/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 117.3
+    },
+    {
+      "num": 10,
+      "url": "/api/clients/(?P1[/.]+)/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 67.2
+    },
+    {
+      "num": 11,
+      "url": "/api/clients/(?P1[/.]+)/disconnect_meta/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/disconnect_meta/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 17.0
+    },
+    {
+      "num": 12,
+      "url": "/api/clients/(?P1[/.]+)/get_whatsapp_business_profile/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/get_whatsapp_business_profile/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 42.5
+    },
+    {
+      "num": 13,
+      "url": "/api/clients/(?P1[/.]+)/get_whatsapp_profile_picture/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/get_whatsapp_profile_picture/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.3
+    },
+    {
+      "num": 14,
+      "url": "/api/clients/(?P1[/.]+)/reactivate/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/reactivate/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 27.5
+    },
+    {
+      "num": 15,
+      "url": "/api/clients/(?P1[/.]+)/reset_ai/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/reset_ai/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 18.6
+    },
+    {
+      "num": 16,
+      "url": "/api/clients/(?P1[/.]+)/reset_workflows/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/reset_workflows/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.1
+    },
+    {
+      "num": 17,
+      "url": "/api/clients/(?P1[/.]+)/suspend/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/suspend/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 35.6
+    },
+    {
+      "num": 18,
+      "url": "/api/clients/(?P1[/.]+)/toggle_feature/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/toggle_feature/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.8
+    },
+    {
+      "num": 19,
+      "url": "/api/clients/(?P1[/.]+)/update_whatsapp_business_profile/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/update_whatsapp_business_profile/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 19.3
+    },
+    {
+      "num": 20,
+      "url": "/api/clients/(?P1[/.]+)/update_whatsapp_profile_picture/",
+      "raw_pattern": "api/^clients/(?P<pk>[^/.]+)/update_whatsapp_profile_picture/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 21,
+      "url": "/api/competitor-analysis/",
+      "raw_pattern": "api/^competitor-analysis/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.0
+    },
+    {
+      "num": 22,
+      "url": "/api/competitor-analysis/discover/",
+      "raw_pattern": "api/^competitor-analysis/discover/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 6697.8
+    },
+    {
+      "num": 23,
+      "url": "/api/competitor-analysis/stats/",
+      "raw_pattern": "api/^competitor-analysis/stats/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 28.9
+    },
+    {
+      "num": 24,
+      "url": "/api/competitor-analysis/(?P1[/.]+)/",
+      "raw_pattern": "api/^competitor-analysis/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 34.7
+    },
+    {
+      "num": 25,
+      "url": "/api/competitor-analysis/(?P1[/.]+)/reanalyze/",
+      "raw_pattern": "api/^competitor-analysis/(?P<pk>[^/.]+)/reanalyze/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.9
+    },
+    {
+      "num": 26,
+      "url": "/api/automations/",
+      "raw_pattern": "api/^automations/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 368.7
+    },
+    {
+      "num": 27,
+      "url": "/api/automations/(?P1[/.]+)/",
+      "raw_pattern": "api/^automations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 31.7
+    },
+    {
+      "num": 28,
+      "url": "/api/workflows/",
+      "raw_pattern": "api/^workflows/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 172.1
+    },
+    {
+      "num": 29,
+      "url": "/api/workflows/upload_media/",
+      "raw_pattern": "api/^workflows/upload_media/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 30,
+      "url": "/api/workflows/(?P1[/.]+)/",
+      "raw_pattern": "api/^workflows/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.5
+    },
+    {
+      "num": 31,
+      "url": "/api/contacts/",
+      "raw_pattern": "api/^contacts/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3473.4
+    },
+    {
+      "num": 32,
+      "url": "/api/contacts/export_csv/",
+      "raw_pattern": "api/^contacts/export_csv/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 98.4
+    },
+    {
+      "num": 33,
+      "url": "/api/contacts/import_csv/",
+      "raw_pattern": "api/^contacts/import_csv/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 34,
+      "url": "/api/contacts/upcoming_followups/",
+      "raw_pattern": "api/^contacts/upcoming_followups/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.6
+    },
+    {
+      "num": 35,
+      "url": "/api/contacts/(?P1[/.]+)/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 14.9
+    },
+    {
+      "num": 36,
+      "url": "/api/contacts/(?P1[/.]+)/follow_ups/create/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/follow_ups/create/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 31.9
+    },
+    {
+      "num": 37,
+      "url": "/api/contacts/(?P1[/.]+)/follow_ups/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/follow_ups/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 32.5
+    },
+    {
+      "num": 38,
+      "url": "/api/contacts/(?P1[/.]+)/follow_ups/6a5338debec6daea1165d2b3/update/",
+      "raw_pattern": "api/^contacts/(?P<pk>[^/.]+)/follow_ups/(?P<fid>[^/.]+)/update/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 39,
+      "url": "/api/conversations/",
+      "raw_pattern": "api/^conversations/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 167.3
+    },
+    {
+      "num": 40,
+      "url": "/api/conversations/(?P1[/.]+)/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 42.9
+    },
+    {
+      "num": 41,
+      "url": "/api/conversations/(?P1[/.]+)/add_note/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/add_note/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 31.1
+    },
+    {
+      "num": 42,
+      "url": "/api/conversations/(?P1[/.]+)/audit_logs/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/audit_logs/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 27.6
+    },
+    {
+      "num": 43,
+      "url": "/api/conversations/(?P1[/.]+)/lock_toggle/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/lock_toggle/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.3
+    },
+    {
+      "num": 44,
+      "url": "/api/conversations/(?P1[/.]+)/mark_read/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/mark_read/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 15.5
+    },
+    {
+      "num": 45,
+      "url": "/api/conversations/(?P1[/.]+)/resume_bot/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/resume_bot/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 32.9
+    },
+    {
+      "num": 46,
+      "url": "/api/conversations/(?P1[/.]+)/takeover/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/takeover/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 47,
+      "url": "/api/conversations/(?P1[/.]+)/transfer/",
+      "raw_pattern": "api/^conversations/(?P<pk>[^/.]+)/transfer/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 16.8
+    },
+    {
+      "num": 48,
+      "url": "/api/templates/",
+      "raw_pattern": "api/^templates/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 155.7
+    },
+    {
+      "num": 49,
+      "url": "/api/templates/sync_from_meta/",
+      "raw_pattern": "api/^templates/sync_from_meta/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 50,
+      "url": "/api/templates/(?P1[/.]+)/",
+      "raw_pattern": "api/^templates/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 21.5
+    },
+    {
+      "num": 51,
+      "url": "/api/campaigns/",
+      "raw_pattern": "api/^campaigns/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 644.3
+    },
+    {
+      "num": 52,
+      "url": "/api/campaigns/ai_generate/",
+      "raw_pattern": "api/^campaigns/ai_generate/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 53,
+      "url": "/api/campaigns/parse_excel/",
+      "raw_pattern": "api/^campaigns/parse_excel/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 54,
+      "url": "/api/campaigns/(?P1[/.]+)/",
+      "raw_pattern": "api/^campaigns/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 114.1
+    },
+    {
+      "num": 55,
+      "url": "/api/campaigns/(?P1[/.]+)/retry_failed/",
+      "raw_pattern": "api/^campaigns/(?P<pk>[^/.]+)/retry_failed/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 24.4
+    },
+    {
+      "num": 56,
+      "url": "/api/support/messages/",
+      "raw_pattern": "api/^support/messages/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 201.5
+    },
+    {
+      "num": 57,
+      "url": "/api/support/messages/clients/",
+      "raw_pattern": "api/^support/messages/clients/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 58,
+      "url": "/api/support/messages/(?P1[/.]+)/",
+      "raw_pattern": "api/^support/messages/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 49.8
+    },
+    {
+      "num": 59,
+      "url": "/api/audit-logs/",
+      "raw_pattern": "api/^audit-logs/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 60,
+      "url": "/api/audit-logs/(?P1[/.]+)/",
+      "raw_pattern": "api/^audit-logs/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 16.0
+    },
+    {
+      "num": 61,
+      "url": "/api/team/members/",
+      "raw_pattern": "api/^team/members/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 155.8
+    },
+    {
+      "num": 62,
+      "url": "/api/team/members/connected_social_channels/",
+      "raw_pattern": "api/^team/members/connected_social_channels/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 63,
+      "url": "/api/team/members/live_activity/",
+      "raw_pattern": "api/^team/members/live_activity/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 31.2
+    },
+    {
+      "num": 64,
+      "url": "/api/team/members/login_monitoring/",
+      "raw_pattern": "api/^team/members/login_monitoring/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 65,
+      "url": "/api/team/members/(?P1[/.]+)/",
+      "raw_pattern": "api/^team/members/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.4
+    },
+    {
+      "num": 66,
+      "url": "/api/team/members/(?P1[/.]+)/suspend/",
+      "raw_pattern": "api/^team/members/(?P<pk>[^/.]+)/suspend/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 43.0
+    },
+    {
+      "num": 67,
+      "url": "/api/team/members/(?P1[/.]+)/update_permissions/",
+      "raw_pattern": "api/^team/members/(?P<pk>[^/.]+)/update_permissions/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 29.2
+    },
+    {
+      "num": 68,
+      "url": "/api/team/projects/",
+      "raw_pattern": "api/^team/projects/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 240.3
+    },
+    {
+      "num": 69,
+      "url": "/api/team/projects/(?P1[/.]+)/",
+      "raw_pattern": "api/^team/projects/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.7
+    },
+    {
+      "num": 70,
+      "url": "/api/team/tasks/",
+      "raw_pattern": "api/^team/tasks/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 26.4
+    },
+    {
+      "num": 71,
+      "url": "/api/team/tasks/(?P1[/.]+)/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 72,
+      "url": "/api/team/tasks/(?P1[/.]+)/add_comment/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/add_comment/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 34.7
+    },
+    {
+      "num": 73,
+      "url": "/api/team/tasks/(?P1[/.]+)/clone/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/clone/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 30.5
+    },
+    {
+      "num": 74,
+      "url": "/api/team/tasks/(?P1[/.]+)/submit_for_approval/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/submit_for_approval/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 17.6
+    },
+    {
+      "num": 75,
+      "url": "/api/team/tasks/(?P1[/.]+)/toggle_checklist/",
+      "raw_pattern": "api/^team/tasks/(?P<pk>[^/.]+)/toggle_checklist/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 76,
+      "url": "/api/team/attendance/",
+      "raw_pattern": "api/^team/attendance/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 148.8
+    },
+    {
+      "num": 77,
+      "url": "/api/team/attendance/clock_in/",
+      "raw_pattern": "api/^team/attendance/clock_in/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 99.3
+    },
+    {
+      "num": 78,
+      "url": "/api/team/attendance/clock_out/",
+      "raw_pattern": "api/^team/attendance/clock_out/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 161.9
+    },
+    {
+      "num": 79,
+      "url": "/api/team/attendance/(?P1[/.]+)/",
+      "raw_pattern": "api/^team/attendance/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.1
+    },
+    {
+      "num": 80,
+      "url": "/api/team/leaves/",
+      "raw_pattern": "api/^team/leaves/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.1
+    },
+    {
+      "num": 81,
+      "url": "/api/team/leaves/(?P1[/.]+)/",
+      "raw_pattern": "api/^team/leaves/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.1
+    },
+    {
+      "num": 82,
+      "url": "/api/team/leaves/(?P1[/.]+)/approve/",
+      "raw_pattern": "api/^team/leaves/(?P<pk>[^/.]+)/approve/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 37.4
+    },
+    {
+      "num": 83,
+      "url": "/api/products/",
+      "raw_pattern": "api/^products/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 101.3
+    },
+    {
+      "num": 84,
+      "url": "/api/products/analytics/",
+      "raw_pattern": "api/^products/analytics/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 26.2
+    },
+    {
+      "num": 85,
+      "url": "/api/products/bulk_action/",
+      "raw_pattern": "api/^products/bulk_action/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 86,
+      "url": "/api/products/import_csv/",
+      "raw_pattern": "api/^products/import_csv/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.7
+    },
+    {
+      "num": 87,
+      "url": "/api/products/upload_image/",
+      "raw_pattern": "api/^products/upload_image/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 88,
+      "url": "/api/products/(?P1[/.]+)/",
+      "raw_pattern": "api/^products/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 34.1
+    },
+    {
+      "num": 89,
+      "url": "/api/products/(?P1[/.]+)/redirect_link/",
+      "raw_pattern": "api/^products/(?P<pk>[^/.]+)/redirect_link/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 23.5
+    },
+    {
+      "num": 90,
+      "url": "/api/products/(?P1[/.]+)/track_click/",
+      "raw_pattern": "api/^products/(?P<pk>[^/.]+)/track_click/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 91,
+      "url": "/api/orders/",
+      "raw_pattern": "api/^orders/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.4
+    },
+    {
+      "num": 92,
+      "url": "/api/orders/(?P1[/.]+)/",
+      "raw_pattern": "api/^orders/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 29.4
+    },
+    {
+      "num": 93,
+      "url": "/api/guides/",
+      "raw_pattern": "api/^guides/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 695.2
+    },
+    {
+      "num": 94,
+      "url": "/api/guides/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/^guides/(?P<slug>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.3
+    },
+    {
+      "num": 95,
+      "url": "/api/guides/6a5338debec6daea1165d2b3/add_section/",
+      "raw_pattern": "api/^guides/(?P<slug>[^/.]+)/add_section/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 28.1
+    },
+    {
+      "num": 96,
+      "url": "/api/guides/6a5338debec6daea1165d2b3/add_step/",
+      "raw_pattern": "api/^guides/(?P<slug>[^/.]+)/add_step/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 27.4
+    },
+    {
+      "num": 97,
+      "url": "/api/email/accounts/",
+      "raw_pattern": "api/^email/accounts/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 178.3
+    },
+    {
+      "num": 98,
+      "url": "/api/email/accounts/(?P1[/.]+)/",
+      "raw_pattern": "api/^email/accounts/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 30.1
+    },
+    {
+      "num": 99,
+      "url": "/api/email/messages/",
+      "raw_pattern": "api/^email/messages/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 10707.0
+    },
+    {
+      "num": 100,
+      "url": "/api/email/messages/process_scheduled/",
+      "raw_pattern": "api/^email/messages/process_scheduled/$",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.4
+    },
+    {
+      "num": 101,
+      "url": "/api/email/messages/(?P1[/.]+)/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 31.3
+    },
+    {
+      "num": 102,
+      "url": "/api/email/messages/(?P1[/.]+)/add_note/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/add_note/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 30.3
+    },
+    {
+      "num": 103,
+      "url": "/api/email/messages/(?P1[/.]+)/delete_message/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/delete_message/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 29.3
+    },
+    {
+      "num": 104,
+      "url": "/api/email/messages/(?P1[/.]+)/mark_read/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/mark_read/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 29.3
+    },
+    {
+      "num": 105,
+      "url": "/api/email/messages/(?P1[/.]+)/move_folder/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/move_folder/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 29.5
+    },
+    {
+      "num": 106,
+      "url": "/api/email/messages/(?P1[/.]+)/schedule_action/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/schedule_action/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 30.4
+    },
+    {
+      "num": 107,
+      "url": "/api/email/messages/(?P1[/.]+)/toggle_star/",
+      "raw_pattern": "api/^email/messages/(?P<pk>[^/.]+)/toggle_star/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.5
+    },
+    {
+      "num": 108,
+      "url": "/api/email/auto-replies/",
+      "raw_pattern": "api/^email/auto-replies/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 148.3
+    },
+    {
+      "num": 109,
+      "url": "/api/email/auto-replies/(?P1[/.]+)/",
+      "raw_pattern": "api/^email/auto-replies/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 30.8
+    },
+    {
+      "num": 110,
+      "url": "/api/email/automations/",
+      "raw_pattern": "api/^email/automations/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.0
+    },
+    {
+      "num": 111,
+      "url": "/api/email/automations/(?P1[/.]+)/",
+      "raw_pattern": "api/^email/automations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 30.2
+    },
+    {
+      "num": 112,
+      "url": "/api/sales-documents/",
+      "raw_pattern": "api/^sales-documents/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4313.3
+    },
+    {
+      "num": 113,
+      "url": "/api/sales-documents/(?P1[/.]+)/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 22.9
+    },
+    {
+      "num": 114,
+      "url": "/api/sales-documents/(?P1[/.]+)/activity/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/activity/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 115,
+      "url": "/api/sales-documents/(?P1[/.]+)/convert_invoice/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/convert_invoice/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 116,
+      "url": "/api/sales-documents/(?P1[/.]+)/duplicate/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/duplicate/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 17.5
+    },
+    {
+      "num": 117,
+      "url": "/api/sales-documents/(?P1[/.]+)/pdf/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/pdf/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 32.6
+    },
+    {
+      "num": 118,
+      "url": "/api/sales-documents/(?P1[/.]+)/send/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/send/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 119,
+      "url": "/api/sales-documents/(?P1[/.]+)/versions/",
+      "raw_pattern": "api/^sales-documents/(?P<pk>[^/.]+)/versions/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 35.5
+    },
+    {
+      "num": 120,
+      "url": "/api/sales-document-templates/",
+      "raw_pattern": "api/^sales-document-templates/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 98.1
+    },
+    {
+      "num": 121,
+      "url": "/api/sales-document-templates/(?P1[/.]+)/",
+      "raw_pattern": "api/^sales-document-templates/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 16.6
+    },
+    {
+      "num": 122,
+      "url": "/api/invoices/",
+      "raw_pattern": "api/^invoices/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 194.8
+    },
+    {
+      "num": 123,
+      "url": "/api/invoices/by-customer/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/^invoices/by-customer/(?P<customer_id>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 20.2
+    },
+    {
+      "num": 124,
+      "url": "/api/invoices/by-order/(?P6a5338debec6daea1165d2b3[/.]+)/",
+      "raw_pattern": "api/^invoices/by-order/(?P<order_id>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 36.1
+    },
+    {
+      "num": 125,
+      "url": "/api/invoices/settings/",
+      "raw_pattern": "api/^invoices/settings/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 126,
+      "url": "/api/invoices/(?P1[/.]+)/",
+      "raw_pattern": "api/^invoices/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 32.8
+    },
+    {
+      "num": 127,
+      "url": "/api/invoices/(?P1[/.]+)/download/",
+      "raw_pattern": "api/^invoices/(?P<pk>[^/.]+)/download/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 36.4
+    },
+    {
+      "num": 128,
+      "url": "/api/invoices/(?P1[/.]+)/regenerate/",
+      "raw_pattern": "api/^invoices/(?P<pk>[^/.]+)/regenerate/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 13.7
+    },
+    {
+      "num": 129,
+      "url": "/api/invoices/(?P1[/.]+)/send/",
+      "raw_pattern": "api/^invoices/(?P<pk>[^/.]+)/send/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 130,
+      "url": "/api/quotations/",
+      "raw_pattern": "api/^quotations/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4556.0
+    },
+    {
+      "num": 131,
+      "url": "/api/quotations/(?P1[/.]+)/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 31.4
+    },
+    {
+      "num": 132,
+      "url": "/api/quotations/(?P1[/.]+)/activity/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/activity/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 21.3
+    },
+    {
+      "num": 133,
+      "url": "/api/quotations/(?P1[/.]+)/convert_invoice/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/convert_invoice/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.4
+    },
+    {
+      "num": 134,
+      "url": "/api/quotations/(?P1[/.]+)/duplicate/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/duplicate/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 32.9
+    },
+    {
+      "num": 135,
+      "url": "/api/quotations/(?P1[/.]+)/pdf/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/pdf/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 29.0
+    },
+    {
+      "num": 136,
+      "url": "/api/quotations/(?P1[/.]+)/send/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/send/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 29.4
+    },
+    {
+      "num": 137,
+      "url": "/api/quotations/(?P1[/.]+)/versions/",
+      "raw_pattern": "api/^quotations/(?P<pk>[^/.]+)/versions/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 25.6
+    },
+    {
+      "num": 138,
+      "url": "/api/proposals/",
+      "raw_pattern": "api/^proposals/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4106.7
+    },
+    {
+      "num": 139,
+      "url": "/api/proposals/(?P1[/.]+)/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 34.4
+    },
+    {
+      "num": 140,
+      "url": "/api/proposals/(?P1[/.]+)/activity/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/activity/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 31.9
+    },
+    {
+      "num": 141,
+      "url": "/api/proposals/(?P1[/.]+)/convert_invoice/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/convert_invoice/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 34.2
+    },
+    {
+      "num": 142,
+      "url": "/api/proposals/(?P1[/.]+)/duplicate/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/duplicate/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 15.1
+    },
+    {
+      "num": 143,
+      "url": "/api/proposals/(?P1[/.]+)/pdf/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/pdf/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 144,
+      "url": "/api/proposals/(?P1[/.]+)/send/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/send/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 35.4
+    },
+    {
+      "num": 145,
+      "url": "/api/proposals/(?P1[/.]+)/versions/",
+      "raw_pattern": "api/^proposals/(?P<pk>[^/.]+)/versions/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 30.8
+    },
+    {
+      "num": 146,
+      "url": "/api/features/",
+      "raw_pattern": "api/^features/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 67.1
+    },
+    {
+      "num": 147,
+      "url": "/api/features/(?P1[/.]+)/",
+      "raw_pattern": "api/^features/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 52.4
+    },
+    {
+      "num": 148,
+      "url": "/api/plans/",
+      "raw_pattern": "api/^plans/$",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 70.7
+    },
+    {
+      "num": 149,
+      "url": "/api/plans/public_plans/",
+      "raw_pattern": "api/^plans/public_plans/$",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 72.2
+    },
+    {
+      "num": 150,
+      "url": "/api/plans/(?P1[/.]+)/",
+      "raw_pattern": "api/^plans/(?P<pk>[^/.]+)/$",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 44.8
+    },
+    {
+      "num": 151,
+      "url": "/api/plans/(?P1[/.]+)/monthly/",
+      "raw_pattern": "api/^plans/(?P<pk>[^/.]+)/monthly/$",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 27.4
+    },
+    {
+      "num": 152,
+      "url": "/api/plans/(?P1[/.]+)/yearly/",
+      "raw_pattern": "api/^plans/(?P<pk>[^/.]+)/yearly/$",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 16.7
+    },
+    {
+      "num": 153,
+      "url": "/api/plan-features/",
+      "raw_pattern": "api/^plan-features/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 117.2
+    },
+    {
+      "num": 154,
+      "url": "/api/plan-features/(?P1[/.]+)/",
+      "raw_pattern": "api/^plan-features/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 33.0
+    },
+    {
+      "num": 155,
+      "url": "/api/client-feature-overrides/",
+      "raw_pattern": "api/^client-feature-overrides/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 49.8
+    },
+    {
+      "num": 156,
+      "url": "/api/client-feature-overrides/(?P1[/.]+)/",
+      "raw_pattern": "api/^client-feature-overrides/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 17.0
+    },
+    {
+      "num": 157,
+      "url": "/api/plan-audit-logs/",
+      "raw_pattern": "api/^plan-audit-logs/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 44.0
+    },
+    {
+      "num": 158,
+      "url": "/api/plan-audit-logs/(?P1[/.]+)/",
+      "raw_pattern": "api/^plan-audit-logs/(?P<pk>[^/.]+)/$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 301,
+      "healthy": true,
+      "duration_ms": 28.6
+    },
+    {
+      "num": 159,
+      "url": "/api/",
+      "raw_pattern": "api/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 143.6
+    },
+    {
+      "num": 160,
+      "url": "/api/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/<drf_format_suffix:format>",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.0
+    },
+    {
+      "num": 161,
+      "url": "/api/health/",
+      "raw_pattern": "api/health",
+      "role": "ANON",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.0
+    },
+    {
+      "num": 162,
+      "url": "/api/whitelabel/config/",
+      "raw_pattern": "api/whitelabel/config",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 163,
+      "url": "/api/email/analytics/",
+      "raw_pattern": "api/email/analytics/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 104.8
+    },
+    {
+      "num": 164,
+      "url": "/api/guides/progress/",
+      "raw_pattern": "api/guides/progress/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.8
+    },
+    {
+      "num": 165,
+      "url": "/api/guides/progress/connectors/",
+      "raw_pattern": "api/guides/progress/<slug:slug>/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 63.5
+    },
+    {
+      "num": 166,
+      "url": "/api/guides/sections/1/",
+      "raw_pattern": "api/guides/sections/<int:section_id>/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 167,
+      "url": "/api/guides/steps/1/",
+      "raw_pattern": "api/guides/steps/<int:step_id>/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.4
+    },
+    {
+      "num": 168,
+      "url": "/api/monitoring/stats/",
+      "raw_pattern": "api/monitoring/stats/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 203.3
+    },
+    {
+      "num": 169,
+      "url": "/api/monitoring/analytics/",
+      "raw_pattern": "api/monitoring/analytics/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 114.7
+    },
+    {
+      "num": 170,
+      "url": "/api/team/invites/",
+      "raw_pattern": "api/team/invites/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 97.1
+    },
+    {
+      "num": 171,
+      "url": "/api/team/invites/generate-qr/",
+      "raw_pattern": "api/team/invites/generate-qr/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 46.1
+    },
+    {
+      "num": 172,
+      "url": "/api/team/invites/validate/",
+      "raw_pattern": "api/team/invites/validate/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 4.4
+    },
+    {
+      "num": 173,
+      "url": "/api/team/chat/",
+      "raw_pattern": "api/team/chat/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.4
+    },
+    {
+      "num": 174,
+      "url": "/api/team/reports/",
+      "raw_pattern": "api/team/reports/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 240.5
+    },
+    {
+      "num": 175,
+      "url": "/api/team/approvals/",
+      "raw_pattern": "api/team/approvals/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 25.9
+    },
+    {
+      "num": 176,
+      "url": "/api/team/channels/",
+      "raw_pattern": "api/team/channels/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 868.3
+    },
+    {
+      "num": 177,
+      "url": "/api/team/channel-messages/",
+      "raw_pattern": "api/team/channel-messages/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 178,
+      "url": "/api/team/analytics/",
+      "raw_pattern": "api/team/analytics/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 249.0
+    },
+    {
+      "num": 179,
+      "url": "/api/team/ai-copilot/",
+      "raw_pattern": "api/team/ai-copilot/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1263.6
+    },
+    {
+      "num": 180,
+      "url": "/api/auth/register/",
+      "raw_pattern": "api/auth/register",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 181,
+      "url": "/api/auth/login/",
+      "raw_pattern": "api/auth/login",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 182,
+      "url": "/api/auth/google/",
+      "raw_pattern": "api/auth/google",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 183,
+      "url": "/api/auth/google-login/",
+      "raw_pattern": "api/auth/google-login",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 184,
+      "url": "/api/auth/google-client-id/",
+      "raw_pattern": "api/auth/google-client-id",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 29.8
+    },
+    {
+      "num": 185,
+      "url": "/api/auth/apple/",
+      "raw_pattern": "api/auth/apple",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 186,
+      "url": "/api/auth/gmail/connect/",
+      "raw_pattern": "api/auth/gmail/connect",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 60.0
+    },
+    {
+      "num": 187,
+      "url": "/api/auth/gmail/callback/",
+      "raw_pattern": "api/auth/gmail/callback",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 42.7
+    },
+    {
+      "num": 188,
+      "url": "/api/auth/gmail/disconnect/",
+      "raw_pattern": "api/auth/gmail/disconnect",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.7
+    },
+    {
+      "num": 189,
+      "url": "/api/auth/google-calendar/connect/",
+      "raw_pattern": "api/auth/google-calendar/connect",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.4
+    },
+    {
+      "num": 190,
+      "url": "/api/auth/google-calendar/callback/",
+      "raw_pattern": "api/auth/google-calendar/callback",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 25.9
+    },
+    {
+      "num": 191,
+      "url": "/api/auth/gmail/sync/",
+      "raw_pattern": "api/auth/gmail/sync",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 29.9
+    },
+    {
+      "num": 192,
+      "url": "/api/auth/firebase-login/",
+      "raw_pattern": "api/auth/firebase-login",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 14.5
+    },
+    {
+      "num": 193,
+      "url": "/api/auth/uwo-login/",
+      "raw_pattern": "api/auth/uwo-login",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 30.8
+    },
+    {
+      "num": 194,
+      "url": "/api/auth/delete-account/",
+      "raw_pattern": "api/auth/delete-account",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 195,
+      "url": "/api/legal/documents/",
+      "raw_pattern": "api/legal/documents",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 26.6
+    },
+    {
+      "num": 196,
+      "url": "/api/legal/consent-status/",
+      "raw_pattern": "api/legal/consent-status",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 75.9
+    },
+    {
+      "num": 197,
+      "url": "/api/legal/consent/",
+      "raw_pattern": "api/legal/consent",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 129.4
+    },
+    {
+      "num": 198,
+      "url": "/api/auth/qr/create/",
+      "raw_pattern": "api/auth/qr/create",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 201,
+      "healthy": true,
+      "duration_ms": 59.1
+    },
+    {
+      "num": 199,
+      "url": "/api/auth/qr/status/test_token_123/",
+      "raw_pattern": "api/auth/qr/status/<str:session_id>",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 43.5
+    },
+    {
+      "num": 200,
+      "url": "/api/auth/qr/scan/",
+      "raw_pattern": "api/auth/qr/scan",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 4.7
+    },
+    {
+      "num": 201,
+      "url": "/api/auth/qr/approve/",
+      "raw_pattern": "api/auth/qr/approve",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 4.2
+    },
+    {
+      "num": 202,
+      "url": "/api/auth/qr/reject/",
+      "raw_pattern": "api/auth/qr/reject",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 203,
+      "url": "/api/auth/linked-devices/",
+      "raw_pattern": "api/auth/linked-devices",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 204,
+      "url": "/api/auth/linked-devices/6a5338debec6daea1165d2b3/revoke/",
+      "raw_pattern": "api/auth/linked-devices/<str:pk>/revoke",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 205,
+      "url": "/api/auth/linked-devices/revoke-all/",
+      "raw_pattern": "api/auth/linked-devices/revoke-all",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 206,
+      "url": "/api/auth/forgot-password/send-otp/",
+      "raw_pattern": "api/auth/forgot-password/send-otp",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 207,
+      "url": "/api/auth/forgot-password/verify-otp/",
+      "raw_pattern": "api/auth/forgot-password/verify-otp",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 208,
+      "url": "/api/auth/forgot-password/reset/",
+      "raw_pattern": "api/auth/forgot-password/reset",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 209,
+      "url": "/api/auth/whatsapp/embedded-signup/",
+      "raw_pattern": "api/auth/whatsapp/embedded-signup",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 210,
+      "url": "/api/auth/instagram/embedded-signup/",
+      "raw_pattern": "api/auth/instagram/embedded-signup",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.3
+    },
+    {
+      "num": 211,
+      "url": "/api/auth/facebook/embedded-signup/",
+      "raw_pattern": "api/auth/facebook/embedded-signup",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 27.7
+    },
+    {
+      "num": 212,
+      "url": "/api/auth/instagram/oauth-callback/",
+      "raw_pattern": "api/auth/instagram/oauth-callback",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.3
+    },
+    {
+      "num": 213,
+      "url": "/api/client/instagram/sync/",
+      "raw_pattern": "api/client/instagram/sync",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 214,
+      "url": "/api/profile/",
+      "raw_pattern": "api/profile",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 151.4
+    },
+    {
+      "num": 215,
+      "url": "/api/media-proxy/",
+      "raw_pattern": "api/media-proxy/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 216,
+      "url": "/api/messages/",
+      "raw_pattern": "api/messages/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 134.5
+    },
+    {
+      "num": 217,
+      "url": "/api/messages/suggest_draft/",
+      "raw_pattern": "api/messages/suggest_draft/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 218,
+      "url": "/api/client/stats/",
+      "raw_pattern": "api/client/stats",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 193.4
+    },
+    {
+      "num": 219,
+      "url": "/api/admin/stats/",
+      "raw_pattern": "api/admin/stats",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.2
+    },
+    {
+      "num": 220,
+      "url": "/api/admin/clients/overview/",
+      "raw_pattern": "api/admin/clients/overview",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 602.4
+    },
+    {
+      "num": 221,
+      "url": "/api/admin/clients/6a5338debec6daea1165d2b3/details/",
+      "raw_pattern": "api/admin/clients/<str:client_id>/details",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1718.7
+    },
+    {
+      "num": 222,
+      "url": "/api/admin/client-intelligence/stats/",
+      "raw_pattern": "api/admin/client-intelligence/stats",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3538.4
+    },
+    {
+      "num": 223,
+      "url": "/api/admin/client-intelligence/clients/",
+      "raw_pattern": "api/admin/client-intelligence/clients",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 562.1
+    },
+    {
+      "num": 224,
+      "url": "/api/admin/client-intelligence/clients/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/admin/client-intelligence/clients/<str:client_id>",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1677.0
+    },
+    {
+      "num": 225,
+      "url": "/api/admin/client-intelligence/clients/6a5338debec6daea1165d2b3/action/",
+      "raw_pattern": "api/admin/client-intelligence/clients/<str:client_id>/action",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 226,
+      "url": "/api/admin/client-intelligence/export/",
+      "raw_pattern": "api/admin/client-intelligence/export",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 262.4
+    },
+    {
+      "num": 227,
+      "url": "/api/admin/overview/",
+      "raw_pattern": "api/admin/overview",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 463.1
+    },
+    {
+      "num": 228,
+      "url": "/api/admin/clients-directory/",
+      "raw_pattern": "api/admin/clients-directory",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 8246.0
+    },
+    {
+      "num": 229,
+      "url": "/api/admin/clients/6a5338debec6daea1165d2b3/dashboard/",
+      "raw_pattern": "api/admin/clients/<str:client_id>/dashboard",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 10868.8
+    },
+    {
+      "num": 230,
+      "url": "/api/admin/clients/6a5338debec6daea1165d2b3/action/",
+      "raw_pattern": "api/admin/clients/<str:client_id>/action",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 67.3
+    },
+    {
+      "num": 231,
+      "url": "/api/admin/all-team/",
+      "raw_pattern": "api/admin/all-team",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 145.6
+    },
+    {
+      "num": 232,
+      "url": "/api/admin/all-team/create/",
+      "raw_pattern": "api/admin/all-team/create",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 233,
+      "url": "/api/admin/all-team/6a8989d58cc343d29b3fb103/",
+      "raw_pattern": "api/admin/all-team/<str:member_id>",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 165.5
+    },
+    {
+      "num": 234,
+      "url": "/api/admin/team-summary/",
+      "raw_pattern": "api/admin/team-summary",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1287.5
+    },
+    {
+      "num": 235,
+      "url": "/api/admin/team-analytics/",
+      "raw_pattern": "api/admin/team-analytics",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 250.1
+    },
+    {
+      "num": 236,
+      "url": "/api/admin/team/analytics/",
+      "raw_pattern": "api/admin/team/analytics",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 235.3
+    },
+    {
+      "num": 237,
+      "url": "/api/admin/all-projects/",
+      "raw_pattern": "api/admin/all-projects",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 181.3
+    },
+    {
+      "num": 238,
+      "url": "/api/admin/all-projects/6a8d3e75486605f9727d429d/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 129.0
+    },
+    {
+      "num": 239,
+      "url": "/api/admin/all-projects/6a8d3e75486605f9727d429d/assign-members/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/assign-members",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 86.4
+    },
+    {
+      "num": 240,
+      "url": "/api/admin/all-projects/6a8d3e75486605f9727d429d/members/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/members",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 64.2
+    },
+    {
+      "num": 241,
+      "url": "/api/admin/all-projects/6a8d3e75486605f9727d429d/members/6a8989d58cc343d29b3fb103/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/members/<str:member_id>",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 292.5
+    },
+    {
+      "num": 242,
+      "url": "/api/admin/all-teams/",
+      "raw_pattern": "api/admin/all-teams",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 421.4
+    },
+    {
+      "num": 243,
+      "url": "/api/admin/all-teams/6a6b3b49bf3ba91888724d44/",
+      "raw_pattern": "api/admin/all-teams/<str:channel_id>",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.6
+    },
+    {
+      "num": 244,
+      "url": "/api/admin/all-teams/6a6b3b49bf3ba91888724d44/assign-members/",
+      "raw_pattern": "api/admin/all-teams/<str:channel_id>/assign-members",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 130.5
+    },
+    {
+      "num": 245,
+      "url": "/api/admin/all-channels/",
+      "raw_pattern": "api/admin/all-channels",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 753.7
+    },
+    {
+      "num": 246,
+      "url": "/api/admin/all-messages/",
+      "raw_pattern": "api/admin/all-messages",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 299.2
+    },
+    {
+      "num": 247,
+      "url": "/api/admin/all-sales/",
+      "raw_pattern": "api/admin/all-sales",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 106.5
+    },
+    {
+      "num": 248,
+      "url": "/api/admin/all-quotations/",
+      "raw_pattern": "api/admin/all-quotations",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 447.4
+    },
+    {
+      "num": 249,
+      "url": "/api/admin/all-proposals/",
+      "raw_pattern": "api/admin/all-proposals",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 483.1
+    },
+    {
+      "num": 250,
+      "url": "/api/admin/all-invoices/",
+      "raw_pattern": "api/admin/all-invoices",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 147.4
+    },
+    {
+      "num": 251,
+      "url": "/api/admin/all-reports/",
+      "raw_pattern": "api/admin/all-reports",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.5
+    },
+    {
+      "num": 252,
+      "url": "/api/admin/all-products/",
+      "raw_pattern": "api/admin/all-products",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 100.0
+    },
+    {
+      "num": 253,
+      "url": "/api/admin/global-search/",
+      "raw_pattern": "api/admin/global-search",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 13.8
+    },
+    {
+      "num": 254,
+      "url": "/api/admin/automations/",
+      "raw_pattern": "api/admin/automations",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.0
+    },
+    {
+      "num": 255,
+      "url": "/api/email/compose/",
+      "raw_pattern": "api/email/compose/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 256,
+      "url": "/api/admin/messages/",
+      "raw_pattern": "api/admin/messages",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 117.9
+    },
+    {
+      "num": 257,
+      "url": "/api/admin/users/",
+      "raw_pattern": "api/admin/users",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.8
+    },
+    {
+      "num": 258,
+      "url": "/api/admin/users/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/admin/users/<str:pk>",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 31.2
+    },
+    {
+      "num": 259,
+      "url": "/api/platform-assistant/",
+      "raw_pattern": "api/platform-assistant/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 260,
+      "url": "/api/platform/ai-assistant/chat/",
+      "raw_pattern": "api/platform/ai-assistant/chat",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 261,
+      "url": "/api/admin/settings/global/",
+      "raw_pattern": "api/admin/settings/global",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 24.4
+    },
+    {
+      "num": 262,
+      "url": "/api/webhook/whatsapp/",
+      "raw_pattern": "api/webhook/whatsapp",
+      "role": "ANON",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 263,
+      "url": "/api/webhooks/whatsapp/",
+      "raw_pattern": "api/webhooks/whatsapp",
+      "role": "ANON",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 264,
+      "url": "/api/webhook/facebook-instagram/",
+      "raw_pattern": "api/webhook/facebook-instagram",
+      "role": "ANON",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 265,
+      "url": "/api/webhooks/facebook-instagram/",
+      "raw_pattern": "api/webhooks/facebook-instagram",
+      "role": "ANON",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 266,
+      "url": "/api/knowledge/",
+      "raw_pattern": "api/knowledge/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 765.3
+    },
+    {
+      "num": 267,
+      "url": "/api/knowledge/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/knowledge/<str:pk>/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.4
+    },
+    {
+      "num": 268,
+      "url": "/api/admin/impersonate/",
+      "raw_pattern": "api/admin/impersonate",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 269,
+      "url": "/api/payments/create-order/",
+      "raw_pattern": "api/payments/create-order",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 201,
+      "healthy": true,
+      "duration_ms": 1459.8
+    },
+    {
+      "num": 270,
+      "url": "/api/payments/checkout/",
+      "raw_pattern": "api/payments/checkout",
+      "role": "ANON",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 271,
+      "url": "/api/payments/checkout/callback/",
+      "raw_pattern": "api/payments/checkout/callback",
+      "role": "ANON",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 11.1
+    },
+    {
+      "num": 272,
+      "url": "/api/payments/verify-order/",
+      "raw_pattern": "api/payments/verify-order",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 273,
+      "url": "/api/payments/history/",
+      "raw_pattern": "api/payments/history",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 69.5
+    },
+    {
+      "num": 274,
+      "url": "/api/payments/webhook/",
+      "raw_pattern": "api/payments/webhook",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 275,
+      "url": "/api/payments/apple/verify/",
+      "raw_pattern": "api/payments/apple/verify",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 276,
+      "url": "/api/payments/apple/restore/",
+      "raw_pattern": "api/payments/apple/restore",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.9
+    },
+    {
+      "num": 277,
+      "url": "/api/payments/apple/notifications/",
+      "raw_pattern": "api/payments/apple/notifications",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 278,
+      "url": "/api/wallet/dashboard/",
+      "raw_pattern": "api/wallet/dashboard",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 125.7
+    },
+    {
+      "num": 279,
+      "url": "/api/wallet/recharge/create/",
+      "raw_pattern": "api/wallet/recharge/create",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.3
+    },
+    {
+      "num": 280,
+      "url": "/api/wallet/recharge/checkout/",
+      "raw_pattern": "api/wallet/recharge/checkout",
+      "role": "ANON",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 281,
+      "url": "/api/wallet/recharge/verify/",
+      "raw_pattern": "api/wallet/recharge/verify",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 282,
+      "url": "/api/wallet/webhook/",
+      "raw_pattern": "api/wallet/webhook",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 283,
+      "url": "/api/admin/wallet/overview/",
+      "raw_pattern": "api/admin/wallet/overview",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2408.3
+    },
+    {
+      "num": 284,
+      "url": "/api/admin/wallet/adjustment/",
+      "raw_pattern": "api/admin/wallet/adjustment",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 285,
+      "url": "/api/admin/wallet/rates/",
+      "raw_pattern": "api/admin/wallet/rates",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 30.9
+    },
+    {
+      "num": 286,
+      "url": "/api/broadcasts/entitlement/",
+      "raw_pattern": "api/broadcasts/entitlement",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 238.7
+    },
+    {
+      "num": 287,
+      "url": "/api/broadcasts/validate/",
+      "raw_pattern": "api/broadcasts/validate",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 234.7
+    },
+    {
+      "num": 288,
+      "url": "/api/broadcasts/consume/",
+      "raw_pattern": "api/broadcasts/consume",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 495.6
+    },
+    {
+      "num": 289,
+      "url": "/api/broadcasts/refund/",
+      "raw_pattern": "api/broadcasts/refund",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 290,
+      "url": "/api/onedrive/connect/",
+      "raw_pattern": "api/onedrive/connect",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4.8
+    },
+    {
+      "num": 291,
+      "url": "/api/onedrive/callback/",
+      "raw_pattern": "api/onedrive/callback",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 292,
+      "url": "/api/onedrive/status/",
+      "raw_pattern": "api/onedrive/status",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 293,
+      "url": "/api/onedrive/sync/",
+      "raw_pattern": "api/onedrive/sync",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 294,
+      "url": "/api/onedrive/disconnect/",
+      "raw_pattern": "api/onedrive/disconnect",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 49.7
+    },
+    {
+      "num": 295,
+      "url": "/api/google-calendar/connect/",
+      "raw_pattern": "api/google-calendar/connect",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 11.5
+    },
+    {
+      "num": 296,
+      "url": "/api/google-calendar/callback/",
+      "raw_pattern": "api/google-calendar/callback",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 297,
+      "url": "/api/google-calendar/status/",
+      "raw_pattern": "api/google-calendar/status",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 298,
+      "url": "/api/google-calendar/sync/",
+      "raw_pattern": "api/google-calendar/sync",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 299,
+      "url": "/api/google-calendar/create-event/",
+      "raw_pattern": "api/google-calendar/create-event",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 300,
+      "url": "/api/google-calendar/disconnect/",
+      "raw_pattern": "api/google-calendar/disconnect",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 56.9
+    },
+    {
+      "num": 301,
+      "url": "/api/google-sheets/connect/",
+      "raw_pattern": "api/google-sheets/connect",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 6.0
+    },
+    {
+      "num": 302,
+      "url": "/api/google-sheets/callback/",
+      "raw_pattern": "api/google-sheets/callback",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 303,
+      "url": "/api/google-sheets/status/",
+      "raw_pattern": "api/google-sheets/status",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 304,
+      "url": "/api/google-sheets/sync/",
+      "raw_pattern": "api/google-sheets/sync",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.9
+    },
+    {
+      "num": 305,
+      "url": "/api/google-sheets/append-row/",
+      "raw_pattern": "api/google-sheets/append-row",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 306,
+      "url": "/api/google-sheets/disconnect/",
+      "raw_pattern": "api/google-sheets/disconnect",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 54.2
+    },
+    {
+      "num": 307,
+      "url": "/api/google-docs/connect/",
+      "raw_pattern": "api/google-docs/connect",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 308,
+      "url": "/api/google-docs/callback/",
+      "raw_pattern": "api/google-docs/callback",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 309,
+      "url": "/api/google-docs/status/",
+      "raw_pattern": "api/google-docs/status",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 310,
+      "url": "/api/google-docs/sync/",
+      "raw_pattern": "api/google-docs/sync",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 311,
+      "url": "/api/google-docs/create-doc/",
+      "raw_pattern": "api/google-docs/create-doc",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 312,
+      "url": "/api/google-docs/disconnect/",
+      "raw_pattern": "api/google-docs/disconnect",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 51.7
+    },
+    {
+      "num": 313,
+      "url": "/api/google-slides/connect/",
+      "raw_pattern": "api/google-slides/connect",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 314,
+      "url": "/api/google-slides/callback/",
+      "raw_pattern": "api/google-slides/callback",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 3.2
+    },
+    {
+      "num": 315,
+      "url": "/api/google-slides/status/",
+      "raw_pattern": "api/google-slides/status",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 316,
+      "url": "/api/google-slides/sync/",
+      "raw_pattern": "api/google-slides/sync",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 317,
+      "url": "/api/google-slides/create-presentation/",
+      "raw_pattern": "api/google-slides/create-presentation",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 318,
+      "url": "/api/google-slides/disconnect/",
+      "raw_pattern": "api/google-slides/disconnect",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 51.5
+    },
+    {
+      "num": 319,
+      "url": "/api/auth/youtube/connect/",
+      "raw_pattern": "api/auth/youtube/connect",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 49.9
+    },
+    {
+      "num": 320,
+      "url": "/api/auth/youtube/callback/",
+      "raw_pattern": "api/auth/youtube/callback",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.3
+    },
+    {
+      "num": 321,
+      "url": "/api/auth/youtube/status/",
+      "raw_pattern": "api/auth/youtube/status",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 30.2
+    },
+    {
+      "num": 322,
+      "url": "/api/auth/youtube/sync/",
+      "raw_pattern": "api/auth/youtube/sync",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 19.2
+    },
+    {
+      "num": 323,
+      "url": "/api/youtube/analytics/",
+      "raw_pattern": "api/youtube/analytics",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1641.3
+    },
+    {
+      "num": 324,
+      "url": "/api/youtube/videos/",
+      "raw_pattern": "api/youtube/videos",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1672.6
+    },
+    {
+      "num": 325,
+      "url": "/api/youtube/comments/",
+      "raw_pattern": "api/youtube/comments",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 678.5
+    },
+    {
+      "num": 326,
+      "url": "/api/youtube/ai-suggest-reply/",
+      "raw_pattern": "api/youtube/ai-suggest-reply",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 327,
+      "url": "/api/youtube/settings/",
+      "raw_pattern": "api/youtube/settings",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 328,
+      "url": "/api/youtube/broadcast-check/",
+      "raw_pattern": "api/youtube/broadcast-check",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1155.5
+    },
+    {
+      "num": 329,
+      "url": "/api/youtube/upload/",
+      "raw_pattern": "api/youtube/upload",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 415,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 330,
+      "url": "/api/youtube/profile/",
+      "raw_pattern": "api/youtube/profile",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 331,
+      "url": "/api/youtube/delete/",
+      "raw_pattern": "api/youtube/delete",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 332,
+      "url": "/api/zoho/connect/",
+      "raw_pattern": "api/zoho/connect",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.9
+    },
+    {
+      "num": 333,
+      "url": "/api/zoho/callback/",
+      "raw_pattern": "api/zoho/callback",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 334,
+      "url": "/api/zoho/disconnect/",
+      "raw_pattern": "api/zoho/disconnect",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 98.5
+    },
+    {
+      "num": 335,
+      "url": "/api/zoho/test-lead/",
+      "raw_pattern": "api/zoho/test-lead",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 336,
+      "url": "/api/google-news/settings/",
+      "raw_pattern": "api/google-news/settings",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 337,
+      "url": "/api/google-news/feed/",
+      "raw_pattern": "api/google-news/feed",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 481.1
+    },
+    {
+      "num": 338,
+      "url": "/api/google-news/summarize/",
+      "raw_pattern": "api/google-news/summarize",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 339,
+      "url": "/api/google-news/send-alert/",
+      "raw_pattern": "api/google-news/send-alert",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 340,
+      "url": "/api/public/calendar/6a5338debec6daea1165d2b3/slots/",
+      "raw_pattern": "api/public/calendar/<str:client_id>/slots",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 26.3
+    },
+    {
+      "num": 341,
+      "url": "/api/public/calendar/6a5338debec6daea1165d2b3/book/",
+      "raw_pattern": "api/public/calendar/<str:client_id>/book",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 27.2
+    },
+    {
+      "num": 342,
+      "url": "/api/auth/outlook/connect/",
+      "raw_pattern": "api/auth/outlook/connect",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 343,
+      "url": "/api/auth/outlook/callback/",
+      "raw_pattern": "api/auth/outlook/callback",
+      "role": "ANON",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 344,
+      "url": "/api/auth/outlook/status/",
+      "raw_pattern": "api/auth/outlook/status",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 345,
+      "url": "/api/auth/outlook/sync/",
+      "raw_pattern": "api/auth/outlook/sync",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 346,
+      "url": "/api/auth/outlook/send-mail/",
+      "raw_pattern": "api/auth/outlook/send-mail",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 347,
+      "url": "/api/auth/outlook/disconnect/",
+      "raw_pattern": "api/auth/outlook/disconnect",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 348,
+      "url": "/api/auth/outlook/calendar/events/",
+      "raw_pattern": "api/auth/outlook/calendar/events",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 349,
+      "url": "/api/auth/outlook/teams/",
+      "raw_pattern": "api/auth/outlook/teams",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 350,
+      "url": "/api/auth/outlook/contacts/",
+      "raw_pattern": "api/auth/outlook/contacts",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.6
+    },
+    {
+      "num": 351,
+      "url": "/api/auth/outlook/excel/",
+      "raw_pattern": "api/auth/outlook/excel",
+      "role": "ANON",
+      "method": "GET",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 352,
+      "url": "/api/webrtc/config/",
+      "raw_pattern": "api/webrtc/config",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 353,
+      "url": "/api/webrtc/history/",
+      "raw_pattern": "api/webrtc/history",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.3
+    },
+    {
+      "num": 354,
+      "url": "/api/webrtc/call/initiate/",
+      "raw_pattern": "api/webrtc/call/initiate/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 174.5
+    },
+    {
+      "num": 355,
+      "url": "/api/webrtc/call/action/",
+      "raw_pattern": "api/webrtc/call/action/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 39.0
+    },
+    {
+      "num": 356,
+      "url": "/api/webrtc/call/signal/",
+      "raw_pattern": "api/webrtc/call/signal/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.3
+    },
+    {
+      "num": 357,
+      "url": "/api/webrtc/call/active-check/",
+      "raw_pattern": "api/webrtc/call/active-check",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 25.8
+    },
+    {
+      "num": 358,
+      "url": "/api/calls/schedule/",
+      "raw_pattern": "api/calls/schedule",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 359,
+      "url": "/api/calls/ai-summary/",
+      "raw_pattern": "api/calls/ai-summary",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 360,
+      "url": "/api/calls/analytics/",
+      "raw_pattern": "api/calls/analytics",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 100.4
+    },
+    {
+      "num": 361,
+      "url": "/api/razorpay/connect/",
+      "raw_pattern": "api/razorpay/connect",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 362,
+      "url": "/api/razorpay/callback/",
+      "raw_pattern": "api/razorpay/callback",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 15.7
+    },
+    {
+      "num": 363,
+      "url": "/api/razorpay/status/",
+      "raw_pattern": "api/razorpay/status",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.1
+    },
+    {
+      "num": 364,
+      "url": "/api/razorpay/mode/",
+      "raw_pattern": "api/razorpay/mode",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 365,
+      "url": "/api/razorpay/keys/",
+      "raw_pattern": "api/razorpay/keys",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 366,
+      "url": "/api/razorpay/checkout/create-order/",
+      "raw_pattern": "api/razorpay/checkout/create-order",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.1
+    },
+    {
+      "num": 367,
+      "url": "/api/razorpay/checkout/verify/",
+      "raw_pattern": "api/razorpay/checkout/verify",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 368,
+      "url": "/api/razorpay/product-webhook/",
+      "raw_pattern": "api/razorpay/product-webhook",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 369,
+      "url": "/api/razorpay/sales/",
+      "raw_pattern": "api/razorpay/sales",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 70.7
+    },
+    {
+      "num": 370,
+      "url": "/api/razorpay/sales/dashboard/",
+      "raw_pattern": "api/razorpay/sales/dashboard",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 234.2
+    },
+    {
+      "num": 371,
+      "url": "/api/razorpay/refund/",
+      "raw_pattern": "api/razorpay/refund",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 372,
+      "url": "/api/public/checkout/6aa2454732dedcadbd3ddef9/",
+      "raw_pattern": "api/public/checkout/<str:product_id>",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.1
+    },
+    {
+      "num": 373,
+      "url": "/api/sales/analytics/",
+      "raw_pattern": "api/sales/analytics",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 371.9
+    },
+    {
+      "num": 374,
+      "url": "/api/public/sales-documents/test_token_123/",
+      "raw_pattern": "api/public/sales-documents/<str:token>",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 40.2
+    },
+    {
+      "num": 375,
+      "url": "/api/public/sales-documents/test_token_123/accept/",
+      "raw_pattern": "api/public/sales-documents/<str:token>/accept",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 29.0
+    },
+    {
+      "num": 376,
+      "url": "/api/public/sales-documents/test_token_123/reject/",
+      "raw_pattern": "api/public/sales-documents/<str:token>/reject",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.5
+    },
+    {
+      "num": 377,
+      "url": "/api/public/sales-documents/test_token_123/pdf/",
+      "raw_pattern": "api/public/sales-documents/<str:token>/pdf",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 25.5
+    },
+    {
+      "num": 378,
+      "url": "/api/public/quotation/test_token_123/",
+      "raw_pattern": "api/public/quotation/<str:token>",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.7
+    },
+    {
+      "num": 379,
+      "url": "/api/public/quotation/test_token_123/accept/",
+      "raw_pattern": "api/public/quotation/<str:token>/accept",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.8
+    },
+    {
+      "num": 380,
+      "url": "/api/public/quotation/test_token_123/reject/",
+      "raw_pattern": "api/public/quotation/<str:token>/reject",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 381,
+      "url": "/api/public/proposal/test_token_123/",
+      "raw_pattern": "api/public/proposal/<str:token>",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.4
+    },
+    {
+      "num": 382,
+      "url": "/api/public/proposal/test_token_123/accept/",
+      "raw_pattern": "api/public/proposal/<str:token>/accept",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.4
+    },
+    {
+      "num": 383,
+      "url": "/api/public/proposal/test_token_123/reject/",
+      "raw_pattern": "api/public/proposal/<str:token>/reject",
+      "role": "ANON",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 21.5
+    },
+    {
+      "num": 384,
+      "url": "/api/public/invoices/test_token_123/",
+      "raw_pattern": "api/public/invoices/<str:token>",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 50.1
+    },
+    {
+      "num": 385,
+      "url": "/api/public/invoices/test_token_123/pdf/",
+      "raw_pattern": "api/public/invoices/<str:token>/pdf",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.8
+    },
+    {
+      "num": 386,
+      "url": "/api/public/invoice/test_token_123/",
+      "raw_pattern": "api/public/invoice/<str:token>",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.6
+    },
+    {
+      "num": 387,
+      "url": "/api/public/invoice/test_token_123/pdf/",
+      "raw_pattern": "api/public/invoice/<str:token>/pdf",
+      "role": "ANON",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.1
+    },
+    {
+      "num": 388,
+      "url": "/api/admin/channel-access/global/",
+      "raw_pattern": "api/admin/channel-access/global/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 767.6
+    },
+    {
+      "num": 389,
+      "url": "/api/admin/channel-access/global/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/admin/channel-access/global/<str:connector_key>/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 207.8
+    },
+    {
+      "num": 390,
+      "url": "/api/admin/channel-access/matrix/",
+      "raw_pattern": "api/admin/channel-access/matrix/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1270.0
+    },
+    {
+      "num": 391,
+      "url": "/api/admin/channel-access/client/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/admin/channel-access/client/<str:client_id>/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1001.9
+    },
+    {
+      "num": 392,
+      "url": "/api/admin/channel-access/bulk/",
+      "raw_pattern": "api/admin/channel-access/bulk/",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 393,
+      "url": "/api/admin/channel-access/audit-logs/",
+      "raw_pattern": "api/admin/channel-access/audit-logs/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 243.7
+    },
+    {
+      "num": 394,
+      "url": "/api/connectors/effective/",
+      "raw_pattern": "api/connectors/effective/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 105.6
+    },
+    {
+      "num": 395,
+      "url": "/api/connectors/global-status/",
+      "raw_pattern": "api/connectors/global-status/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.7
+    },
+    {
+      "num": 396,
+      "url": "/api/admin/all-projects/6a8d3e75486605f9727d429d/assign/",
+      "raw_pattern": "api/admin/all-projects/<str:project_id>/assign/",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 63.6
+    },
+    {
+      "num": 397,
+      "url": "/api/admin/teams-channels/",
+      "raw_pattern": "api/admin/teams-channels/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 417.5
+    },
+    {
+      "num": 398,
+      "url": "/api/agency/stats/",
+      "raw_pattern": "api/agency/stats/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 135.8
+    },
+    {
+      "num": 399,
+      "url": "/api/agency/sub-clients/",
+      "raw_pattern": "api/agency/sub-clients/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 10.5
+    },
+    {
+      "num": 400,
+      "url": "/api/agency/sub-clients/6a5338debec6daea1165d2b3/action/",
+      "raw_pattern": "api/agency/sub-clients/<str:pk>/action/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 2.8
+    },
+    {
+      "num": 401,
+      "url": "/api/agency/plans/",
+      "raw_pattern": "api/agency/plans/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3.2
+    },
+    {
+      "num": 402,
+      "url": "/api/admin/whitelabel/revenue/",
+      "raw_pattern": "api/admin/whitelabel/revenue/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 39.9
+    },
+    {
+      "num": 403,
+      "url": "/api/user/preferences/",
+      "raw_pattern": "api/user/preferences/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.0
+    },
+    {
+      "num": 404,
+      "url": "/api/app/content/version/",
+      "raw_pattern": "api/app/content/version/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 100.0
+    },
+    {
+      "num": 405,
+      "url": "/api/app/content/",
+      "raw_pattern": "api/app/content/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 263.8
+    },
+    {
+      "num": 406,
+      "url": "/api/admin/content/",
+      "raw_pattern": "api/admin/content/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1598.6
+    },
+    {
+      "num": 407,
+      "url": "/api/admin/content/draft/",
+      "raw_pattern": "api/admin/content/draft/",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 27.2
+    },
+    {
+      "num": 408,
+      "url": "/api/admin/content/publish/",
+      "raw_pattern": "api/admin/content/publish/",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 238.9
+    },
+    {
+      "num": 409,
+      "url": "/api/admin/content/preview/",
+      "raw_pattern": "api/admin/content/preview/",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 135.9
+    },
+    {
+      "num": 410,
+      "url": "/api/admin/content/rollback/",
+      "raw_pattern": "api/admin/content/rollback/",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 411,
+      "url": "/api/admin/content/versions/",
+      "raw_pattern": "api/admin/content/versions/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 339.0
+    },
+    {
+      "num": 412,
+      "url": "/api/admin/content/banners/",
+      "raw_pattern": "api/admin/content/banners/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 36.0
+    },
+    {
+      "num": 413,
+      "url": "/api/admin/content/banners/6a5338debec6daea1165d2b3/",
+      "raw_pattern": "api/admin/content/banners/<str:pk>/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.5
+    },
+    {
+      "num": 414,
+      "url": "/api/admin/content/maintenance/",
+      "raw_pattern": "api/admin/content/maintenance/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 68.6
+    },
+    {
+      "num": 415,
+      "url": "/api/admin/content/feature-flags/",
+      "raw_pattern": "api/admin/content/feature-flags/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.1
+    },
+    {
+      "num": 416,
+      "url": "/api/admin/content/audit-logs/",
+      "raw_pattern": "api/admin/content/audit-logs/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 26.0
+    },
+    {
+      "num": 417,
+      "url": "/api/telemetry/app-install/",
+      "raw_pattern": "api/telemetry/app-install/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.3
+    },
+    {
+      "num": 418,
+      "url": "/api/admin/app-analytics/",
+      "raw_pattern": "api/admin/app-analytics/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1951.4
+    },
+    {
+      "num": 419,
+      "url": "/api/admin/client-platform-overview/",
+      "raw_pattern": "api/admin/client-platform-overview/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 159.8
+    },
+    {
+      "num": 420,
+      "url": "/api/admin/installations/",
+      "raw_pattern": "api/admin/installations/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 937.4
+    },
+    {
+      "num": 421,
+      "url": "/api/admin/installations/6a5338debec6daea1165d2b3/toggle-status/",
+      "raw_pattern": "api/admin/installations/<str:installation_id>/toggle-status/",
+      "role": "ADMIN",
+      "method": "POST (probe)",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 63.9
+    },
+    {
+      "num": 422,
+      "url": "/api/telemetry/app-uninstall/",
+      "raw_pattern": "api/telemetry/app-uninstall/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 423,
+      "url": "/api/client/update/",
+      "raw_pattern": "api/client/update/",
+      "role": "CLIENT",
+      "method": "POST (probe)",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 98.1
+    },
+    {
+      "num": 424,
+      "url": "/api/auth/qr/consume/",
+      "raw_pattern": "api/auth/qr/consume/",
+      "role": "ANON",
+      "method": "GET",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 112.4
+    },
+    {
+      "num": 425,
+      "url": "/api/admin/logs/",
+      "raw_pattern": "api/admin/logs/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 73.1
+    },
+    {
+      "num": 426,
+      "url": "/api/admin/workflows/",
+      "raw_pattern": "api/admin/workflows/",
+      "role": "ADMIN",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 25.1
+    },
+    {
+      "num": 427,
+      "url": "/api/team/",
+      "raw_pattern": "api/team/",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 173.6
+    },
+    {
+      "num": 428,
+      "url": "/media/test.jpg",
+      "raw_pattern": "^media/(?P<path>.*)$",
+      "role": "CLIENT",
+      "method": "GET",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 9.6
+    }
+  ]
+}
