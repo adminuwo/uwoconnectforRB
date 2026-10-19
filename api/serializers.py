@@ -32,6 +32,7 @@ class ClientSerializer(serializers.ModelSerializer):
     google_docs_config = serializers.SerializerMethodField()
     google_slides_config = serializers.SerializerMethodField()
     zoho_config = serializers.SerializerMethodField()
+    is_verification_account = serializers.SerializerMethodField()
     email = serializers.EmailField(write_only=True, required=False)
 
     class Meta:
@@ -133,6 +134,14 @@ class ClientSerializer(serializers.ModelSerializer):
             'account_email', 'domain', 'connected_at', 'last_sync_time'
         }
         return {k: v for k, v in config.items() if k in safe_keys}
+
+    def get_is_verification_account(self, obj):
+        """Returns True if this client is designated for Google OAuth verification testing."""
+        try:
+            from .services.google_oauth_service import is_google_verification_account
+            return is_google_verification_account(obj)
+        except Exception:
+            return False
 
 
 class UserSerializer(serializers.ModelSerializer):
