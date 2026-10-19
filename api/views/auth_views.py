@@ -592,15 +592,17 @@ class WhatsAppEmbeddedSignupView(APIView):
 
         # 1. Exchange code for access token if supplied
         if not access_token and code:
-            token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
+            token_url = "https://graph.facebook.com/v22.0/oauth/access_token"
             candidate_uris = []
             req_uri = request.data.get('redirect_uri')
             if req_uri:
                 candidate_uris.append(req_uri)
             candidate_uris.extend([
+                "https://uwoconnectforrf-743928421487.asia-south1.run.app/client/channels",
+                "https://uwoconnectforrf-743928421487.asia-south1.run.app/client/channels?state=whatsapp",
                 "https://uwoconnectforrf-743928421487.asia-south1.run.app/",
-                "https://uwoconnect.aisa24.com/client/channels?state=whatsapp",
                 "https://uwoconnect.aisa24.com/client/channels",
+                "https://uwoconnect.aisa24.com/client/channels?state=whatsapp",
                 "https://uwoconnect.aisa24.com/",
                 ""
             ])
@@ -621,6 +623,8 @@ class WhatsAppEmbeddedSignupView(APIView):
                     if "access_token" in token_data:
                         logger.info(f"[WhatsAppEmbeddedSignup] Token exchanged successfully with redirect_uri: '{cand_uri}'")
                         break
+                    else:
+                        logger.warning(f"[WhatsAppEmbeddedSignup] Token response for '{cand_uri}': {token_data}")
                 except Exception as e:
                     logger.warning(f"[WhatsAppEmbeddedSignup] Token exchange attempt error with '{cand_uri}': {e}")
 
@@ -637,7 +641,7 @@ class WhatsAppEmbeddedSignupView(APIView):
         if access_token:
             try:
                 ll_res = requests.get(
-                    "https://graph.facebook.com/v20.0/oauth/access_token",
+                    "https://graph.facebook.com/v22.0/oauth/access_token",
                     params={
                         "grant_type": "fb_exchange_token",
                         "client_id": client_id,
@@ -666,7 +670,7 @@ class WhatsAppEmbeddedSignupView(APIView):
 
         if not waba_id:
             candidate_wabas = []
-            waba_url = f"https://graph.facebook.com/v20.0/me/client_whatsapp_business_accounts?access_token={access_token}"
+            waba_url = f"https://graph.facebook.com/v22.0/me/client_whatsapp_business_accounts?access_token={access_token}"
             try:
                 waba_res = requests.get(waba_url, timeout=10)
                 waba_data = waba_res.json()
@@ -702,7 +706,7 @@ class WhatsAppEmbeddedSignupView(APIView):
 
         # 3. Get Phone Number ID if not provided
         if waba_id and not phone_number_id:
-            phone_url = f"https://graph.facebook.com/v20.0/{waba_id}/phone_numbers?access_token={access_token}"
+            phone_url = f"https://graph.facebook.com/v22.0/{waba_id}/phone_numbers?access_token={access_token}"
             phone_res = requests.get(phone_url)
             phone_data = phone_res.json()
             
@@ -713,7 +717,7 @@ class WhatsAppEmbeddedSignupView(APIView):
         # 3.5 Fetch display phone number if phone_number_id is known
         if phone_number_id and not display_phone_number:
             try:
-                p_url = f"https://graph.facebook.com/v20.0/{phone_number_id}?fields=display_phone_number,verified_name&access_token={access_token}"
+                p_url = f"https://graph.facebook.com/v22.0/{phone_number_id}?fields=display_phone_number,verified_name&access_token={access_token}"
                 p_res = requests.get(p_url, timeout=10)
                 p_data = p_res.json()
                 display_phone_number = p_data.get('display_phone_number') or p_data.get('verified_name', '')
@@ -723,7 +727,7 @@ class WhatsAppEmbeddedSignupView(APIView):
         # 4. Subscribe WABA to webhook events
         if waba_id:
             try:
-                sub_url = f"https://graph.facebook.com/v20.0/{waba_id}/subscribed_apps"
+                sub_url = f"https://graph.facebook.com/v22.0/{waba_id}/subscribed_apps"
                 sub_res = requests.post(sub_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
                 logger.info(f"[WhatsAppEmbeddedSignup] Webhook subscribe status: {sub_res.status_code}")
             except Exception as e:
@@ -873,45 +877,80 @@ class FacebookEmbeddedSignupView(APIView):
         long_lived_token = None
 
         if code:
-            token_url = "https://graph.facebook.com/v20.0/oauth/access_token"
-            redirect_uri = request.data.get('redirect_uri') or "https://uwoconnect.aisa24.com/client/channels?state=facebook"
-            token_payload = {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "redirect_uri": redirect_uri,
-                "code": code
-            }
-            token_res = requests.get(token_url, params=token_payload)
-            token_data = token_res.json()
-            if "error" in token_data:
-                return Response({"error": "Failed to exchange code", "details": token_data}, status=400)
-            long_lived_token = token_data.get('access_token')
+            token_url = "https://graph.facebook.com/v22.0/oauth/access_token"
+            candidate_uris = []
+            req_uri = request.data.get('redirect_uri')
+            if req_uri:
+                candidate_uris.append(req_uri)
+            candidate_uris.extend([
+                "https://uwoconnectforrf-743928421487.asia-south1.run.app/client/channels",
+                "https://uwoconnectforrf-743928421487.asia-south1.run.app/client/channels?state=facebook",
+                "https://uwoconnectforrf-743928421487.asia-south1.run.app/",
+                "https://uwoconnect.aisa24.com/client/channels",
+                "https://uwoconnect.aisa24.com/client/channels?state=facebook",
+                "https://uwoconnect.aisa24.com/",
+                ""
+            ])
+            
+            token_data = {}
+            for cand_uri in candidate_uris:
+                token_payload = {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": code
+                }
+                if cand_uri:
+                    token_payload["redirect_uri"] = cand_uri
+                
+                try:
+                    token_res = requests.get(token_url, params=token_payload, timeout=10)
+                    token_data = token_res.json()
+                    if "access_token" in token_data:
+                        long_lived_token = token_data.get('access_token')
+                        break
+                except Exception as e:
+                    pass
+
+            if not long_lived_token:
+                return Response({"error": "Failed to exchange Facebook code for access token", "details": token_data}, status=400)
         elif access_token:
             ll_res = requests.get(
-                "https://graph.facebook.com/v20.0/oauth/access_token",
+                "https://graph.facebook.com/v22.0/oauth/access_token",
                 params={
                     "grant_type":        "fb_exchange_token",
                     "client_id":         client_id,
                     "client_secret":     client_secret,
                     "fb_exchange_token": access_token,
-                }
+                },
+                timeout=10
             )
             ll_data = ll_res.json()
             long_lived_token = ll_data.get("access_token", access_token)
         else:
             return Response({"error": "No code or access_token provided"}, status=400)
             
-        accounts_url = f"https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,category&access_token={long_lived_token}"
-        accounts_res = requests.get(accounts_url)
+        accounts_url = f"https://graph.facebook.com/v22.0/me/accounts?fields=id,name,access_token,category&access_token={long_lived_token}"
+        accounts_res = requests.get(accounts_url, timeout=10)
         accounts_data = accounts_res.json()
         
         if "error" in accounts_data or not accounts_data.get('data'):
-            return Response({"error": "Could not find connected Facebook Pages", "details": accounts_data}, status=400)
+            return Response({"error": "Could not find connected Facebook Pages for this account", "details": accounts_data}, status=400)
             
         page = accounts_data['data'][0]
         fb_page_id = page['id']
         fb_page_name = page.get('name', 'Facebook Page')
         page_access_token = page.get('access_token', long_lived_token)
+        
+        # Subscribe page to webhooks for messages and messaging_postbacks
+        try:
+            sub_url = f"https://graph.facebook.com/v22.0/{fb_page_id}/subscribed_apps"
+            sub_res = requests.post(
+                sub_url,
+                params={"subscribed_fields": "messages,messaging_postbacks", "access_token": page_access_token},
+                timeout=10
+            )
+        except Exception as e:
+            pass
         
         import datetime
         client = safe_get_client(request.user)
