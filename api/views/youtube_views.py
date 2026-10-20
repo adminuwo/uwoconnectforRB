@@ -51,6 +51,10 @@ class YouTubeConnectView(APIView):
         if "error" in auth_data:
             return Response({"error": auth_data["error"]}, status=auth_data.get("status_code", 500))
 
+        accept_header = request.headers.get("Accept", "")
+        if "text/html" in accept_header:
+            return HttpResponseRedirect(auth_data["url"])
+
         return Response({"url": auth_data["url"], "auth_url": auth_data["url"]})
 
 
