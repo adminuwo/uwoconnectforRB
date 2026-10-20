@@ -198,15 +198,17 @@ def get_google_credentials() -> Dict[str, str]:
     Returns client_id and client_secret from environment variables.
     Supports GMAIL_CLIENT_ID / GOOGLE_CLIENT_ID interchangeably.
     """
+    # Prioritize GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET because the registered OAuth 2.0 Client ID
+    # with authorized redirect URIs is 876129590251-lok6bi4ut8f2nhl63hh79mghd1ccuf6j.apps.googleusercontent.com
     client_id = (
-        os.environ.get("GOOGLE_CLIENT_ID")
-        or os.environ.get("GMAIL_CLIENT_ID")
+        os.environ.get("GMAIL_CLIENT_ID")
+        or os.environ.get("GOOGLE_CLIENT_ID")
         or ""
     ).strip()
 
     client_secret = (
-        os.environ.get("GOOGLE_CLIENT_SECRET")
-        or os.environ.get("GMAIL_CLIENT_SECRET")
+        os.environ.get("GMAIL_CLIENT_SECRET")
+        or os.environ.get("GOOGLE_CLIENT_SECRET")
         or ""
     ).strip()
 
@@ -234,7 +236,13 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
     }
     callback_path = callback_paths.get(norm, f"/api/auth/{norm}/callback")
 
-    # 1. Check dedicated service environment variable
+    # 1. If request is from local development (localhost / 127.0.0.1), ALWAYS use local callback
+    if request:
+        host = request.get_host()
+        if "localhost" in host or "127.0.0.1" in host:
+            return f"http://localhost:8080{callback_path}"
+
+    # 2. Check dedicated service environment variable (production / deployment override)
     candidate_keys = [
         f"GOOGLE_{norm.upper()}_REDIRECT_URI",
         f"{norm.upper()}_REDIRECT_URI",
@@ -244,13 +252,9 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
         if val and val.strip():
             return val.strip()
 
-    # 2. Check if request is local development vs Cloud Run
+    # 3. Dynamic fallback for remote requests
     if request:
-        host = request.get_host()
-        if "localhost" in host or "127.0.0.1" in host:
-            return f"http://localhost:8080{callback_path}"
-        else:
-            return f"https://uwoconnectforrb-743928421487.asia-south1.run.app{callback_path}"
+        return f"https://uwoconnectforrb-743928421487.asia-south1.run.app{callback_path}"
 
     if os.environ.get("GOOGLE_REDIRECT_URI"):
         return os.environ["GOOGLE_REDIRECT_URI"].strip()
@@ -260,6 +264,7 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
 
     # Default fallback
     return f"http://localhost:8080{callback_path}"
+
 
 
 def get_frontend_return_url(client=None, request=None) -> str:
