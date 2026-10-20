@@ -343,14 +343,22 @@ def generate_google_auth_url(
         "frontend_url": frontend_url,
     }
     
-    # Store standard service-prefixed cache keys for backward compatibility
+    norm_service = service_name.lower().replace("google_", "").strip()
     cache.set(f"google_oauth_state_{state}", state_payload, timeout=3600)
-    cache.set(f"gmail_state_{state}", {"client_id": str(effective_client_id), "return_origin": frontend_url}, timeout=3600)
-    cache.set(f"gcal_state_{state}", str(effective_client_id), timeout=3600)
-    cache.set(f"gsheets_state_{state}", str(effective_client_id), timeout=3600)
-    cache.set(f"gdocs_state_{state}", str(effective_client_id), timeout=3600)
-    cache.set(f"gslides_state_{state}", str(effective_client_id), timeout=3600)
-    cache.set(f"youtube_state_{state}", str(effective_client_id), timeout=3600)
+
+    # Store ONLY the service-specific cache key matching the requested service
+    if norm_service in ("gmail", "all"):
+        cache.set(f"gmail_state_{state}", {"client_id": str(effective_client_id), "return_origin": frontend_url}, timeout=3600)
+    elif norm_service == "calendar":
+        cache.set(f"gcal_state_{state}", str(effective_client_id), timeout=3600)
+    elif norm_service == "sheets":
+        cache.set(f"gsheets_state_{state}", str(effective_client_id), timeout=3600)
+    elif norm_service == "docs":
+        cache.set(f"gdocs_state_{state}", str(effective_client_id), timeout=3600)
+    elif norm_service == "slides":
+        cache.set(f"gslides_state_{state}", str(effective_client_id), timeout=3600)
+    elif norm_service == "youtube":
+        cache.set(f"youtube_state_{state}", str(effective_client_id), timeout=3600)
 
     params = {
         "client_id": creds["client_id"],

@@ -85,25 +85,28 @@ class GmailCallbackView(APIView):
         client_id = state_data.get('client_id') if isinstance(state_data, dict) else state_data
         frontend_url = state_data.get('return_origin') if isinstance(state_data, dict) else os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         
-        # Check if state belongs to Google Calendar OAuth
-        if state and cache.get(f'gcal_state_{state}'):
-            from .google_calendar_views import GoogleCalendarCallbackView
-            return GoogleCalendarCallbackView().get(request)
+        state_meta = cache.get(f"google_oauth_state_{state}") or {}
+        service = state_meta.get("service", "").lower().replace("google_", "").strip()
 
         # Check if state belongs to Google Sheets OAuth
-        if state and cache.get(f'gsheets_state_{state}'):
+        if service == "sheets" or (state and cache.get(f'gsheets_state_{state}')):
             from .google_sheets_views import GoogleSheetsCallbackView
             return GoogleSheetsCallbackView().get(request)
 
         # Check if state belongs to Google Docs OAuth
-        if state and cache.get(f'gdocs_state_{state}'):
+        if service == "docs" or (state and cache.get(f'gdocs_state_{state}')):
             from .google_docs_views import GoogleDocsCallbackView
             return GoogleDocsCallbackView().get(request)
 
         # Check if state belongs to Google Slides OAuth
-        if state and cache.get(f'gslides_state_{state}'):
+        if service == "slides" or (state and cache.get(f'gslides_state_{state}')):
             from .google_slides_views import GoogleSlidesCallbackView
             return GoogleSlidesCallbackView().get(request)
+
+        # Check if state belongs to Google Calendar OAuth
+        if service == "calendar" or (state and cache.get(f'gcal_state_{state}')):
+            from .google_calendar_views import GoogleCalendarCallbackView
+            return GoogleCalendarCallbackView().get(request)
 
         if error:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?gmail_error={error}")
