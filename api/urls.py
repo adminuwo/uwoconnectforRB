@@ -1,5 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .views.google_oauth_views import (
+    GoogleOAuthScopesView,
+    GoogleOAuthDiagnosticView,
+    GoogleOAuthConnectAllView,
+)
 from .views import (
     RegisterView, LoginView, GoogleLoginView, GoogleClientIdView, AppleLoginView, FirebaseLoginView, UWOLoginView, ClientViewSet, AutomationViewSet, WorkflowViewSet, 
     QrAuthCreateView, QrAuthStatusView, QrAuthScanView, QrAuthApproveView, QrAuthRejectView,
@@ -165,6 +170,12 @@ urlpatterns = [
     path('auth/google-login', GoogleLoginView.as_view(), name='google-login'),
     path('auth/google-login/', GoogleLoginView.as_view()),
     path('auth/google-client-id', GoogleClientIdView.as_view(), name='google-client-id'),
+    path('auth/google/diagnostic', GoogleOAuthDiagnosticView.as_view(), name='google-oauth-diagnostic'),
+    path('auth/google/diagnostic/', GoogleOAuthDiagnosticView.as_view()),
+    path('auth/google/scopes', GoogleOAuthScopesView.as_view(), name='google-oauth-scopes'),
+    path('auth/google/scopes/', GoogleOAuthScopesView.as_view()),
+    path('auth/google/connect-all', GoogleOAuthConnectAllView.as_view(), name='google-oauth-connect-all'),
+    path('auth/google/connect-all/', GoogleOAuthConnectAllView.as_view()),
     path('auth/apple', AppleLoginView.as_view(), name='apple-auth'),
     path('auth/apple/', AppleLoginView.as_view()),
     path('auth/gmail/connect', GmailConnectView.as_view(), name='gmail-connect'),
@@ -434,9 +445,13 @@ urlpatterns = [
     path('google-slides/disconnect', GoogleSlidesDisconnectView.as_view(), name='gslides-disconnect'),
     # YouTube Integration
     path('auth/youtube/connect', YouTubeConnectView.as_view(), name='youtube-connect'),
+    path('auth/youtube/connect/', YouTubeConnectView.as_view()),
     path('auth/youtube/callback', YouTubeCallbackView.as_view(), name='youtube-callback'),
+    path('auth/youtube/callback/', YouTubeCallbackView.as_view()),
     path('auth/youtube/status', YouTubeStatusView.as_view(), name='youtube-status'),
+    path('auth/youtube/status/', YouTubeStatusView.as_view()),
     path('auth/youtube/sync', YouTubeSyncView.as_view(), name='youtube-sync'),
+    path('auth/youtube/sync/', YouTubeSyncView.as_view()),
     path('youtube/analytics', YouTubeAnalyticsView.as_view(), name='youtube-analytics'),
     path('youtube/analytics/', YouTubeAnalyticsView.as_view()),
     path('youtube/videos', YouTubeVideosView.as_view(), name='youtube-videos'),

@@ -97,6 +97,16 @@ class Client(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def is_verification_account(self):
+        return bool((self.settings or {}).get('is_verification_account', False))
+
+    @is_verification_account.setter
+    def is_verification_account(self, val):
+        if not isinstance(self.settings, dict):
+            self.settings = {}
+        self.settings['is_verification_account'] = bool(val)
+
     def has_channel_access(self, channel_name):
         """
         Returns True if the client has admin-granted access to this channel.

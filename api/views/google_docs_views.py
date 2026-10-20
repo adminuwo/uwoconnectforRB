@@ -17,15 +17,16 @@ from ..services.google_docs_service import (
     list_client_docs,
 )
 
+from ..services.google_oauth_service import (
+    DOCS_SCOPES,
+    get_google_credentials,
+    get_google_redirect_uri,
+    get_frontend_return_url,
+    generate_google_auth_url,
+)
+
 logger = logging.getLogger(__name__)
 
-DOCS_SCOPES = [
-    "https://www.googleapis.com/auth/documents",
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/userinfo.profile",
-    "openid",
-]
 
 class GoogleDocsConnectView(APIView):
     permission_classes = [IsAuthenticated]
@@ -35,29 +36,11 @@ class GoogleDocsConnectView(APIView):
         if not client:
             return Response({"error": "No associated client account found."}, status=400)
 
-        client_id = os.getenv("GMAIL_CLIENT_ID")
-        # Use whitelisted OAuth redirect URI
-        redirect_uri = "http://localhost:8080/api/auth/gmail/callback"
+        auth_data = generate_google_auth_url("docs", client.id, scopes=DOCS_SCOPES, request=request)
+        if "error" in auth_data:
+            return Response({"error": auth_data["error"]}, status=auth_data.get("status_code", 503))
 
-        if not client_id:
-            return Response({"error": "Google OAuth is not configured on backend."}, status=503)
-
-        state = secrets.token_urlsafe(24)
-        # Store state in cache to delegate callback
-        cache.set(f"gdocs_state_{state}", str(client.id), timeout=600)
-
-        auth_url = (
-            "https://accounts.google.com/o/oauth2/v2/auth?"
-            f"client_id={client_id}&"
-            f"redirect_uri={redirect_uri}&"
-            "response_type=code&"
-            f"scope={'%20'.join(DOCS_SCOPES)}&"
-            "access_type=offline&"
-            "prompt=consent&"
-            f"state={state}"
-        )
-
-        return Response({"auth_url": auth_url})
+        return Response({"auth_url": auth_data["url"], "url": auth_data["url"]})
 
 
 class GoogleDocsCallbackView(APIView):
@@ -68,29 +51,32 @@ class GoogleDocsCallbackView(APIView):
         state = request.GET.get("state")
         error = request.GET.get("error")
 
+        state_meta = cache.get(f"google_oauth_state_{state}") or {}
+        frontend_url = state_meta.get("frontend_url") or get_frontend_return_url(request=request)
+
         if error:
             logger.error("Google Docs OAuth error: %s", error)
-            return redirect("http://localhost:3000/client/channels?gdocs_error=access_denied")
+            return redirect(f"{frontend_url}/client/channels?gdocs_error=access_denied")
 
-        client_id_str = cache.get(f"gdocs_state_{state}")
+        client_id_str = state_meta.get("client_id") or cache.get(f"gdocs_state_{state}")
         if not client_id_str:
             logger.error("Invalid or expired state token for Google Docs: %s", state)
-            return redirect("http://localhost:3000/client/channels?gdocs_error=invalid_state")
+            return redirect(f"{frontend_url}/client/channels?gdocs_error=invalid_state")
 
         cache.delete(f"gdocs_state_{state}")
+        cache.delete(f"google_oauth_state_{state}")
 
         try:
             client_obj = Client.objects.get(id=client_id_str)
         except Client.DoesNotExist:
-            return redirect("http://localhost:3000/client/channels?gdocs_error=client_not_found")
+            return redirect(f"{frontend_url}/client/channels?gdocs_error=client_not_found")
 
-        client_id = os.getenv("GMAIL_CLIENT_ID")
-        client_secret = os.getenv("GMAIL_CLIENT_SECRET")
-        redirect_uri = "http://localhost:8080/api/auth/gmail/callback"
+        creds = get_google_credentials()
+        redirect_uri = state_meta.get("redirect_uri") or get_google_redirect_uri("docs", request=request)
 
         token_payload = {
-            "client_id": client_id,
-            "client_secret": client_secret,
+            "client_id": creds["client_id"],
+            "client_secret": creds["client_secret"],
             "code": code,
             "grant_type": "authorization_code",
             "redirect_uri": redirect_uri,
@@ -99,7 +85,7 @@ class GoogleDocsCallbackView(APIView):
         token_resp = requests.post("https://oauth2.googleapis.com/token", data=token_payload, timeout=15)
         if token_resp.status_code != 200:
             logger.error("Token exchange failed for Google Docs: %s", token_resp.text)
-            return redirect("http://localhost:3000/client/channels?gdocs_error=token_exchange_failed")
+            return redirect(f"{frontend_url}/client/channels?gdocs_error=token_exchange_failed")
 
         tokens = token_resp.json()
         access_token = tokens.get("access_token")
@@ -140,7 +126,7 @@ class GoogleDocsCallbackView(APIView):
         except Exception as _e:
             logger.warning("Default document creation warning: %s", _e)
 
-        return redirect("http://localhost:3000/client/channels?gdocs_connected=true")
+        return redirect(f"{frontend_url}/client/channels?gdocs_connected=true")
 
 
 class GoogleDocsStatusView(APIView):

@@ -453,6 +453,28 @@ class EntitlementService:
         if not client:
             return DEFAULT_PLANS_CONFIG['free']
 
+        # Google Reviewer / Verification account bypass (Phase 6):
+        # Grants test accounts full access to all Google integrations without requiring paid subscriptions.
+        try:
+            from .google_oauth_service import is_google_verification_account
+            if is_google_verification_account(client):
+                verification_cfg = dict(DEFAULT_PLANS_CONFIG.get('advanced', {}))
+                verification_cfg.update({
+                    'name': 'Google Verification Reviewer Plan',
+                    'slug': 'verification_partner',
+                    'description': 'Designated reviewer sandbox environment for Google OAuth verification review.',
+                    'allowed_connectors': list(set(
+                        verification_cfg.get('allowed_connectors', []) + [
+                            'gmail', 'google_calendar', 'google_sheets', 'google_docs',
+                            'google_slides', 'youtube', 'connector_gmail', 'channel_youtube',
+                            'connector_google_news', 'conn_gnews'
+                        ]
+                    ))
+                })
+                return verification_cfg
+        except Exception:
+            pass
+
         plan_str = (client.plan or '').strip().lower()
         
         # 1. Check assigned_plan ForeignKey or active database Plan first
@@ -548,11 +570,39 @@ class EntitlementService:
         return DEFAULT_PLANS_CONFIG['free']
 
     @staticmethod
+    def get_effective_entitlements(client: Client) -> Dict[str, Any]:
+        """Returns consolidated plan dictionary and allowed scopes/features for a client."""
+        cfg = EntitlementService.get_client_plan_config(client)
+        return {
+            'plan_name': cfg.get('name', 'No Active Plan'),
+            'plan_slug': cfg.get('slug', 'free'),
+            'is_active': bool(client and getattr(client, 'status', 'ACTIVE') == 'ACTIVE'),
+            'allowed_connectors': cfg.get('allowed_connectors', []),
+            'allowed_features': cfg.get('allowed_features', []),
+        }
+
+    @staticmethod
+    def can_access_channel(client: Client, channel_name: str):
+        """Returns (can_access: bool, status: str) for a given channel/connector."""
+        status = EntitlementService.evaluate_item_access(channel_name, 'connector', client)
+        if status == 'AVAILABLE':
+            return True, 'AVAILABLE'
+        return False, status
+
+    @staticmethod
     def evaluate_item_access(item_key: str, item_type: str, client: Client) -> str:
         """
         Evaluates item access state:
         Returns COMING_SOON | AVAILABLE | UPGRADE_REQUIRED
         """
+        # Google Reviewer / Verification account bypass (Phase 6):
+        try:
+            from .google_oauth_service import is_google_verification_account
+            if is_google_verification_account(client):
+                return 'AVAILABLE'
+        except Exception:
+            pass
+
         # 1. Check if item is marked COMING SOON or INACTIVE by Admin in DB
         clean_k = item_key.lower().replace('feature_', '').replace('connector_', '').replace('channel_', '')
 

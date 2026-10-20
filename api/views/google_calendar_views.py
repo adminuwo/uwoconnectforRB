@@ -22,18 +22,18 @@ from ..services.google_calendar_service import (
 )
 from ..serializers import ClientSerializer
 
+from ..services.google_oauth_service import (
+    CALENDAR_SCOPES,
+    GOOGLE_AUTH_ENDPOINT,
+    GOOGLE_TOKEN_ENDPOINT,
+    GOOGLE_USERINFO_ENDPOINT,
+    get_google_credentials,
+    get_google_redirect_uri,
+    get_frontend_return_url,
+    generate_google_auth_url,
+)
+
 logger = logging.getLogger(__name__)
-
-GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-GOOGLE_USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo"
-
-CALENDAR_SCOPES = " ".join([
-    "https://www.googleapis.com/auth/calendar",
-    "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/userinfo.profile",
-])
 
 
 class GoogleCalendarConnectView(APIView):
@@ -45,28 +45,11 @@ class GoogleCalendarConnectView(APIView):
         if not client:
             return Response({"error": "No client associated with user."}, status=400)
 
-        creds = _get_credentials()
-        if not creds["client_id"] or not creds["client_secret"]:
-            return Response(
-                {"error": "Google OAuth credentials not configured on backend (GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET)."},
-                status=503,
-            )
+        auth_data = generate_google_auth_url("calendar", client.id, scopes=CALENDAR_SCOPES, request=request)
+        if "error" in auth_data:
+            return Response({"error": auth_data["error"]}, status=auth_data.get("status_code", 503))
 
-        state = secrets.token_urlsafe(32)
-        cache.set(f"gcal_state_{state}", client.id, timeout=600)
-        cache.set(f"calendar_state_{state}", client.id, timeout=3600)
-
-        auth_url = (
-            f"{GOOGLE_AUTH_ENDPOINT}"
-            f"?client_id={creds['client_id']}"
-            f"&response_type=code"
-            f"&redirect_uri={creds['redirect_uri']}"
-            f"&scope={CALENDAR_SCOPES}"
-            f"&state={state}"
-            f"&access_type=offline"
-            f"&prompt=consent"
-        )
-        return Response({"url": auth_url})
+        return Response({"url": auth_data["url"], "auth_url": auth_data["url"]})
 
 
 class GoogleCalendarCallbackView(APIView):
@@ -75,10 +58,12 @@ class GoogleCalendarCallbackView(APIView):
     authentication_classes = []
 
     def get(self, request):
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-        code = request.query_params.get("code")
         state = request.query_params.get("state")
+        code = request.query_params.get("code")
         error = request.query_params.get("error")
+
+        state_meta = cache.get(f"google_oauth_state_{state}") or {}
+        frontend_url = state_meta.get("frontend_url") or get_frontend_return_url(request=request)
 
         if error:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_calendar_error={error}")
@@ -86,12 +71,13 @@ class GoogleCalendarCallbackView(APIView):
         if not code or not state:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_calendar_error=missing_code_or_state")
 
-        client_id_val = cache.get(f"gcal_state_{state}") or cache.get(f"calendar_state_{state}")
+        client_id_val = state_meta.get("client_id") or cache.get(f"gcal_state_{state}") or cache.get(f"calendar_state_{state}")
         if not client_id_val:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_calendar_error=invalid_or_expired_state")
 
         cache.delete(f"gcal_state_{state}")
         cache.delete(f"calendar_state_{state}")
+        cache.delete(f"google_oauth_state_{state}")
 
         try:
             from api.models import Client
@@ -100,6 +86,7 @@ class GoogleCalendarCallbackView(APIView):
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_calendar_error=client_not_found")
 
         creds = _get_credentials()
+        redirect_uri = state_meta.get("redirect_uri") or creds["redirect_uri"]
         token_payload = {
             "client_id": creds["client_id"],
             "client_secret": creds["client_secret"],

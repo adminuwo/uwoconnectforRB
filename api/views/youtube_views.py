@@ -18,30 +18,23 @@ from ..serializers import ClientSerializer
 
 logger = logging.getLogger(__name__)
 
-GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-GOOGLE_USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo"
+from ..services.google_oauth_service import (
+    YOUTUBE_SCOPES,
+    GOOGLE_AUTH_ENDPOINT,
+    GOOGLE_TOKEN_ENDPOINT,
+    GOOGLE_USERINFO_ENDPOINT,
+    get_google_credentials,
+    get_google_redirect_uri,
+    get_frontend_return_url,
+    generate_google_auth_url,
+)
 
-YOUTUBE_SCOPES = " ".join([
-    "https://www.googleapis.com/auth/youtube",
-    "https://www.googleapis.com/auth/youtube.readonly",
-    "https://www.googleapis.com/auth/youtube.upload",
-    "https://www.googleapis.com/auth/youtube.force-ssl",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/userinfo.profile",
-])
-
-def _get_credentials():
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(override=True)
-    except Exception:
-        pass
-
+def _get_credentials(request=None):
+    creds = get_google_credentials()
     return {
-        "client_id": os.environ.get("GMAIL_CLIENT_ID", ""),
-        "client_secret": os.environ.get("GMAIL_CLIENT_SECRET", ""),
-        "redirect_uri": os.environ.get("YOUTUBE_REDIRECT_URI", "http://localhost:8080/api/auth/youtube/callback"),
+        "client_id": creds["client_id"],
+        "client_secret": creds["client_secret"],
+        "redirect_uri": get_google_redirect_uri("youtube", request=request),
     }
 
 
@@ -54,49 +47,11 @@ class YouTubeConnectView(APIView):
         if not client:
             return Response({"error": "No client associated with user."}, status=400)
 
-        creds = _get_credentials()
-        if not creds["client_id"] or not creds["client_secret"]:
-            return Response(
-                {"error": "Google OAuth credentials not configured on backend (GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET)."},
-                status=500,
-            )
+        auth_data = generate_google_auth_url("youtube", client.id, scopes=YOUTUBE_SCOPES, request=request)
+        if "error" in auth_data:
+            return Response({"error": auth_data["error"]}, status=auth_data.get("status_code", 500))
 
-        # Determine appropriate redirect_uri based on environment / request host
-        host = request.get_host()
-        if 'localhost' in host or '127.0.0.1' in host:
-            redirect_uri = "http://localhost:8080/api/auth/youtube/callback"
-        else:
-            redirect_uri = os.environ.get(
-                "YOUTUBE_REDIRECT_URI",
-                "https://uwoconnectforrb-743928421487.asia-south1.run.app/api/auth/youtube/callback"
-            )
-
-        # Determine caller frontend origin dynamically
-        client_origin = request.headers.get('Origin') or request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER', '')
-        if client_origin and '://' in client_origin:
-            parts = client_origin.split('/')
-            client_origin = f"{parts[0]}//{parts[2]}"
-        elif client.white_label_domain:
-            client_origin = f"https://{client.white_label_domain}"
-        else:
-            client_origin = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-
-        state = secrets.token_urlsafe(32)
-        cache.set(f"youtube_state_{state}", client.id, timeout=600)
-        cache.set(f"youtube_redirect_uri_{state}", redirect_uri, timeout=600)
-        cache.set(f"youtube_origin_{state}", client_origin, timeout=600)
-
-        auth_url = (
-            f"{GOOGLE_AUTH_ENDPOINT}"
-            f"?client_id={creds['client_id']}"
-            f"&redirect_uri={redirect_uri}"
-            f"&response_type=code"
-            f"&scope={YOUTUBE_SCOPES}"
-            f"&state={state}"
-            f"&access_type=offline"
-            f"&prompt=consent"
-        )
-        return Response({"url": auth_url})
+        return Response({"url": auth_data["url"], "auth_url": auth_data["url"]})
 
 
 class YouTubeCallbackView(APIView):
@@ -106,10 +61,12 @@ class YouTubeCallbackView(APIView):
 
     def get(self, request):
         state = request.GET.get("state")
-        cached_origin = cache.get(f"youtube_origin_{state}") if state else None
-        frontend_url = cached_origin or os.environ.get("FRONTEND_URL", "http://localhost:3000")
         code = request.GET.get("code")
         error = request.GET.get("error")
+
+        state_meta = cache.get(f"google_oauth_state_{state}") or {}
+        cached_origin = cache.get(f"youtube_origin_{state}") if state else None
+        frontend_url = state_meta.get("frontend_url") or cached_origin or get_frontend_return_url(request=request)
 
         if error:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?youtube_error={error}")
@@ -117,7 +74,7 @@ class YouTubeCallbackView(APIView):
         if not code or not state:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?youtube_error=missing_params")
 
-        client_id_from_cache = cache.get(f"youtube_state_{state}")
+        client_id_from_cache = state_meta.get("client_id") or cache.get(f"youtube_state_{state}")
         # Fallback: look up client via all states in cache (handles server restarts)
         if not client_id_from_cache:
             # Try to find any pending youtube state for authenticated user
@@ -129,9 +86,14 @@ class YouTubeCallbackView(APIView):
         if not client_id_from_cache:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?youtube_error=invalid_state")
 
-        creds = _get_credentials()
+        creds = _get_credentials(request=request)
         cached_redirect_uri = cache.get(f"youtube_redirect_uri_{state}")
-        redirect_uri = cached_redirect_uri or creds["redirect_uri"]
+        redirect_uri = state_meta.get("redirect_uri") or cached_redirect_uri or creds["redirect_uri"]
+
+        cache.delete(f"youtube_state_{state}")
+        cache.delete(f"google_oauth_state_{state}")
+        cache.delete(f"youtube_redirect_uri_{state}")
+        cache.delete(f"youtube_origin_{state}")
         import requests as http_requests
 
         # Exchange code for tokens

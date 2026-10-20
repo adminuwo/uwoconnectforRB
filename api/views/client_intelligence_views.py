@@ -144,6 +144,7 @@ def get_all_supported_channels(client):
     """
     Returns unified status dictionary for all supported platform channels.
     """
+    s = getattr(client, 'settings', None) or {}
     channels = [
         {
             'key': 'whatsapp',
@@ -179,9 +180,9 @@ def get_all_supported_channels(client):
             'key': 'telegram',
             'name': 'Telegram Bot',
             'icon': 'Send',
-            'is_connected': bool(client.settings.get('telegram_enabled')),
-            'status': 'Connected' if client.settings.get('telegram_enabled') else 'Not Connected',
-            'details': client.settings.get('telegram_bot_name') or 'Not Configured',
+            'is_connected': bool(s.get('telegram_enabled')),
+            'status': 'Connected' if s.get('telegram_enabled') else 'Not Connected',
+            'details': s.get('telegram_bot_name') or 'Not Configured',
             'connected_date': None,
             'category': 'Messaging'
         },
@@ -189,9 +190,9 @@ def get_all_supported_channels(client):
             'key': 'linkedin',
             'name': 'LinkedIn Messaging',
             'icon': 'Linkedin',
-            'is_connected': bool(client.settings.get('linkedin_enabled')),
-            'status': 'Connected' if client.settings.get('linkedin_enabled') else 'Not Connected',
-            'details': client.settings.get('linkedin_company') or 'Not Configured',
+            'is_connected': bool(s.get('linkedin_enabled')),
+            'status': 'Connected' if s.get('linkedin_enabled') else 'Not Connected',
+            'details': s.get('linkedin_company') or 'Not Configured',
             'connected_date': None,
             'category': 'Social'
         },
@@ -199,9 +200,9 @@ def get_all_supported_channels(client):
             'key': 'twitter',
             'name': 'X / Twitter DM',
             'icon': 'Twitter',
-            'is_connected': bool(client.settings.get('twitter_enabled')),
-            'status': 'Connected' if client.settings.get('twitter_enabled') else 'Not Connected',
-            'details': client.settings.get('twitter_handle') or 'Not Configured',
+            'is_connected': bool(s.get('twitter_enabled')),
+            'status': 'Connected' if s.get('twitter_enabled') else 'Not Connected',
+            'details': s.get('twitter_handle') or 'Not Configured',
             'connected_date': None,
             'category': 'Social'
         },
@@ -219,9 +220,9 @@ def get_all_supported_channels(client):
             'key': 'tiktok',
             'name': 'TikTok Direct',
             'icon': 'Share2',
-            'is_connected': bool(client.settings.get('tiktok_enabled')),
-            'status': 'Connected' if client.settings.get('tiktok_enabled') else 'Not Connected',
-            'details': client.settings.get('tiktok_handle') or 'Not Configured',
+            'is_connected': bool(s.get('tiktok_enabled')),
+            'status': 'Connected' if s.get('tiktok_enabled') else 'Not Connected',
+            'details': s.get('tiktok_handle') or 'Not Configured',
             'connected_date': None,
             'category': 'Media'
         },
