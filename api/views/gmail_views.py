@@ -1,4 +1,5 @@
 import os
+import requests
 import google_auth_oauthlib.flow
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -9,10 +10,9 @@ from api.models import Client
 
 from django.conf import settings
 
-# Allow HTTP traffic strictly during local development debugging
-if getattr(settings, 'DEBUG', False):
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+# Unconditionally allow OAuth transport across reverse proxies (Cloud Run, local dev, etc.)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 from ..services.google_oauth_service import (
     GMAIL_SCOPES,
@@ -116,46 +116,100 @@ class GmailCallbackView(APIView):
         except Client.DoesNotExist:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?gmail_error=client_not_found")
             
-        client_config = get_client_config()
-        flow = google_auth_oauthlib.flow.Flow.from_client_config(
-            client_config,
-            scopes=SCOPES,
-            state=state
+        creds = get_google_credentials()
+        redirect_uri = (
+            state_data.get('redirect_uri')
+            if isinstance(state_data, dict) and state_data.get('redirect_uri')
+            else os.environ.get("GMAIL_REDIRECT_URI", "http://localhost:8080/api/auth/gmail/callback")
         )
-        flow.redirect_uri = os.environ.get("GMAIL_REDIRECT_URI", "http://localhost:8080/api/auth/gmail/callback")
-        
-        authorization_response = request.build_absolute_uri()
-        # Fix http to https if behind a proxy
-        if 'https' not in authorization_response and 'localhost' not in authorization_response:
-             authorization_response = authorization_response.replace('http:', 'https:')
-             
-        # Add the code_verifier back to the flow for PKCE
+        code = request.GET.get('code')
         code_verifier = cache.get(f'gmail_verifier_{state}')
-        if code_verifier:
-            flow.code_verifier = code_verifier
-             
+
+        access_token = None
+        refresh_token = None
+        email_address = ''
+
+        # 1. Primary: Direct HTTPS token exchange (completely immune to oauthlib InsecureTransportError)
         try:
-            flow.fetch_token(authorization_response=authorization_response)
-        except Exception as e:
-            return HttpResponseRedirect(f"{frontend_url}/client/channels?gmail_error={str(e)}")
-            
-        credentials = flow.credentials
-        
-        # Get user's email address using the token to store it
-        from googleapiclient.discovery import build
-        service = build('gmail', 'v1', credentials=credentials)
-        profile = service.users().getProfile(userId='me').execute()
-        email_address = profile.get('emailAddress', '')
-        
+            token_payload = {
+                "client_id": creds["client_id"],
+                "client_secret": creds["client_secret"],
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            }
+            if code_verifier:
+                token_payload["code_verifier"] = code_verifier
+
+            token_res = requests.post("https://oauth2.googleapis.com/token", data=token_payload, timeout=20)
+            token_data = token_res.json()
+            if "access_token" in token_data:
+                access_token = token_data.get("access_token")
+                refresh_token = token_data.get("refresh_token")
+            else:
+                err_msg = token_data.get("error_description") or token_data.get("error") or "Direct exchange failed"
+                raise Exception(err_msg)
+        except Exception as direct_err:
+            # 2. Fallback: Google Auth Flow
+            try:
+                client_config = get_client_config()
+                flow = google_auth_oauthlib.flow.Flow.from_client_config(
+                    client_config,
+                    scopes=SCOPES,
+                    state=state
+                )
+                flow.redirect_uri = redirect_uri
+                authorization_response = request.build_absolute_uri()
+                if 'https' not in authorization_response and 'localhost' not in authorization_response:
+                    authorization_response = authorization_response.replace('http:', 'https:')
+                if code_verifier:
+                    flow.code_verifier = code_verifier
+                flow.fetch_token(authorization_response=authorization_response)
+                access_token = flow.credentials.token
+                refresh_token = flow.credentials.refresh_token
+            except Exception as flow_err:
+                return HttpResponseRedirect(f"{frontend_url}/client/channels?gmail_error={str(direct_err or flow_err)}")
+
+        # Fetch user's email address
+        try:
+            user_info = requests.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=15
+            ).json()
+            email_address = user_info.get("email", "")
+        except Exception:
+            pass
+
+        if not email_address:
+            try:
+                from google.oauth2.credentials import Credentials
+                from googleapiclient.discovery import build
+                g_creds = Credentials(
+                    token=access_token,
+                    refresh_token=refresh_token,
+                    token_uri='https://oauth2.googleapis.com/token',
+                    client_id=creds['client_id'],
+                    client_secret=creds['client_secret'],
+                    scopes=SCOPES
+                )
+                service = build('gmail', 'v1', credentials=g_creds)
+                profile = service.users().getProfile(userId='me').execute()
+                email_address = profile.get('emailAddress', '')
+            except Exception:
+                pass
+
         client.gmail_enabled = True
+        existing_cfg = client.gmail_config or {}
         client.gmail_config = {
             'email_address': email_address,
-            'token': credentials.token,
-            'refresh_token': credentials.refresh_token,
-            'token_uri': credentials.token_uri,
-            'client_id': credentials.client_id,
-            'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes
+            'token': access_token,
+            'access_token': access_token,
+            'refresh_token': refresh_token or existing_cfg.get('refresh_token', ''),
+            'token_uri': 'https://oauth2.googleapis.com/token',
+            'client_id': creds['client_id'],
+            'client_secret': creds['client_secret'],
+            'scopes': SCOPES
         }
         client.save()
         

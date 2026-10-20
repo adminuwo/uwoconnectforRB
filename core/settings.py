@@ -58,6 +58,13 @@ if not SECRET_KEY:
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
+# Handle reverse proxy HTTPS termination (Google Cloud Run / Nginx / Load Balancer)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# OAuth transport allowance across reverse proxies and local development
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
 # Host header validation
 allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
 if allowed_hosts_env:

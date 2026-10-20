@@ -225,24 +225,7 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
     """
     norm = service_name.lower().replace("google_", "").strip()
 
-    # Callback path mapping per service
-    callback_paths = {
-        "youtube": "/api/auth/youtube/callback",
-        "calendar": "/api/auth/google-calendar/callback",
-        "sheets": "/api/auth/google-sheets/callback",
-        "docs": "/api/auth/gmail/callback",
-        "slides": "/api/auth/gmail/callback",
-        "gmail": "/api/auth/gmail/callback",
-    }
-    callback_path = callback_paths.get(norm, f"/api/auth/{norm}/callback")
-
-    # 1. If request is from local development (localhost / 127.0.0.1), ALWAYS use local callback
-    if request:
-        host = request.get_host()
-        if "localhost" in host or "127.0.0.1" in host:
-            return f"http://localhost:8080{callback_path}"
-
-    # 2. Check dedicated service environment variable (production / deployment override)
+    # 1. Check dedicated service environment variable (production / deployment override)
     candidate_keys = [
         f"GOOGLE_{norm.upper()}_REDIRECT_URI",
         f"{norm.upper()}_REDIRECT_URI",
@@ -252,14 +235,38 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
         if val and val.strip():
             return val.strip()
 
-    # 3. Dynamic fallback for remote requests
+    # 2. For unified services that share the verified Google OAuth callback (gmail, sheets, docs, slides, all),
+    # prioritize the registered GMAIL_REDIRECT_URI if configured in environment
+    if norm in ("gmail", "sheets", "docs", "slides", "all") and os.environ.get("GMAIL_REDIRECT_URI"):
+        if not os.environ.get("USE_LOCAL_GOOGLE_CALLBACK", "").lower() in ("true", "1"):
+            return os.environ["GMAIL_REDIRECT_URI"].strip()
+
+    # Callback path mapping per service
+    callback_paths = {
+        "youtube": "/api/auth/youtube/callback",
+        "calendar": "/api/auth/google-calendar/callback",
+        "sheets": "/api/auth/gmail/callback",
+        "docs": "/api/auth/gmail/callback",
+        "slides": "/api/auth/gmail/callback",
+        "gmail": "/api/auth/gmail/callback",
+        "all": "/api/auth/gmail/callback",
+    }
+    callback_path = callback_paths.get(norm, "/api/auth/gmail/callback")
+
+    # 3. If request is from local development (localhost / 127.0.0.1), use local callback
+    if request:
+        host = request.get_host()
+        if "localhost" in host or "127.0.0.1" in host:
+            return f"http://localhost:8080{callback_path}"
+
+    # 4. Dynamic fallback for remote requests
     if request:
         return f"https://uwoconnectforrb-743928421487.asia-south1.run.app{callback_path}"
 
     if os.environ.get("GOOGLE_REDIRECT_URI"):
         return os.environ["GOOGLE_REDIRECT_URI"].strip()
 
-    if norm == "gmail" and os.environ.get("GMAIL_REDIRECT_URI"):
+    if os.environ.get("GMAIL_REDIRECT_URI"):
         return os.environ["GMAIL_REDIRECT_URI"].strip()
 
     # Default fallback
