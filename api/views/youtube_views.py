@@ -61,13 +61,35 @@ class YouTubeConnectView(APIView):
                 status=500,
             )
 
+        # Determine appropriate redirect_uri based on environment / request host
+        host = request.get_host()
+        if 'localhost' in host or '127.0.0.1' in host:
+            redirect_uri = "http://localhost:8080/api/auth/youtube/callback"
+        else:
+            redirect_uri = os.environ.get(
+                "YOUTUBE_REDIRECT_URI",
+                "https://uwoconnectforrb-743928421487.asia-south1.run.app/api/auth/youtube/callback"
+            )
+
+        # Determine caller frontend origin dynamically
+        client_origin = request.headers.get('Origin') or request.META.get('HTTP_ORIGIN') or request.META.get('HTTP_REFERER', '')
+        if client_origin and '://' in client_origin:
+            parts = client_origin.split('/')
+            client_origin = f"{parts[0]}//{parts[2]}"
+        elif client.white_label_domain:
+            client_origin = f"https://{client.white_label_domain}"
+        else:
+            client_origin = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
         state = secrets.token_urlsafe(32)
         cache.set(f"youtube_state_{state}", client.id, timeout=600)
+        cache.set(f"youtube_redirect_uri_{state}", redirect_uri, timeout=600)
+        cache.set(f"youtube_origin_{state}", client_origin, timeout=600)
 
         auth_url = (
             f"{GOOGLE_AUTH_ENDPOINT}"
             f"?client_id={creds['client_id']}"
-            f"&redirect_uri={creds['redirect_uri']}"
+            f"&redirect_uri={redirect_uri}"
             f"&response_type=code"
             f"&scope={YOUTUBE_SCOPES}"
             f"&state={state}"
@@ -83,9 +105,10 @@ class YouTubeCallbackView(APIView):
     authentication_classes = []
 
     def get(self, request):
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
-        code = request.GET.get("code")
         state = request.GET.get("state")
+        cached_origin = cache.get(f"youtube_origin_{state}") if state else None
+        frontend_url = cached_origin or os.environ.get("FRONTEND_URL", "http://localhost:3000")
+        code = request.GET.get("code")
         error = request.GET.get("error")
 
         if error:
@@ -107,6 +130,8 @@ class YouTubeCallbackView(APIView):
             return HttpResponseRedirect(f"{frontend_url}/client/channels?youtube_error=invalid_state")
 
         creds = _get_credentials()
+        cached_redirect_uri = cache.get(f"youtube_redirect_uri_{state}")
+        redirect_uri = cached_redirect_uri or creds["redirect_uri"]
         import requests as http_requests
 
         # Exchange code for tokens
@@ -115,7 +140,7 @@ class YouTubeCallbackView(APIView):
                 "code": code,
                 "client_id": creds["client_id"],
                 "client_secret": creds["client_secret"],
-                "redirect_uri": creds["redirect_uri"],
+                "redirect_uri": redirect_uri,
                 "grant_type": "authorization_code",
             }, timeout=10)
             token_data = token_res.json()
@@ -174,6 +199,8 @@ class YouTubeCallbackView(APIView):
             }
             client_obj.save()
             cache.delete(f"youtube_state_{state}")
+            cache.delete(f"youtube_redirect_uri_{state}")
+            cache.delete(f"youtube_origin_{state}")
             return HttpResponseRedirect(f"{frontend_url}/client/channels?youtube_connected=true")
         except Client.DoesNotExist:
             return HttpResponseRedirect("/client/channels?youtube_error=client_not_found")
