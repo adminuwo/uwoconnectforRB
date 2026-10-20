@@ -85,17 +85,41 @@ class GoogleSheetsCallbackView(APIView):
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_sheets_error=client_not_found")
 
         creds = _get_credentials()
-        redirect_uri = state_meta.get("redirect_uri") or creds["redirect_uri"]
-        token_payload = {
-            "client_id": creds["client_id"],
-            "client_secret": creds["client_secret"],
-            "code": code,
-            "redirect_uri": redirect_uri,
-            "grant_type": "authorization_code",
-        }
-        token_resp = requests.post(GOOGLE_TOKEN_ENDPOINT, data=token_payload, timeout=20)
-        if token_resp.status_code != 200:
-            logger.error("Google Sheets token exchange failed: %s", token_resp.text)
+        primary_redirect_uri = (
+            state_meta.get("redirect_uri")
+            or get_google_redirect_uri("sheets", request=request)
+            or creds.get("redirect_uri")
+        )
+        candidate_uris = [
+            primary_redirect_uri,
+            creds.get("redirect_uri"),
+            "https://uwoconnectforrb-743928421487.asia-south1.run.app/api/auth/gmail/callback",
+            "https://uwoconnectforrb-743928421487.asia-south1.run.app/api/google-sheets/callback/",
+            "https://uwoconnectforrb-743928421487.asia-south1.run.app/api/auth/google-sheets/callback",
+            "https://uwoconnect.aisa24.com/api/auth/gmail/callback",
+            "http://localhost:8080/api/auth/gmail/callback",
+        ]
+        # Remove duplicates while preserving order
+        candidate_uris = [u for i, u in enumerate(candidate_uris) if u and u not in candidate_uris[:i]]
+
+        token_resp = None
+        for cand_uri in candidate_uris:
+            token_payload = {
+                "client_id": creds["client_id"],
+                "client_secret": creds["client_secret"],
+                "code": code,
+                "redirect_uri": cand_uri,
+                "grant_type": "authorization_code",
+            }
+            token_resp = requests.post(GOOGLE_TOKEN_ENDPOINT, data=token_payload, timeout=20)
+            if token_resp.status_code == 200:
+                logger.info("Google Sheets token exchange successful using redirect_uri: %s", cand_uri)
+                break
+            else:
+                logger.warning("Google Sheets token exchange attempt with %s failed (%s): %s", cand_uri, token_resp.status_code, token_resp.text)
+
+        if not token_resp or token_resp.status_code != 200:
+            logger.error("Google Sheets token exchange failed: %s", token_resp.text if token_resp else "No response")
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_sheets_error=token_exchange_failed")
 
         token_data = token_resp.json()
