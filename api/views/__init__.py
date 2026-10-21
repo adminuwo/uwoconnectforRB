@@ -15,6 +15,8 @@ from .google_calendar_views import *
 from .google_sheets_views import *
 from .google_docs_views import *
 from .google_slides_views import *
+from .google_drive_views import *
+from .google_workspace_ai_views import *
 from .public_calendar_views import *
 from .monitoring_views import *
 from .youtube_views import *

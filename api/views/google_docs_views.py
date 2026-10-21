@@ -15,6 +15,9 @@ from ..services.google_docs_service import (
     create_google_doc,
     append_text_to_doc,
     list_client_docs,
+    get_google_doc_content,
+    delete_google_doc,
+    ai_generate_google_doc,
 )
 
 from ..services.google_oauth_service import (
@@ -231,3 +234,98 @@ class GoogleDocsDisconnectView(APIView):
         client.save(update_fields=["google_docs_enabled", "google_docs_config"])
 
         return Response({"message": "Google Docs disconnected successfully."})
+
+
+class GoogleDocsListView(APIView):
+    """List Google Docs accessible to the client."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_docs_enabled:
+            return Response({"connected": False, "docs": []})
+
+        docs = list_client_docs(client)
+        return Response({"connected": True, "docs": docs, "total": len(docs)})
+
+
+class GoogleDocsDetailView(APIView):
+    """Read content of a Google Doc or append text."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, doc_id=None):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_docs_enabled:
+            return Response({"error": "Google Docs is not connected."}, status=400)
+
+        target_id = doc_id or request.query_params.get("doc_id")
+        if not target_id:
+            return Response({"error": "doc_id is required."}, status=400)
+
+        try:
+            doc_data = get_google_doc_content(client, target_id)
+            return Response(doc_data)
+        except Exception as e:
+            logger.error("Failed fetching doc content %s: %s", target_id, e)
+            return Response({"error": str(e)}, status=500)
+
+    def post(self, request, doc_id=None):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_docs_enabled:
+            return Response({"error": "Google Docs is not connected."}, status=400)
+
+        target_id = doc_id or request.data.get("doc_id")
+        text = request.data.get("text", "").strip()
+        if not text:
+            return Response({"error": "text is required."}, status=400)
+
+        try:
+            success = append_text_to_doc(client, doc_id=target_id, text=text)
+            return Response({"success": success, "doc_id": target_id, "message": "Content appended successfully."})
+        except Exception as e:
+            logger.error("Failed appending to doc %s: %s", target_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleDocsDeleteView(APIView):
+    """Trashes a Google Doc."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_docs_enabled:
+            return Response({"error": "Google Docs is not connected."}, status=400)
+
+        doc_id = request.data.get("doc_id")
+        if not doc_id:
+            return Response({"error": "doc_id is required."}, status=400)
+
+        try:
+            res = delete_google_doc(client, doc_id)
+            return Response(res)
+        except Exception as e:
+            logger.error("Failed deleting doc %s: %s", doc_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleDocsAIGenerateView(APIView):
+    """AI Document Builder: Generates structured document and saves real Google Doc."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_docs_enabled:
+            return Response({"error": "Google Docs is not connected."}, status=400)
+
+        prompt = request.data.get("prompt", "").strip()
+        doc_type = request.data.get("doc_type", "PROPOSAL")
+        if not prompt:
+            return Response({"error": "Prompt is required."}, status=400)
+
+        try:
+            res = ai_generate_google_doc(client, prompt=prompt, doc_type=doc_type)
+            return Response(res)
+        except Exception as e:
+            logger.error("AI Document Builder error: %s", e)
+            return Response({"error": str(e)}, status=500)
+

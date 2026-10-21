@@ -17,7 +17,11 @@ from rest_framework.permissions import IsAuthenticated
 from ..services.google_calendar_service import (
     _get_credentials,
     list_upcoming_events,
+    list_calendar_events_range,
     create_calendar_event,
+    update_calendar_event,
+    delete_calendar_event,
+    ai_calendar_assistant,
     get_valid_calendar_token,
 )
 from ..serializers import ClientSerializer
@@ -264,3 +268,111 @@ class GoogleCalendarDisconnectView(APIView):
 
         serializer = ClientSerializer(client)
         return Response(serializer.data)
+
+
+class GoogleCalendarEventsView(APIView):
+    """Retrieve Google Calendar events with date range filtering (Month, Week, Day)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_calendar_enabled:
+            return Response({"connected": False, "events": []})
+
+        start_iso = request.query_params.get("start")
+        end_iso = request.query_params.get("end")
+        max_results = request.query_params.get("max_results", 100)
+
+        try:
+            events = list_calendar_events_range(
+                client_obj=client,
+                start_iso=start_iso,
+                end_iso=end_iso,
+                max_results=int(max_results),
+            )
+            return Response({"connected": True, "events": events, "count": len(events)})
+        except Exception as e:
+            logger.error("Failed fetching calendar events range: %s", e)
+            return Response({"error": str(e), "events": []}, status=500)
+
+
+class GoogleCalendarUpdateEventView(APIView):
+    """Updates/reschedules an existing Google Calendar event."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_calendar_enabled:
+            return Response({"error": "Google Calendar is not connected."}, status=400)
+
+        event_id = request.data.get("event_id")
+        if not event_id:
+            return Response({"error": "event_id is required."}, status=400)
+
+        summary = request.data.get("summary")
+        description = request.data.get("description")
+        start_iso = request.data.get("start_iso")
+        end_iso = request.data.get("end_iso")
+        duration = request.data.get("duration")
+        location = request.data.get("location")
+        attendee_email = request.data.get("attendee_email")
+
+        try:
+            res = update_calendar_event(
+                client_obj=client,
+                event_id=event_id,
+                summary=summary,
+                description=description,
+                start_iso=start_iso,
+                end_iso=end_iso,
+                duration_minutes=duration,
+                location=location,
+                attendee_email=attendee_email,
+            )
+            return Response(res)
+        except Exception as e:
+            logger.error("Failed updating calendar event %s: %s", event_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleCalendarDeleteEventView(APIView):
+    """Deletes an event from Google Calendar."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_calendar_enabled:
+            return Response({"error": "Google Calendar is not connected."}, status=400)
+
+        event_id = request.data.get("event_id")
+        if not event_id:
+            return Response({"error": "event_id is required."}, status=400)
+
+        try:
+            res = delete_calendar_event(client, event_id)
+            return Response(res)
+        except Exception as e:
+            logger.error("Failed deleting calendar event %s: %s", event_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleCalendarAIAssistantView(APIView):
+    """Interprets natural language scheduling prompt and drafts/creates event."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_calendar_enabled:
+            return Response({"error": "Google Calendar is not connected."}, status=400)
+
+        prompt = request.data.get("prompt", "").strip()
+        if not prompt:
+            return Response({"error": "Prompt is required."}, status=400)
+
+        try:
+            res = ai_calendar_assistant(client, prompt)
+            return Response(res)
+        except Exception as e:
+            logger.error("AI Calendar assistant error: %s", e)
+            return Response({"error": str(e)}, status=500)
+

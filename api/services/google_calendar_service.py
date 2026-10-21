@@ -179,6 +179,216 @@ def create_calendar_event(client_obj, summary, description="", start_iso=None, d
     }
 
 
+def list_calendar_events_range(client_obj, start_iso=None, end_iso=None, max_results=100):
+    """
+    Fetch events from primary calendar within an optional date range (supports Month, Week, Day views).
+    """
+    token = get_valid_calendar_token(client_obj)
+    config = client_obj.google_calendar_config or {}
+    calendar_id = config.get("primary_calendar_id", "primary")
+
+    url = f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events"
+    params = {
+        "singleEvents": "true",
+        "orderBy": "startTime",
+        "maxResults": max_results,
+    }
+    if start_iso:
+        params["timeMin"] = start_iso
+    else:
+        params["timeMin"] = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+
+    if end_iso:
+        params["timeMax"] = end_iso
+
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = requests.get(url, headers=headers, params=params, timeout=20)
+    if resp.status_code != 200:
+        logger.error("Failed fetching calendar events range: %s", resp.text)
+        return []
+
+    events_data = resp.json().get("items", [])
+    formatted_events = []
+    for ev in events_data:
+        start_time = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date")
+        end_time = ev.get("end", {}).get("dateTime") or ev.get("end", {}).get("date")
+        meet_link = ev.get("hangoutLink") or (ev.get("conferenceData", {}).get("entryPoints", [{}])[0].get("uri") if ev.get("conferenceData") else None)
+        formatted_events.append({
+            "id": ev.get("id"),
+            "summary": ev.get("summary", "No Title"),
+            "description": ev.get("description", ""),
+            "start": start_time,
+            "end": end_time,
+            "htmlLink": ev.get("htmlLink"),
+            "meetLink": meet_link,
+            "location": ev.get("location", ""),
+            "attendees": [a.get("email") for a in ev.get("attendees", []) if a.get("email")],
+            "status": ev.get("status", "confirmed"),
+        })
+    return formatted_events
+
+
+def update_calendar_event(client_obj, event_id, summary=None, description=None, start_iso=None, end_iso=None, duration_minutes=None, location=None, attendee_email=None):
+    """
+    Updates an existing Google Calendar event (reschedule, rename, details).
+    """
+    token = get_valid_calendar_token(client_obj)
+    config = client_obj.google_calendar_config or {}
+    calendar_id = config.get("primary_calendar_id", "primary")
+
+    url = f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events/{event_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    body = {}
+    if summary is not None:
+        body["summary"] = summary
+    if description is not None:
+        body["description"] = description
+    if location is not None:
+        body["location"] = location
+
+    if start_iso:
+        try:
+            s_dt = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
+            body["start"] = {"dateTime": s_dt.isoformat()}
+            if end_iso:
+                e_dt = datetime.fromisoformat(end_iso.replace("Z", "+00:00"))
+                body["end"] = {"dateTime": e_dt.isoformat()}
+            else:
+                dur = int(duration_minutes or 30)
+                body["end"] = {"dateTime": (s_dt + timedelta(minutes=dur)).isoformat()}
+        except Exception as e:
+            logger.warning("Error parsing update start_iso: %s", e)
+
+    if attendee_email:
+        body["attendees"] = [{"email": attendee_email}]
+
+    resp = requests.patch(url, json=body, headers=headers, timeout=20)
+    if resp.status_code not in (200, 201):
+        logger.error("Failed updating calendar event %s: %s", event_id, resp.text)
+        raise ValueError(f"Failed to update event: {resp.text}")
+
+    data = resp.json()
+    meet_link = data.get("hangoutLink") or (data.get("conferenceData", {}).get("entryPoints", [{}])[0].get("uri") if data.get("conferenceData") else None)
+    return {
+        "success": True,
+        "event_id": data.get("id"),
+        "summary": data.get("summary"),
+        "start": data.get("start", {}).get("dateTime"),
+        "end": data.get("end", {}).get("dateTime"),
+        "meetLink": meet_link,
+        "htmlLink": data.get("htmlLink"),
+    }
+
+
+def delete_calendar_event(client_obj, event_id):
+    """
+    Deletes an event from Google Calendar.
+    """
+    token = get_valid_calendar_token(client_obj)
+    config = client_obj.google_calendar_config or {}
+    calendar_id = config.get("primary_calendar_id", "primary")
+
+    url = f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events/{event_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = requests.delete(url, headers=headers, timeout=15)
+    if resp.status_code not in (200, 204):
+        logger.error("Failed deleting calendar event %s: %s", event_id, resp.text)
+        raise ValueError(f"Failed to delete event: {resp.text}")
+
+    return {"success": True, "event_id": event_id}
+
+
+def ai_calendar_assistant(client_obj, prompt):
+    """
+    Interprets natural language calendar instructions (e.g. 'Schedule a 30m demo with team tomorrow at 3pm')
+    and extracts event parameters or books the event.
+    """
+    import json
+    from .ai_service import _get_client
+    ai_client = _get_client()
+
+    now_utc = datetime.now(timezone.utc)
+    current_time_str = now_utc.strftime("%Y-%m-%d %H:%M:%S UTC (Day: %A)")
+
+    sys_prompt = (
+        f"You are a calendar assistant for UWO Connect. Current timestamp is {current_time_str}. "
+        "Extract event details from the user request and return a JSON object with this exact structure:\n"
+        "{\n"
+        '  "summary": "Meeting Title",\n'
+        '  "description": "Short description",\n'
+        '  "start_iso": "YYYY-MM-DDTHH:MM:SSZ",\n'
+        '  "duration_minutes": 30,\n'
+        '  "location": "Google Meet",\n'
+        '  "attendee_email": "optional email if mentioned else null",\n'
+        '  "action": "CREATE"\n'
+        "}\n"
+        "Calculate the exact ISO datetime for relative dates like 'tomorrow', 'Friday', 'next Monday'. "
+        "Do not output markdown codeblocks, only pure JSON."
+    )
+
+    event_payload = None
+    if ai_client:
+        try:
+            completion = ai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=500,
+            )
+            raw = completion.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:].strip()
+            event_payload = json.loads(raw)
+        except Exception as e:
+            logger.error("AI Calendar Assistant JSON parse error: %s", e)
+
+    if not event_payload or not isinstance(event_payload, dict):
+        tomorrow = now_utc + timedelta(days=1)
+        event_payload = {
+            "summary": f"Meeting: {prompt[:30]}",
+            "description": prompt,
+            "start_iso": tomorrow.replace(hour=10, minute=0, second=0).isoformat(),
+            "duration_minutes": 30,
+            "location": "Google Meet",
+            "attendee_email": None,
+            "action": "CREATE",
+        }
+
+    # Automatically create the event in Google Calendar
+    try:
+        created = create_calendar_event(
+            client_obj=client_obj,
+            summary=event_payload.get("summary", "New Meeting"),
+            description=event_payload.get("description", ""),
+            start_iso=event_payload.get("start_iso"),
+            duration_minutes=event_payload.get("duration_minutes", 30),
+            attendee_email=event_payload.get("attendee_email"),
+            location=event_payload.get("location", "Google Meet"),
+        )
+        return {
+            "success": True,
+            "interpretation": event_payload,
+            "event": created,
+            "message": f"Successfully scheduled '{event_payload.get('summary')}' with Google Meet link.",
+        }
+    except Exception as err:
+        return {
+            "success": False,
+            "interpretation": event_payload,
+            "error": str(err),
+            "message": f"Prepared meeting details: {event_payload.get('summary')} at {event_payload.get('start_iso')}. Error booking: {str(err)}",
+        }
+
+
 class GoogleCalendarService:
     @staticmethod
     def check_availability(client, target_date_str):
@@ -217,3 +427,4 @@ class GoogleCalendarService:
             return f"Successfully booked appointment on {date_str} at {time_str} for {customer_name}. Meet link: {res.get('meetLink', 'N/A')}"
         except Exception as e:
             return f"Error booking appointment: {str(e)}"
+

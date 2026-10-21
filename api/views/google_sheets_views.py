@@ -20,6 +20,11 @@ from ..services.google_sheets_service import (
     append_lead_row,
     read_sheet_rows,
     get_valid_sheets_token,
+    list_client_spreadsheets,
+    read_full_spreadsheet,
+    create_custom_spreadsheet,
+    delete_google_sheet,
+    ai_generate_google_spreadsheet,
 )
 from ..serializers import ClientSerializer
 
@@ -271,3 +276,118 @@ class GoogleSheetsDisconnectView(APIView):
 
         serializer = ClientSerializer(client)
         return Response(serializer.data)
+
+
+class GoogleSheetsListView(APIView):
+    """Lists spreadsheets accessible to the client."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_sheets_enabled:
+            return Response({"connected": False, "spreadsheets": []})
+
+        sheets = list_client_spreadsheets(client)
+        return Response({"connected": True, "spreadsheets": sheets, "total": len(sheets)})
+
+
+class GoogleSheetsDetailView(APIView):
+    """Reads tabs, columns, and tabular rows from a Google Spreadsheet."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, spreadsheet_id=None):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_sheets_enabled:
+            return Response({"error": "Google Sheets is not connected."}, status=400)
+
+        target_id = spreadsheet_id or request.query_params.get("spreadsheet_id")
+        sheet_name = request.query_params.get("sheet_name")
+        max_rows = request.query_params.get("max_rows", 100)
+
+        try:
+            data = read_full_spreadsheet(
+                client_obj=client,
+                spreadsheet_id=target_id,
+                sheet_name=sheet_name,
+                max_rows=int(max_rows),
+            )
+            return Response(data)
+        except Exception as e:
+            logger.error("Failed reading spreadsheet %s: %s", target_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleSheetsCreateSpreadsheetView(APIView):
+    """Creates a custom Google Spreadsheet with defined title and column headers."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_sheets_enabled:
+            return Response({"error": "Google Sheets is not connected."}, status=400)
+
+        title = request.data.get("title", "").strip()
+        headers = request.data.get("headers", [])
+        sheet_name = request.data.get("sheet_name", "Sheet1")
+        initial_rows = request.data.get("initial_rows", [])
+
+        if not title:
+            return Response({"error": "title is required."}, status=400)
+        if not headers or not isinstance(headers, list):
+            headers = ["Item", "Category", "Status", "Date", "Notes"]
+
+        try:
+            res = create_custom_spreadsheet(
+                client_obj=client,
+                title=title,
+                headers_list=headers,
+                initial_rows=initial_rows,
+                sheet_name=sheet_name,
+            )
+            return Response({"success": True, "spreadsheet": res, "message": "Spreadsheet created successfully."})
+        except Exception as e:
+            logger.error("Failed creating spreadsheet: %s", e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleSheetsDeleteView(APIView):
+    """Trashes a Google Spreadsheet."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_sheets_enabled:
+            return Response({"error": "Google Sheets is not connected."}, status=400)
+
+        spreadsheet_id = request.data.get("spreadsheet_id")
+        if not spreadsheet_id:
+            return Response({"error": "spreadsheet_id is required."}, status=400)
+
+        try:
+            res = delete_google_sheet(client, spreadsheet_id)
+            return Response(res)
+        except Exception as e:
+            logger.error("Failed deleting spreadsheet %s: %s", spreadsheet_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleSheetsAIGenerateView(APIView):
+    """AI Spreadsheet Builder: generates structure and real Google Spreadsheet."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_sheets_enabled:
+            return Response({"error": "Google Sheets is not connected."}, status=400)
+
+        prompt = request.data.get("prompt", "").strip()
+        if not prompt:
+            return Response({"error": "Prompt is required."}, status=400)
+
+        try:
+            res = ai_generate_google_spreadsheet(client, prompt=prompt)
+            return Response({"success": True, "spreadsheet": res, "message": "AI Spreadsheet created successfully."})
+        except Exception as e:
+            logger.error("AI Spreadsheet Builder error: %s", e)
+            return Response({"error": str(e)}, status=500)
+

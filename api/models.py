@@ -34,6 +34,7 @@ class Client(models.Model):
     google_sheets_enabled = models.BooleanField(default=False)
     google_docs_enabled = models.BooleanField(default=False)
     google_slides_enabled = models.BooleanField(default=False)
+    google_drive_enabled = models.BooleanField(default=False)
     zoho_enabled = models.BooleanField(default=False)
     youtube_enabled = models.BooleanField(default=False)
     google_news_enabled = models.BooleanField(default=False)
@@ -71,6 +72,7 @@ class Client(models.Model):
     google_sheets_config = models.JSONField(default=dict, blank=True)
     google_docs_config = models.JSONField(default=dict, blank=True)
     google_slides_config = models.JSONField(default=dict, blank=True)
+    google_drive_config = models.JSONField(default=dict, blank=True)
     zoho_config = models.JSONField(default=dict, blank=True)
     youtube_config = models.JSONField(default=dict, blank=True)
     google_news_config = models.JSONField(default=dict, blank=True)
@@ -134,7 +136,7 @@ class Client(models.Model):
         ca = self.channel_access if isinstance(self.channel_access, dict) else {}
         ALL_KEYS = [
             'whatsapp', 'facebook', 'instagram', 'gmail', 'outlook', 'onedrive',
-            'google_calendar', 'google_sheets', 'google_docs', 'google_slides',
+            'google_calendar', 'google_sheets', 'google_docs', 'google_slides', 'google_drive',
             'zoho', 'youtube', 'google_news', 'telegram', 'linkedin', 'twitter', 'tiktok'
         ]
         result = {}

@@ -14,6 +14,10 @@ from ..models import Client
 from ..services.google_slides_service import (
     create_google_presentation,
     list_client_presentations,
+    get_presentation_details,
+    add_slide_to_presentation,
+    delete_google_presentation,
+    ai_generate_google_presentation,
 )
 
 from ..services.google_oauth_service import (
@@ -230,3 +234,106 @@ class GoogleSlidesDisconnectView(APIView):
         client.save(update_fields=["google_slides_enabled", "google_slides_config"])
 
         return Response({"message": "Google Slides disconnected successfully."})
+
+
+class GoogleSlidesListView(APIView):
+    """List Google Slides presentations accessible to the client."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_slides_enabled:
+            return Response({"connected": False, "presentations": []})
+
+        pres = list_client_presentations(client)
+        return Response({"connected": True, "presentations": pres, "total": len(pres)})
+
+
+class GoogleSlidesDetailView(APIView):
+    """Fetch details and slide elements of a presentation."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, presentation_id=None):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_slides_enabled:
+            return Response({"error": "Google Slides is not connected."}, status=400)
+
+        target_id = presentation_id or request.query_params.get("presentation_id")
+        if not target_id:
+            return Response({"error": "presentation_id is required."}, status=400)
+
+        try:
+            data = get_presentation_details(client, target_id)
+            return Response(data)
+        except Exception as e:
+            logger.error("Failed fetching presentation %s: %s", target_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleSlidesAddSlideView(APIView):
+    """Adds a slide to a presentation."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_slides_enabled:
+            return Response({"error": "Google Slides is not connected."}, status=400)
+
+        presentation_id = request.data.get("presentation_id")
+        title = request.data.get("title")
+        bullets = request.data.get("bullets", [])
+        layout = request.data.get("layout", "TITLE_AND_BODY")
+
+        if not presentation_id:
+            return Response({"error": "presentation_id is required."}, status=400)
+
+        try:
+            res = add_slide_to_presentation(client, presentation_id, title=title, bullet_points=bullets, layout=layout)
+            return Response(res)
+        except Exception as e:
+            logger.error("Failed adding slide to %s: %s", presentation_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleSlidesDeleteView(APIView):
+    """Trashes a Google Slides presentation."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_slides_enabled:
+            return Response({"error": "Google Slides is not connected."}, status=400)
+
+        presentation_id = request.data.get("presentation_id")
+        if not presentation_id:
+            return Response({"error": "presentation_id is required."}, status=400)
+
+        try:
+            res = delete_google_presentation(client, presentation_id)
+            return Response(res)
+        except Exception as e:
+            logger.error("Failed deleting presentation %s: %s", presentation_id, e)
+            return Response({"error": str(e)}, status=500)
+
+
+class GoogleSlidesAIGenerateView(APIView):
+    """AI Presentation Builder: generates presentation outline and real Google Slides presentation."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.google_slides_enabled:
+            return Response({"error": "Google Slides is not connected."}, status=400)
+
+        prompt = request.data.get("prompt", "").strip()
+        slide_count = request.data.get("slide_count", 5)
+        if not prompt:
+            return Response({"error": "Prompt is required."}, status=400)
+
+        try:
+            res = ai_generate_google_presentation(client, prompt=prompt, slide_count=int(slide_count))
+            return Response(res)
+        except Exception as e:
+            logger.error("AI Presentation Builder error: %s", e)
+            return Response({"error": str(e)}, status=500)
+

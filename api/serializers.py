@@ -31,6 +31,7 @@ class ClientSerializer(serializers.ModelSerializer):
     google_sheets_config = serializers.SerializerMethodField()
     google_docs_config = serializers.SerializerMethodField()
     google_slides_config = serializers.SerializerMethodField()
+    google_drive_config = serializers.SerializerMethodField()
     zoho_config = serializers.SerializerMethodField()
     is_verification_account = serializers.SerializerMethodField()
     email = serializers.EmailField(write_only=True, required=False)
@@ -124,6 +125,14 @@ class ClientSerializer(serializers.ModelSerializer):
             'default_presentation_url', 'auto_generate_pitch_decks',
             'auto_generate_catalog_decks', 'presentations_created_count',
             'last_sync_time', 'connected_at', 'recent_presentations',
+        }
+        return {k: v for k, v in config.items() if k in safe_keys}
+
+    def get_google_drive_config(self, obj):
+        """Return Google Drive config without sensitive OAuth tokens."""
+        config = getattr(obj, 'google_drive_config', {}) or {}
+        safe_keys = {
+            'account_email', 'connected_at', 'last_sync_time', 'files_count', 'root_folder_id'
         }
         return {k: v for k, v in config.items() if k in safe_keys}
 

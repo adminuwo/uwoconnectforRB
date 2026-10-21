@@ -259,7 +259,7 @@ def check_client_integrations():
         ]
         for service_name, enabled_field, config_field in google_services:
             enabled = getattr(c, enabled_field, False)
-            config = getattr(c, config_field, {})
+            config = getattr(c, config_field, {}) or {}
             print(f"* {service_name}: {'[OK] ENABLED' if enabled else '[OFFLINE] DISABLED'}")
             if enabled or config:
                 token_val = config.get('token') or config.get('access_token')
@@ -290,7 +290,7 @@ def check_client_integrations():
 
         # OneDrive Check
         onedrive_enabled = getattr(c, 'onedrive_enabled', False)
-        onedrive_config = getattr(c, 'onedrive_config', {})
+        onedrive_config = getattr(c, 'onedrive_config', {}) or {}
         print(f"* OneDrive: {'[OK] ENABLED' if onedrive_enabled else '[OFFLINE] DISABLED'}")
         if onedrive_enabled or onedrive_config:
             token_val = onedrive_config.get('token') or onedrive_config.get('access_token')
