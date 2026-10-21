@@ -538,7 +538,18 @@ class ClientUpdateSelfView(APIView):
         client = getattr(request.user, 'client', None)
         if not client:
             return Response({"error": "No associated client found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = ClientSerializer(client, data=request.data, partial=True)
+
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        config_fields = [
+            'youtube_config', 'gmail_config', 'google_calendar_config', 'google_sheets_config',
+            'google_docs_config', 'google_slides_config', 'google_drive_config', 'google_news_config',
+            'facebook_config', 'instagram_config', 'whatsapp_config', 'onedrive_config', 'outlook_config', 'zoho_config'
+        ]
+        for field in config_fields:
+            if field in data and (data[field] is None or data[field] == 'null'):
+                data[field] = {}
+
+        serializer = ClientSerializer(client, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"success": True, "client": serializer.data}, status=status.HTTP_200_OK)

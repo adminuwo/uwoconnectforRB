@@ -225,6 +225,30 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
     """
     norm = service_name.lower().replace("google_", "").strip()
 
+    # Callback path mapping per service
+    callback_paths = {
+        "youtube": "/api/auth/youtube/callback",
+        "calendar": "/api/auth/google-calendar/callback",
+        "sheets": "/api/auth/gmail/callback",
+        "docs": "/api/auth/gmail/callback",
+        "slides": "/api/auth/gmail/callback",
+        "gmail": "/api/auth/gmail/callback",
+        "all": "/api/auth/gmail/callback",
+    }
+    callback_path = callback_paths.get(norm, "/api/auth/gmail/callback")
+
+    # If running locally (DEBUG=True) or request is from localhost, use localhost callback
+    is_local = False
+    if request:
+        host = request.get_host()
+        if "localhost" in host or "127.0.0.1" in host:
+            is_local = True
+    elif getattr(settings, 'DEBUG', False):
+        is_local = True
+
+    if is_local:
+        return f"http://localhost:8080{callback_path}"
+
     # 1. Check dedicated service environment variable (production / deployment override)
     candidate_keys = [
         f"GOOGLE_{norm.upper()}_REDIRECT_URI",
@@ -238,28 +262,9 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
     # 2. For unified services that share the verified Google OAuth callback (gmail, sheets, docs, slides, all),
     # prioritize the registered GMAIL_REDIRECT_URI if configured in environment
     if norm in ("gmail", "sheets", "docs", "slides", "all") and os.environ.get("GMAIL_REDIRECT_URI"):
-        if not os.environ.get("USE_LOCAL_GOOGLE_CALLBACK", "").lower() in ("true", "1"):
-            return os.environ["GMAIL_REDIRECT_URI"].strip()
+        return os.environ["GMAIL_REDIRECT_URI"].strip()
 
-    # Callback path mapping per service
-    callback_paths = {
-        "youtube": "/api/auth/youtube/callback",
-        "calendar": "/api/auth/google-calendar/callback",
-        "sheets": "/api/auth/gmail/callback",
-        "docs": "/api/auth/gmail/callback",
-        "slides": "/api/auth/gmail/callback",
-        "gmail": "/api/auth/gmail/callback",
-        "all": "/api/auth/gmail/callback",
-    }
-    callback_path = callback_paths.get(norm, "/api/auth/gmail/callback")
-
-    # 3. If request is from local development (localhost / 127.0.0.1), use local callback
-    if request:
-        host = request.get_host()
-        if "localhost" in host or "127.0.0.1" in host:
-            return f"http://localhost:8080{callback_path}"
-
-    # 4. Dynamic fallback for remote requests
+    # 3. Dynamic fallback for remote requests
     if request:
         return f"https://uwoconnectforrb-743928421487.asia-south1.run.app{callback_path}"
 
@@ -269,7 +274,6 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
     if os.environ.get("GMAIL_REDIRECT_URI"):
         return os.environ["GMAIL_REDIRECT_URI"].strip()
 
-    # Default fallback
     return f"http://localhost:8080{callback_path}"
 
 
@@ -280,10 +284,16 @@ def get_frontend_return_url(client=None, request=None) -> str:
         origin = request.headers.get("Origin") or request.META.get("HTTP_ORIGIN") or request.META.get("HTTP_REFERER")
         if origin and "://" in origin:
             parts = origin.split("/")
-            return f"{parts[0]}//{parts[2]}"
+            base_origin = f"{parts[0]}//{parts[2]}"
+            # Never redirect to Google accounts/oauth as frontend return URL
+            if not any(domain in base_origin for domain in ("google.com", "accounts.google", "googleapis.com")):
+                return base_origin
 
     if client and getattr(client, "white_label_domain", None):
         return f"https://{client.white_label_domain}"
+
+    if getattr(settings, 'DEBUG', False):
+        return "http://localhost:3000"
 
     return os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
@@ -332,8 +342,9 @@ def generate_google_auth_url(
     redirect_uri = get_google_redirect_uri(service_name, request=request)
     frontend_url = get_frontend_return_url(request=request)
 
-    # Generate cryptographically strong state token
-    state = secrets.token_urlsafe(32)
+    # Generate state token carrying client_id for cross-worker / container-restart durability
+    rnd = secrets.token_urlsafe(16)
+    state = f"{effective_client_id}__{rnd}" if effective_client_id else secrets.token_urlsafe(32)
 
     # Store state metadata in cache for 1 hour
     state_payload = {

@@ -13,29 +13,51 @@ ALLOWED_MEDIA_EXTS = ALLOWED_IMAGE_EXTS | ALLOWED_VIDEO_EXTS
 
 def sign_azure_url(url_or_path, expiration_secs=86400 * 365 * 10):
     """
-    Ensures an Azure Blob Storage URL has a valid SAS signature for read access.
+    Ensures a cloud storage (Azure Blob or Google Cloud Storage) URL has a valid signature for read access.
     """
     if not url_or_path or not isinstance(url_or_path, str):
         return url_or_path
 
     url_str = url_or_path.strip()
-    if 'blob.core.windows.net' not in url_str:
-        return url_str
 
-    if '?sig=' in url_str or '&sig=' in url_str:
-        return url_str
+    # 1. Azure Blob Storage URL signing
+    if 'blob.core.windows.net' in url_str:
+        if '?sig=' in url_str or '&sig=' in url_str:
+            return url_str
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url_str)
+            path = parsed.path.lstrip('/')
+            container = getattr(settings, 'AZURE_CONTAINER', 'media') or 'media'
+            blob_name = path[len(container)+1:] if path.startswith(container + '/') else path
+            return default_storage.url(blob_name, expire=expiration_secs)
+        except Exception as e:
+            logger.warning(f"[SignStorageURLError] Could not sign Azure URL {url_str}: {e}")
+            return url_str
 
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(url_str)
-        path = parsed.path.lstrip('/')
-        container = getattr(settings, 'AZURE_CONTAINER', 'media') or 'media'
-        blob_name = path[len(container)+1:] if path.startswith(container + '/') else path
-        
-        return default_storage.url(blob_name, expire=expiration_secs)
-    except Exception as e:
-        logger.warning(f"[SignAzureURLError] Could not sign {url_str}: {e}")
-        return url_str
+    # 2. Google Cloud Storage URL signing
+    if 'storage.googleapis.com' in url_str:
+        if any(param in url_str for param in ('X-Goog-Signature', 'GoogleAccessId', 'Signature=')):
+            return url_str
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url_str)
+            path = parsed.path.lstrip('/')
+            bucket_name = getattr(settings, 'GS_BUCKET_NAME', '') or ''
+            blob_name = path[len(bucket_name)+1:] if path.startswith(bucket_name + '/') else path
+            return default_storage.url(blob_name)
+        except Exception as e:
+            logger.warning(f"[SignStorageURLError] Could not sign GCS URL {url_str}: {e}")
+            return url_str
+
+    # 3. If relative storage path, resolve through default_storage
+    if not url_str.startswith(('http://', 'https://')):
+        try:
+            return default_storage.url(url_str)
+        except Exception:
+            return url_str
+
+    return url_str
 
 
 def upload_tenant_media(client_id, folder_name, file, allowed_exts=None, max_size_mb=50):

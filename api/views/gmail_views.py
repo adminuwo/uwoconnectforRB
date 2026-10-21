@@ -11,7 +11,9 @@ from api.models import Client
 from django.conf import settings
 
 # Unconditionally allow OAuth transport across reverse proxies (Cloud Run, local dev, etc.)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' 
+
+
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 from ..services.google_oauth_service import (
@@ -83,7 +85,14 @@ class GmailCallbackView(APIView):
         
         state_data = cache.get(f'gmail_state_{state}')
         client_id = state_data.get('client_id') if isinstance(state_data, dict) else state_data
+        if not client_id and state and "__" in state:
+            potential_client_id = state.split("__")[0]
+            if Client.objects.filter(id=potential_client_id).exists():
+                client_id = potential_client_id
+
         frontend_url = state_data.get('return_origin') if isinstance(state_data, dict) else os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        if any(d in frontend_url for d in ("google.com", "accounts.google", "googleapis.com")):
+            frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         
         state_meta = cache.get(f"google_oauth_state_{state}") or {}
         service = state_meta.get("service", "").lower().replace("google_", "").strip()

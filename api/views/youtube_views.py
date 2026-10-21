@@ -79,9 +79,15 @@ class YouTubeCallbackView(APIView):
             return HttpResponseRedirect(f"{frontend_url}/client/channels?youtube_error=missing_params")
 
         client_id_from_cache = state_meta.get("client_id") or cache.get(f"youtube_state_{state}")
-        # Fallback: look up client via all states in cache (handles server restarts)
+        # Fallback 1: extract from state token (handles cross-server / container cold restarts)
+        if not client_id_from_cache and state and "__" in state:
+            potential_client_id = state.split("__")[0]
+            from ..models import Client
+            if Client.objects.filter(id=potential_client_id).exists():
+                client_id_from_cache = potential_client_id
+
+        # Fallback 2: look up client via authenticated user session
         if not client_id_from_cache:
-            # Try to find any pending youtube state for authenticated user
             if request.user and request.user.is_authenticated:
                 try:
                     client_id_from_cache = request.user.client.id

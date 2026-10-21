@@ -279,6 +279,10 @@ if os.getenv('GS_BUCKET_NAME'):
     }
     GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME')
     GS_PROJECT_ID = os.getenv('GS_PROJECT_ID')
+    GS_DEFAULT_ACL = None  # Uniform bucket-level access does not use object ACLs
+    GS_FILE_OVERWRITE = False
+    GS_QUERYSTRING_AUTH = os.getenv('GS_QUERYSTRING_AUTH', 'True').lower() == 'true'
+    GS_EXPIRATION = int(os.getenv('GS_EXPIRATION', 86400 * 7))  # 7-day signed URL default for private bucket
 elif os.getenv('AZURE_ACCOUNT_NAME'):
     STORAGES = {
         "default": {
