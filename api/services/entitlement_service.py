@@ -688,6 +688,11 @@ class EntitlementService:
         max_channels = plan_config.get('max_channels', 1)
         billing_period = client.billing_period if client else 'MONTHLY'
 
+        # Check Subscription Details & Expiration
+        from api.services.wallet_services import SubscriptionService
+        sub_info = SubscriptionService.get_subscription_details(client)
+        is_expired = sub_info.get('is_expired', False)
+
         # Evaluate Channels
         all_channels = ['whatsapp', 'facebook', 'instagram']
         channels_eval = {}
@@ -695,23 +700,32 @@ class EntitlementService:
             access_state = EntitlementService.evaluate_item_access(ch, 'channel', client)
             is_selected = ch.lower() in [s.lower() for s in selected_channels]
             
-            if access_state == 'COMING_SOON':
+            if is_expired:
+                status = 'SUBSCRIPTION_EXPIRED'
+                can_select = False
+            elif access_state == 'COMING_SOON':
                 status = 'COMING_SOON'
+                can_select = False
             elif access_state == 'AVAILABLE':
                 if is_selected:
                     status = 'CONNECTED'
+                    can_select = True
                 elif len(selected_channels) < max_channels:
                     status = 'AVAILABLE'
+                    can_select = True
                 else:
                     status = 'LIMIT_REACHED'
+                    can_select = False
             else:
                 status = 'UPGRADE_REQUIRED'
+                can_select = False
             
             channels_eval[ch] = {
                 'key': ch,
                 'status': status,
                 'is_selected': is_selected,
-                'can_select': (status == 'AVAILABLE' or is_selected)
+                'can_select': can_select,
+                'reason': "Subscription expired. Please renew your plan." if is_expired else None
             }
 
         # Evaluate Connectors
@@ -790,6 +804,12 @@ class EntitlementService:
             'features': features_eval,
             'custom_added': custom_added,
             'custom_removed': custom_removed,
+            'subscription': sub_info,
+            'is_expired': is_expired,
+            'days_remaining': sub_info.get('days_remaining'),
+            'expires_at': sub_info.get('expires_at'),
+            'current_period_end': sub_info.get('current_period_end'),
+            'can_renew': sub_info.get('can_renew', False),
         }
 
     @staticmethod
@@ -798,6 +818,11 @@ class EntitlementService:
         Activates or toggles channel selection for a client.
         Enforces plan max_channels allowance.
         """
+        from api.services.wallet_services import SubscriptionService
+        sub_info = SubscriptionService.get_subscription_details(client)
+        if sub_info.get('is_expired'):
+            raise PermissionDenied(f"Your {client.plan} subscription has expired. Please renew your plan to select or switch channels.")
+
         plan_config = EntitlementService.get_client_plan_config(client)
         max_channels = plan_config.get('max_channels', 1)
         allowed_channels = [c.lower() for c in plan_config.get('allowed_channels', [])]
@@ -825,7 +850,26 @@ class EntitlementService:
 
         # Selecting new channel - check limit
         if len(current_selected) >= max_channels:
-            # Cannot select additional channel
+            if max_channels == 1:
+                # Starter Plan: swap 1 chosen channel cleanly
+                client.selected_channels = [norm_key]
+                client.save(update_fields=['selected_channels'])
+                return {
+                    'message': f"{channel_key} selected (swapped previous channel).",
+                    'selected_channels': client.selected_channels,
+                    'channel_limit': max_channels
+                }
+            elif max_channels == 2 and len(current_selected) == 2:
+                # Growth Plan: swap oldest selected channel with new selection
+                new_selected = [current_selected[1], norm_key]
+                client.selected_channels = new_selected
+                client.save(update_fields=['selected_channels'])
+                return {
+                    'message': f"{channel_key} selected (swapped active channels).",
+                    'selected_channels': client.selected_channels,
+                    'channel_limit': max_channels
+                }
+            
             required_plan = 'Growth' if max_channels == 1 else 'Advanced'
             raise PermissionDenied(
                 f"Your {plan_config['name']} plan allows a maximum of {max_channels} active channel(s). "

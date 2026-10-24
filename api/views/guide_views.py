@@ -17,10 +17,19 @@ class GuideViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     lookup_field = 'slug'
 
+    def _ensure_guides_seeded(self):
+        if not Guide.objects.filter(status='PUBLISHED').exists():
+            try:
+                import seed_learning_guides
+                seed_learning_guides.seed_guides()
+            except Exception as e:
+                pass
+
     def get_queryset(self):
+        self._ensure_guides_seeded()
         user = self.request.user
         # Admins can view all guides (including draft/archived), clients view PUBLISHED
-        if user.is_staff or user.role == 'ADMIN':
+        if user.is_staff or getattr(user, 'role', '') == 'ADMIN':
             return Guide.objects.all()
         return Guide.objects.filter(status='PUBLISHED')
 

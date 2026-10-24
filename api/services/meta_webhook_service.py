@@ -1024,12 +1024,11 @@ class MetaWebhookService:
         except Exception as e:
             logger.warning(f"Error checking platform greeting automation: {e}")
 
-        # Fallback to global Client greeting setting
-        if getattr(client, 'greeting_enabled', False):
-            msg = getattr(client, 'greeting_message', None) or f"Hello! Welcome to {client.business_name}. Thank you for contacting us! How can we assist you today?"
+        # Fallback to global Client greeting setting (only if greeting_message was explicitly set by the client)
+        if getattr(client, 'greeting_enabled', False) and getattr(client, 'greeting_message', None):
             return {
                 "enabled": True,
-                "message": msg,
+                "message": client.greeting_message,
                 "buttons": getattr(client, 'greeting_buttons', None) or []
             }
 
@@ -1093,7 +1092,18 @@ class MetaWebhookService:
 
         logger.info(f"\n[AUTOMATION ENGINE] ──── Incoming Message ────\n  Platform: {platform}\n  Contact: {contact_id_str}\n  Text: \"{incoming_text}\"")
 
-        # 0. Safety check: Contact bot paused
+        # 0. Safety check: Subscription Expiry check
+        if client and (client.plan or '').upper() not in ['FREE', '']:
+            try:
+                from .wallet_services import SubscriptionService
+                sub_info = SubscriptionService.get_subscription_details(client)
+                if sub_info.get('is_expired'):
+                    logger.info(f"[AUTOMATION HALTED] Subscription expired for {client.business_name}. Bypassing automated responses.")
+                    return
+            except Exception as _sub_err:
+                logger.warning(f"Error checking subscription expiry in dispatch_automations: {_sub_err}")
+
+        # 0b. Safety check: Contact bot paused
         if client:
             from ..models import Contact
             from django.db.models import Q
@@ -1109,40 +1119,61 @@ class MetaWebhookService:
             logger.info(f"[AUTOMATION COMPLETED] Handled by active AI chat session for {platform} contact {contact_id_str}")
             return
 
-        # 2. Platform-Specific Greeting Message
-        msg_count = MessageRepository.filter_messages(
+        # 2. Active Workflow Session Advancement
+        # If the user is currently interacting with an active workflow, advance it!
+        from .workflow_service import WorkflowEngine
+        wf_active = WorkflowEngine.process_workflow(
             client=client,
+            phone_number=contact_id_str,
+            incoming_text=incoming_text,
             channel=platform,
-            from_address=contact_id_str,
-            message_type='INCOMING'
-        ).count()
-
-        greeting_info = MetaWebhookService.get_platform_greeting(client, platform)
-        is_greeting_kw = incoming_clean in ['hi', 'hello', 'hey', 'start']
-        is_first_msg = (msg_count <= 1)
-
-        if (is_first_msg and greeting_info.get('enabled')) or (is_greeting_kw and greeting_info.get('enabled') and greeting_info.get('message')):
-            greeting_text = greeting_info.get('message')
-            if greeting_text:
-                logger.info(
-                    f"\n[GREETING SEND] Platform: {platform} | Contact: {contact_id_str}\n"
-                    f"  Reason: {'First incoming message' if is_first_msg else 'Greeting keyword'}\n"
-                    f"  Message: \"{greeting_text[:50]}...\"\n"
-                    f"  Sending through: {platform}"
-                )
+            allow_catch_all=False,
+            check_active_session=True
+        )
+        if wf_active:
+            logger.info(f"[WORKFLOW SESSION ADVANCE] Advanced active workflow session for {platform} contact {contact_id_str}")
+            for msg in wf_active:
                 MetaWebhookService.send_automated_reply(
                     client=client,
                     platform=platform,
                     contact_id=contact_id_str,
-                    text_body=greeting_text,
-                    buttons=greeting_info.get('buttons'),
-                    phone_number_id=phone_number_id
+                    text_body=msg.get('body', ''),
+                    buttons=msg.get('buttons'),
+                    media_url=msg.get('media_url'),
+                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
+                    phone_number_id=phone_number_id,
+                    list_button_text=msg.get('button_text'),
+                    list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
                 )
-                if is_greeting_kw:
-                    # Pure greeting keyword, nothing further to process
-                    return
+            return
 
-        # 3. Specific Keyword Auto Replies (Automations)
+        # 3. Specific Keyword Workflows (workflows configured with specific trigger words, not '*')
+        wf_specific = WorkflowEngine.process_workflow(
+            client=client,
+            phone_number=contact_id_str,
+            incoming_text=incoming_text,
+            channel=platform,
+            allow_catch_all=False,
+            check_active_session=False
+        )
+        if wf_specific:
+            logger.info(f"[WORKFLOW SEND] Specific keyword workflow triggered for {platform} contact {contact_id_str}")
+            for msg in wf_specific:
+                MetaWebhookService.send_automated_reply(
+                    client=client,
+                    platform=platform,
+                    contact_id=contact_id_str,
+                    text_body=msg.get('body', ''),
+                    buttons=msg.get('buttons'),
+                    media_url=msg.get('media_url'),
+                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
+                    phone_number_id=phone_number_id,
+                    list_button_text=msg.get('button_text'),
+                    list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
+                )
+            return
+
+        # 4. Specific Keyword Auto Replies (Automations)
         # Evaluated BEFORE wildcard workflows so specific trigger words are never hijacked!
         automations = AutomationRepository.filter_automations(client=client, enabled=True, trigger_type='KEYWORD')
         for auto in automations:
@@ -1182,61 +1213,8 @@ class MetaWebhookService:
                 )
                 return  # Stop execution - Auto Reply successfully sent
 
-        # 4. Specific Keyword Workflows (workflows configured with specific trigger words, not '*')
-        from .workflow_service import WorkflowEngine
-        wf_specific = WorkflowEngine.process_workflow(
-            client=client,
-            phone_number=contact_id_str,
-            incoming_text=incoming_text,
-            channel=platform,
-            allow_catch_all=False,
-            check_active_session=False
-        )
-        if wf_specific:
-            logger.info(f"[WORKFLOW SEND] Specific keyword workflow triggered for {platform} contact {contact_id_str}")
-            for msg in wf_specific:
-                MetaWebhookService.send_automated_reply(
-                    client=client,
-                    platform=platform,
-                    contact_id=contact_id_str,
-                    text_body=msg.get('body', ''),
-                    buttons=msg.get('buttons'),
-                    media_url=msg.get('media_url'),
-                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
-                    phone_number_id=phone_number_id,
-                    list_button_text=msg.get('button_text'),
-                    list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
-                )
-            return
-
-        # 5. Active Workflow Session Advancement
-        wf_active = WorkflowEngine.process_workflow(
-            client=client,
-            phone_number=contact_id_str,
-            incoming_text=incoming_text,
-            channel=platform,
-            allow_catch_all=False,
-            check_active_session=True
-        )
-        if wf_active:
-            logger.info(f"[WORKFLOW SESSION ADVANCE] Advanced active workflow session for {platform} contact {contact_id_str}")
-            for msg in wf_active:
-                MetaWebhookService.send_automated_reply(
-                    client=client,
-                    platform=platform,
-                    contact_id=contact_id_str,
-                    text_body=msg.get('body', ''),
-                    buttons=msg.get('buttons'),
-                    media_url=msg.get('media_url'),
-                    media_type=msg.get('media_type') or ('image' if msg.get('media_url') else None),
-                    phone_number_id=phone_number_id,
-                    list_button_text=msg.get('button_text'),
-                    list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
-                )
-            return
-
-        # 6. Catch-All / Wildcard Workflows ('*')
-        # Only triggered if no specific Auto Reply or specific Workflow matched
+        # 5. Catch-All / Wildcard Workflows ('*')
+        # Triggered if client configured a wildcard/universal workflow for this channel
         wf_catchall = WorkflowEngine.process_workflow(
             client=client,
             phone_number=contact_id_str,
@@ -1261,6 +1239,40 @@ class MetaWebhookService:
                     list_items=msg.get('list_items') or msg.get('items') or msg.get('rows')
                 )
             return
+
+        # 6. Platform-Specific Greeting Message
+        # Fallback greeting only if no workflow or auto-reply handled the message
+        msg_count = MessageRepository.filter_messages(
+            client=client,
+            channel=platform,
+            from_address=contact_id_str,
+            message_type='INCOMING'
+        ).count()
+
+        greeting_info = MetaWebhookService.get_platform_greeting(client, platform)
+        is_greeting_kw = incoming_clean in ['hi', 'hello', 'hey', 'start']
+        is_first_msg = (msg_count <= 1)
+
+        if (is_first_msg and greeting_info.get('enabled')) or (is_greeting_kw and greeting_info.get('enabled') and greeting_info.get('message')):
+            greeting_text = greeting_info.get('message')
+            if greeting_text:
+                logger.info(
+                    f"\n[GREETING SEND] Platform: {platform} | Contact: {contact_id_str}\n"
+                    f"  Reason: {'First incoming message' if is_first_msg else 'Greeting keyword'}\n"
+                    f"  Message: \"{greeting_text[:50]}...\"\n"
+                    f"  Sending through: {platform}"
+                )
+                MetaWebhookService.send_automated_reply(
+                    client=client,
+                    platform=platform,
+                    contact_id=contact_id_str,
+                    text_body=greeting_text,
+                    buttons=greeting_info.get('buttons'),
+                    phone_number_id=phone_number_id
+                )
+                if is_greeting_kw:
+                    # Pure greeting keyword, nothing further to process
+                    return
 
         # 7. Commercial System Commands
         # Industrial Lead Qualification (Product & Pricing Intent Detection)

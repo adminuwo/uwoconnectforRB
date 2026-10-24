@@ -25,17 +25,24 @@ DEFAULT_RATES = {
 class SubscriptionService:
     @staticmethod
     def get_or_create_subscription(client: Client) -> ClientSubscription:
-        subscription, created = ClientSubscription.objects.get_or_create(
-            client=client,
-            defaults={
-                'plan_name': 'UwoConnect Pro',
-                'price_monthly': 499.00,
-                'status': 'ACTIVE',
-                'current_period_start': timezone.now(),
-                'current_period_end': timezone.now() + timedelta(days=30),
-                'auto_renew': True
-            }
-        )
+        subscription = ClientSubscription.objects.filter(client=client).first()
+        if not subscription:
+            plan_str = (client.plan or 'STARTER').upper()
+            cycle_str = getattr(client, 'billing_period', 'MONTHLY').upper()
+            is_lifetime = cycle_str in ['LIFETIME', 'ONE_TIME', 'PERPETUAL', 'NEVER'] or (
+                client.assigned_plan and (client.assigned_plan.billing_cycle or '').upper() in ['ONE_TIME', 'LIFETIME']
+            )
+            duration_days = 365 if cycle_str in ['YEARLY', 'ANNUAL'] else 30
+            now = timezone.now()
+            subscription = ClientSubscription.objects.create(
+                client=client,
+                plan_name=plan_str,
+                price_monthly=499.00 if 'STARTER' in plan_str else (1499.00 if 'GROWTH' in plan_str else 2999.00),
+                status='ACTIVE',
+                current_period_start=now,
+                current_period_end=None if is_lifetime else (now + timedelta(days=duration_days)),
+                auto_renew=not is_lifetime
+            )
         return subscription
 
     @staticmethod
@@ -44,6 +51,172 @@ class SubscriptionService:
         sub.status = new_status
         sub.save()
         return sub
+
+    @staticmethod
+    def activate_or_renew_subscription(client: Client, plan_name: str, billing_cycle: str = 'MONTHLY', channels=None, amount=None) -> ClientSubscription:
+        """
+        Activates or renews client subscription upon verified payment.
+        Calculates expiration period (30 days for Monthly, 365 days for Yearly/Annual).
+        Extends existing active time if renewed early.
+        Supports LIFETIME/ONE_TIME perpetual plans without expiration.
+        """
+        now = timezone.now()
+        clean_plan = str(plan_name or client.plan or 'STARTER').upper()
+        clean_cycle = str(billing_cycle or getattr(client, 'billing_period', 'MONTHLY')).upper()
+        duration_days = 365 if clean_cycle in ['YEARLY', 'ANNUAL'] else 30
+        is_lifetime = clean_cycle in ['LIFETIME', 'ONE_TIME', 'PERPETUAL', 'NEVER'] or (
+            client.assigned_plan and (client.assigned_plan.billing_cycle or '').upper() in ['ONE_TIME', 'LIFETIME']
+        )
+
+        sub = ClientSubscription.objects.filter(client=client).first()
+        price = amount or (499.00 if 'STARTER' in clean_plan else (1499.00 if 'GROWTH' in clean_plan else 2999.00))
+
+        if is_lifetime:
+            new_end = None
+        else:
+            if sub and sub.current_period_end and sub.current_period_end > now and sub.plan_name.upper() == clean_plan:
+                new_end = sub.current_period_end + timedelta(days=duration_days)
+            else:
+                new_end = now + timedelta(days=duration_days)
+
+        if not sub:
+            sub = ClientSubscription.objects.create(
+                client=client,
+                plan_name=clean_plan,
+                price_monthly=price,
+                status='ACTIVE',
+                current_period_start=now,
+                current_period_end=new_end,
+                auto_renew=not is_lifetime
+            )
+        else:
+            sub.plan_name = clean_plan
+            sub.status = 'ACTIVE'
+            sub.current_period_start = now
+            sub.current_period_end = new_end
+            if amount:
+                try:
+                    sub.price_monthly = float(amount)
+                except (ValueError, TypeError):
+                    pass
+            sub.save()
+
+        # Update client workspace model
+        client.plan = clean_plan
+        client.billing_period = clean_cycle
+        client.status = 'ACTIVE'
+
+        if channels:
+            if isinstance(channels, str):
+                channels = [c.strip().lower() for c in channels.split(',') if c.strip()]
+            if isinstance(channels, list):
+                client.selected_channels = [str(c).strip().lower() for c in channels if str(c).strip()]
+
+        client.save()
+        return sub
+
+    @staticmethod
+    def get_subscription_details(client: Client) -> dict:
+        """
+        Returns status, is_expired, days_remaining, and formatted dates.
+        Properly handles Lifetime / One-Time / No-Expiry plans.
+        """
+        now = timezone.now()
+        if not client:
+            return {
+                'plan_name': 'Free',
+                'status': 'INACTIVE',
+                'is_expired': False,
+                'days_remaining': None,
+                'current_period_start': None,
+                'current_period_end': None,
+                'expires_at': None,
+                'can_renew': False,
+                'billing_period': 'MONTHLY'
+            }
+
+        plan_str = (client.plan or '').strip().upper()
+        if plan_str in ['FREE', '']:
+            return {
+                'plan_name': 'Free',
+                'status': 'ACTIVE',
+                'is_expired': False,
+                'days_remaining': None,
+                'current_period_start': None,
+                'current_period_end': None,
+                'expires_at': None,
+                'can_renew': False,
+                'billing_period': getattr(client, 'billing_period', 'MONTHLY')
+            }
+
+        sub = ClientSubscription.objects.filter(client=client).first()
+        clean_cycle = getattr(client, 'billing_period', 'MONTHLY').upper()
+        duration_days = 365 if clean_cycle in ['YEARLY', 'ANNUAL'] else 30
+
+        # Check if plan or billing cycle represents lifetime / perpetual access
+        is_lifetime = clean_cycle in ['LIFETIME', 'ONE_TIME', 'PERPETUAL', 'NEVER'] or (
+            client.assigned_plan and (client.assigned_plan.billing_cycle or '').upper() in ['ONE_TIME', 'LIFETIME']
+        )
+
+        if is_lifetime:
+            if sub and sub.status != 'ACTIVE':
+                sub.status = 'ACTIVE'
+                sub.save(update_fields=['status'])
+            return {
+                'plan_name': sub.plan_name if sub else plan_str,
+                'status': 'ACTIVE',
+                'is_expired': False,
+                'days_remaining': None,
+                'current_period_start': sub.current_period_start.isoformat() if (sub and sub.current_period_start) else None,
+                'current_period_end': None,
+                'expires_at': None,
+                'can_renew': False,
+                'billing_period': clean_cycle
+            }
+
+        if not sub:
+            sub = ClientSubscription.objects.create(
+                client=client,
+                plan_name=plan_str,
+                price_monthly=499.00 if 'STARTER' in plan_str else (1499.00 if 'GROWTH' in plan_str else 2999.00),
+                status='ACTIVE',
+                current_period_start=now,
+                current_period_end=now + timedelta(days=duration_days),
+                auto_renew=True
+            )
+
+        period_end = sub.current_period_end
+        if not period_end:
+            period_end = now + timedelta(days=duration_days)
+            sub.current_period_end = period_end
+            sub.save(update_fields=['current_period_end'])
+
+        if now > period_end:
+            is_expired = True
+            days_remaining = 0
+            status_text = 'EXPIRED'
+            if sub.status not in ['PAST_DUE', 'CANCELLED']:
+                sub.status = 'PAST_DUE'
+                sub.save(update_fields=['status'])
+        else:
+            is_expired = False
+            days_remaining = max(0, (period_end - now).days)
+            status_text = 'ACTIVE'
+            if sub.status != 'ACTIVE':
+                sub.status = 'ACTIVE'
+                sub.save(update_fields=['status'])
+
+        return {
+            'plan_name': sub.plan_name,
+            'status': status_text,
+            'is_expired': is_expired,
+            'days_remaining': days_remaining,
+            'current_period_start': sub.current_period_start.isoformat() if sub.current_period_start else None,
+            'current_period_end': period_end.isoformat(),
+            'expires_at': period_end.isoformat(),
+            'can_renew': is_expired or (days_remaining is not None and days_remaining <= 7),
+            'billing_period': getattr(client, 'billing_period', 'MONTHLY')
+        }
 
 
 class PricingService:
