@@ -18,14 +18,14 @@ res = db['api_user'].update_many(
 )
 print(f"Updated ai.mall@uwo24.com in aisaconnect_db_v5: matched {res.matched_count}, modified {res.modified_count}")
 
-# Verify with requests to Azure endpoint
+# Verify with requests to Cloud Run endpoint
 import requests
 r = requests.post(
-    'https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net/api/auth/login',
+    'https://uwoconnectforrb-743928421487.asia-south1.run.app/api/auth/login',
     json={'email': 'ai.mall@uwo24.com', 'password': 'admin123'}
 )
-print(f"Azure Login Status: {r.status_code}")
+print(f"Cloud Run Login Status: {r.status_code}")
 if r.status_code == 200:
-    print("SUCCESS: Logged in to Azure successfully! Token received.")
+    print("SUCCESS: Logged in to Cloud Run successfully! Token received.")
 else:
-    print(f"Azure response: {r.text}")
+    print(f"Cloud Run response: {r.text}")

@@ -46,17 +46,63 @@ class RegisterView(views.APIView):
             result = AuthService.register_user(serializer)
             if result.get("status") == "APPROVED":
                 return Response({
+                    "status": "APPROVED",
                     "user": result["user"],
                     "token": result["token"]
                 }, status=status.HTTP_201_CREATED)
+            elif result.get("status") == "PENDING_VERIFICATION":
+                return Response({
+                    "status": "PENDING_VERIFICATION",
+                    "requires_otp": True,
+                    "message": result.get("message", "Verification code sent to your registered email address."),
+                    "email": result.get("email"),
+                    "userId": result.get("userId"),
+                    **({"otp_debug": result.get("otp_debug")} if result.get("otp_debug") else {})
+                }, status=status.HTTP_201_CREATED)
             else:
                 return Response({
-                    "message": result["message"],
-                    "userId": result["userId"]
+                    "message": result.get("message"),
+                    "userId": result.get("userId")
                 }, status=status.HTTP_201_CREATED)
             
         first_error = next(iter(serializer.errors.values()))[0]
         return Response({"message": str(first_error)}, status=status.HTTP_400_BAD_REQUEST)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class VerifyRegistrationOTPView(views.APIView):
+    """
+    POST /api/auth/register/verify-otp/ or /api/auth/verify-email-otp/
+    Verifies user's registration OTP code, activates account, and returns JWT session.
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, req):
+        email = str(req.data.get('email') or '').strip().lower()
+        otp = str(req.data.get('otp') or '').strip()
+        from ..services.auth_service import AuthService
+        result = AuthService.verify_registration_otp(email, otp)
+        if "error" in result:
+            return Response({"message": result["error"]}, status=result.get("status_code", status.HTTP_400_BAD_REQUEST))
+        return Response(result, status=status.HTTP_200_OK)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ResendRegistrationOTPView(views.APIView):
+    """
+    POST /api/auth/register/resend-otp/ or /api/auth/resend-email-otp/
+    Resends a fresh 6-digit registration OTP to the unverified user with rate limiting.
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, req):
+        email = str(req.data.get('email') or '').strip().lower()
+        from ..services.auth_service import AuthService
+        result = AuthService.resend_registration_otp(email)
+        if "error" in result:
+            return Response({"message": result["error"], **result}, status=result.get("status_code", status.HTTP_400_BAD_REQUEST))
+        return Response(result, status=status.HTTP_200_OK)
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 
@@ -82,7 +128,11 @@ class LoginView(views.APIView):
         result = AuthService.login_user(email, password, ip_address=ip_address, user_agent=user_agent, request=req, payload=req.data)
         
         if "error" in result:
-            return Response({"message": result["error"]}, status=result["status_code"])
+            err_resp = {"message": result["error"]}
+            for k, v in result.items():
+                if k not in ["error", "status_code"]:
+                    err_resp[k] = v
+            return Response(err_resp, status=result["status_code"])
 
         return Response({
             "user": result["user"],
@@ -560,6 +610,50 @@ class ForgotPasswordResetView(views.APIView):
         from ..services.auth_service import AuthService
         result = AuthService.forgot_password_reset(email, password)
         return Response(result, status=result.get("status_code", 200))
+
+
+class ChangePasswordView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = str(request.data.get('current_password') or '').strip()
+        new_password = str(request.data.get('new_password') or request.data.get('password') or '').strip()
+
+        if not new_password:
+            return Response({"error": "New password is required.", "message": "New password is required."}, status=400)
+
+        if user.has_usable_password():
+            if not current_password:
+                return Response({
+                    "error": "Current password is required.",
+                    "message": "Current password is required."
+                }, status=400)
+            if not user.check_password(current_password):
+                return Response({
+                    "error": "Current password is incorrect. Please verify and try again.",
+                    "message": "Current password is incorrect. Please verify and try again."
+                }, status=400)
+
+        if current_password and current_password == new_password:
+            return Response({
+                "error": "New password must be different from current password.",
+                "message": "New password must be different from current password."
+            }, status=400)
+
+        from ..utils.password_validator import validate_password_strength
+        is_valid, errors = validate_password_strength(new_password)
+        if not is_valid:
+            msg = errors[0] if len(errors) == 1 else " ".join(errors)
+            return Response({"error": msg, "message": msg, "errors": errors}, status=400)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({
+            "success": True,
+            "message": "Password changed successfully."
+        }, status=200)
 
 class WhatsAppEmbeddedSignupView(APIView):
     permission_classes = [IsAuthenticated]

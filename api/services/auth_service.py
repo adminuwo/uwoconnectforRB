@@ -50,21 +50,107 @@ class AuthService:
     @staticmethod
     def register_user(serializer):
         user = serializer.save()
+
+        # If user registered with an invite_token, team member was explicitly invited by workspace admin
+        has_invite = bool(serializer.validated_data.get('invite_token'))
+        if has_invite:
+            user.email_verified = True
+            user.email_verified_at = timezone.now()
+            user.status = 'APPROVED'
+            user.save(update_fields=['email_verified', 'email_verified_at', 'status'])
+
+            try:
+                from .welcome_email_service import WelcomeEmailService
+                WelcomeEmailService.send_welcome_email(user)
+            except Exception as e:
+                print(f"[WelcomeEmail Error] {e}")
+
+            refresh = RefreshToken.for_user(user)
+            return {
+                "status": "APPROVED",
+                "user": AuthService._serialize_user(user),
+                "token": str(refresh.access_token)
+            }
+
+        # Standard new user registration -> Send Verification OTP
+        user.email_verified = False
+        user.status = 'PENDING'
+        user.save(update_fields=['email_verified', 'status'])
+
+        from .email_verification_service import EmailVerificationService
+        otp_res = EmailVerificationService.create_and_send_otp(
+            email=user.email,
+            name=user.first_name or user.username
+        )
+
+        return {
+            "status": "PENDING_VERIFICATION",
+            "message": "Verification code sent to your registered email address.",
+            "email": user.email,
+            "userId": str(user.id),
+            "requires_otp": True,
+            **({"otp_debug": otp_res.get("otp_debug")} if otp_res.get("otp_debug") else {})
+        }
+
+    @staticmethod
+    def verify_registration_otp(email, otp):
+        if not email or not otp:
+            return {"error": "Email and verification code are required.", "status_code": 400}
+
+        clean_email = email.strip().lower()
+        user = UserRepository.filter_users(email=clean_email).first() or UserRepository.filter_users(username=clean_email).first()
+        if not user:
+            return {"error": "No account found with this email address.", "status_code": 404}
+
+        from .email_verification_service import EmailVerificationService
+        res = EmailVerificationService.verify_otp(clean_email, otp)
+        if not res.get("success"):
+            return {"error": res.get("message", "Invalid or expired verification code."), "status_code": 400}
+
+        user.refresh_from_db()
+
+        # User is verified - trigger welcome email
         try:
             from .welcome_email_service import WelcomeEmailService
             WelcomeEmailService.send_welcome_email(user)
         except Exception as e:
             print(f"[WelcomeEmail Error] {e}")
 
-        if user.status != 'APPROVED':
-            user.status = 'APPROVED'
-            user.save(update_fields=['status'])
-
         refresh = RefreshToken.for_user(user)
         return {
             "status": "APPROVED",
+            "message": "Email verified successfully! Your account is activated.",
             "user": AuthService._serialize_user(user),
             "token": str(refresh.access_token)
+        }
+
+    @staticmethod
+    def resend_registration_otp(email):
+        if not email:
+            return {"error": "Email address is required.", "status_code": 400}
+
+        clean_email = email.strip().lower()
+        user = UserRepository.filter_users(email=clean_email).first() or UserRepository.filter_users(username=clean_email).first()
+        if not user:
+            return {"error": "No account found with this email address.", "status_code": 404}
+
+        if getattr(user, 'email_verified', False):
+            return {"error": "This email address is already verified. You can sign in directly.", "status_code": 400}
+
+        from .email_verification_service import EmailVerificationService
+        res = EmailVerificationService.create_and_send_otp(clean_email, name=user.first_name or user.username)
+        if not res.get("success"):
+            return {
+                "error": res.get("message", "Please wait before requesting a new code."),
+                "cooldown": res.get("cooldown", False),
+                "remaining_seconds": res.get("remaining_seconds", 30),
+                "status_code": 429 if res.get("cooldown") else 400
+            }
+
+        return {
+            "message": "A fresh 6-digit verification code has been sent to your email.",
+            "email": clean_email,
+            **({"otp_debug": res.get("otp_debug")} if res.get("otp_debug") else {})
         }
 
     @staticmethod
@@ -86,6 +172,19 @@ class AuthService:
         
         if not user:
             return {"error": "Invalid email or password.", "status_code": 401}
+
+        # Check if email verification is required
+        if not getattr(user, 'email_verified', False):
+            from .email_verification_service import EmailVerificationService
+            # Send a fresh OTP to help user verify seamlessly
+            otp_res = EmailVerificationService.create_and_send_otp(user.email, name=user.first_name or user.username)
+            return {
+                "error": "Your email address is not verified yet. We have sent a verification code to your email.",
+                "is_email_unverified": True,
+                "email": user.email,
+                "status_code": 403,
+                **({"otp_debug": otp_res.get("otp_debug")} if otp_res.get("otp_debug") else {})
+            }
 
         if user.status in ['SUSPENDED', 'REJECTED']:
             return {"error": "Your account has been deactivated. Please contact support.", "status_code": 403}
@@ -913,6 +1012,8 @@ class AuthService:
             "name": override_name or f"{user.first_name} {user.last_name}".strip() or user.username,
             "email": user.email,
             "role": user.role,
+            "status": getattr(user, 'status', 'PENDING'),
+            "email_verified": getattr(user, 'email_verified', False),
             "plan": client_plan,
             "client_plan": client_plan,
             "is_agency": is_agency,
@@ -1310,6 +1411,12 @@ class AuthService:
         
         if not email or not password:
             return {"message": "Email and password are required.", "status_code": 400}
+            
+        from ..utils.password_validator import validate_password_strength
+        is_valid, errors = validate_password_strength(password)
+        if not is_valid:
+            msg = errors[0] if len(errors) == 1 else " ".join(errors)
+            return {"message": msg, "error": msg, "status_code": 400}
             
         email = email.lower().strip()
         

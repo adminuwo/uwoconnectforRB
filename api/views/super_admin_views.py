@@ -555,9 +555,16 @@ class SuperAdminClientsListView(APIView):
         else:
             clients_qs = clients_qs.order_by('-created_at')
 
-        # Collect and filter all clients
-        all_clients_data = []
-        for client in clients_qs:
+        # Paginate at queryset level first for performance
+        total_count = clients_qs.count()
+        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_clients = list(clients_qs[start_idx:end_idx])
+
+        # Collect data for page clients
+        clients_data = []
+        for client in page_clients:
             primary_user = client.users.filter(role='CLIENT').first() or client.users.first()
             user_email = primary_user.email if primary_user else ''
             user_name = ''
@@ -610,7 +617,7 @@ class SuperAdminClientsListView(APIView):
             quotations_count = client.sales_documents.filter(document_type='QUOTATION').count()
             invoices_count = client.invoices.count() + client.sales_documents.filter(document_type='INVOICE').count()
 
-            all_clients_data.append({
+            clients_data.append({
                 "id": str(client.id),
                 "client_name": user_name,
                 "company_name": client.business_name,
@@ -651,14 +658,6 @@ class SuperAdminClientsListView(APIView):
                 "settings": client.settings if isinstance(client.settings, dict) else {},
                 "user_id": str(primary_user.id) if primary_user else None
             })
-
-        # Paginate in memory
-        total_count = len(all_clients_data)
-        total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
-
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        clients_data = all_clients_data[start_idx:end_idx]
 
         return Response({
             "results": clients_data,

@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 from openai import OpenAI
 
@@ -86,20 +87,51 @@ def cosine_similarity(vec1, vec2):
     return float(dot / (norm1 * norm2))
 
 
-def find_relevant_chunks(query_embedding, chunks_with_embeddings, top_k=5):
+def find_relevant_chunks(query_embedding, chunks_with_embeddings, top_k=5, query_text=None):
     """
-    Query embedding ke closest chunks dhundta hai.
+    Query embedding and optional query_text ke closest chunks dhundta hai.
+    Supports hybrid scoring (dense cosine similarity + keyword matching)
+    and preserves source_url, page_title, and heading_path.
     Returns: top_k most relevant chunks sorted by similarity.
     """
+    query_tokens = [w.lower() for w in re.findall(r'\w+', (query_text or '').strip()) if len(w) > 1] if query_text else []
+    query_phrase = (query_text or '').strip().lower()
+
     scored = []
     for chunk in chunks_with_embeddings:
-        if not chunk.get('embedding'):
-            continue
-        score = cosine_similarity(query_embedding, chunk['embedding'])
+        dense_score = 0.0
+        emb = chunk.get('embedding')
+        if query_embedding and emb and len(emb) == 1536:
+            dense_score = cosine_similarity(query_embedding, emb)
+
+        # Lexical score if query_text is available
+        lexical_score = 0.0
+        if query_tokens:
+            text_lower = (chunk.get('text') or '').lower()
+            title_lower = (chunk.get('doc_title') or '').lower()
+            heading_lower = (chunk.get('heading_path') or '').lower()
+
+            if query_phrase and query_phrase in text_lower:
+                lexical_score += 0.3
+            if query_phrase and (query_phrase in title_lower or query_phrase in heading_lower):
+                lexical_score += 0.4
+
+            for token in query_tokens:
+                if token in text_lower:
+                    lexical_score += 0.1
+                if token in title_lower or token in heading_lower:
+                    lexical_score += 0.2
+
+        # Combined hybrid score (capped at 1.0)
+        final_score = (dense_score * 0.7) + min(lexical_score, 0.3) if query_tokens else dense_score
+
         scored.append({
-            'text': chunk['text'],
-            'score': score,
-            'doc_title': chunk.get('doc_title', ''),
+            'text': chunk.get('text') or chunk.get('chunk_text', ''),
+            'score': round(final_score, 4),
+            'dense_score': round(dense_score, 4),
+            'doc_title': chunk.get('doc_title') or chunk.get('page_title', ''),
+            'source_url': chunk.get('source_url', ''),
+            'heading_path': chunk.get('heading_path', ''),
         })
     
     # Sort by similarity score (highest first)
@@ -119,7 +151,21 @@ def get_ai_response(prompt, context="", client_model=None):
         ai_client = _get_client()
         if not ai_client:
             return "AI service is not configured. Please add an OPENAI_API_KEY."
-        system_prompt = f"You are an AI assistant for a business. Context: {context}. Be helpful, professional, and concise. Only book appointments if the user explicitly confirms the time."
+        biz_name = getattr(client_model, 'business_name', None) or 'our business'
+        system_prompt = f"""You are a professional, polite, and helpful AI customer assistant for {biz_name}.
+Business Context & Guidelines:
+{context}
+
+CRITICAL MULTILINGUAL & MIRROR-LANGUAGE RULES:
+1. STRICT LANGUAGE MATCHING: You MUST detect the exact language, dialect, and script used by the customer in their message, and reply in the EXACT SAME LANGUAGE and tone:
+   - If the customer writes in Romanized Hindi / Hinglish (e.g. 'price kya hai', 'order kaise karein', 'discount milega kya', 'kya features hain'), you MUST reply in natural, polite Romanized Hindi / Hinglish.
+   - If the customer writes in Devanagari Hindi (e.g. 'नमस्ते, मुझे उत्पाद की जानकारी चाहिए'), reply in pure Devanagari Hindi.
+   - If the customer writes in regional Indian languages (Punjabi, Gujarati, Marathi, Bengali, Tamil, Telugu, Kannada, Malayalam, etc.), reply in that exact language.
+   - If the customer writes in English, reply in English.
+   - If the customer writes in any international language (Spanish, Arabic, French, German, etc.), reply in that language.
+   - NEVER reply in English if the customer messaged in Hindi, Hinglish, or any regional language!
+2. Be polite, concise, and helpful. Keep responses natural and well-suited for WhatsApp and chat messaging.
+3. Only book appointments if the user explicitly confirms the date and time."""
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -238,19 +284,30 @@ def get_rag_response(query, relevant_chunks, client_model=None):
         context_parts = []
         for i, chunk in enumerate(relevant_chunks, 1):
             source = f" (from: {chunk['doc_title']})" if chunk.get('doc_title') else ""
-            context_parts.append(f"[Document Section {i}{source}]\n{chunk['text']}")
+            url_str = f" [URL: {chunk['source_url']}]" if chunk.get('source_url') else ""
+            heading_str = f" [Section: {chunk['heading_path']}]" if chunk.get('heading_path') else ""
+            context_parts.append(f"[Document Section {i}{source}{heading_str}{url_str}]\n{chunk['text']}")
         
         knowledge_context = "\n\n".join(context_parts)
+        biz_name = getattr(client_model, 'business_name', None) or 'our business'
+        system_prompt = f"""You are a professional, polite, and helpful AI customer assistant for {biz_name}. You answer customer questions based on the business documents provided below.
 
-        system_prompt = f"""You are a helpful business assistant. You MUST answer questions ONLY based on the business documents provided below.
+CRITICAL MULTILINGUAL & MIRROR-LANGUAGE RULES:
+1. STRICT LANGUAGE MATCHING: You MUST detect the exact language, dialect, and script used by the customer in their query, and reply in the EXACT SAME LANGUAGE and tone:
+   - If the customer writes in Romanized Hindi / Hinglish (e.g. 'price kya hai', 'order kaise karein', 'kya discount milega', 'features kya hain'), you MUST reply in natural, polite Romanized Hindi / Hinglish.
+   - If the customer writes in Devanagari Hindi (e.g. 'नमस्ते, मुझे उत्पाद की जानकारी चाहिए'), reply in pure Devanagari Hindi.
+   - If the customer writes in regional Indian languages (Punjabi, Gujarati, Marathi, Bengali, Tamil, Telugu, Kannada, Malayalam, etc.), reply in that exact language.
+   - If the customer writes in English, reply in English.
+   - If the customer writes in any international language (Spanish, Arabic, French, etc.), reply in that language.
+   - NEVER reply in English if the customer messaged in Hindi, Hinglish, or any regional language!
 
-STRICT RULES:
-1. Use the provided document sections to answer factual questions about the business.
-2. Do NOT invent facts or use outside knowledge for business-specific questions.
-3. If the user is just greeting (e.g., "Hi", "Hello") or thanking you, reply politely and naturally. Do NOT say you don't have information.
-4. If a factual question's answer is NOT found in the documents, respond with: "I'm sorry, I don't have information about that in our knowledge base. Please contact us directly for help."
-5. Be concise, friendly, and professional.
-6. Respond in the same language the customer used.
+STRICT CONTENT & CITATION RULES:
+1. Use the provided business document sections to answer factual questions about products, pricing, policies, and services.
+2. If an answer is sourced from a website section that has a URL, cite the page title and URL so the user can verify or view details (e.g. 'More details: https://...').
+3. Do NOT invent facts or hallucinate outside information for business-specific questions.
+4. If the user is greeting (e.g. 'Hi', 'Hello', 'Namaste', 'Kem cho', 'Sat Sri Akal') or thanking you, reply warmly in their language.
+5. If a factual question's answer is NOT found in the documents, apologize politely in the CUSTOMER'S SAME LANGUAGE (for Hinglish: 'Maaf kijiye, hamare paas iski jaankari knowledge base me nahi hai. Kripya humse directly contact karein.', for Hindi: 'क्षमा करें, हमारे पास अभी इसकी जानकारी उपलब्ध नहीं है। कृपया हमसे सीधे संपर्क करें।', for English: 'I\\'m sorry, I don\\'t have information about that in our knowledge base. Please contact us directly for help.')
+6. Be concise, friendly, and natural for chat/WhatsApp messaging.
 
 --- RELEVANT BUSINESS KNOWLEDGE ---
 {knowledge_context}
@@ -382,7 +439,13 @@ def get_ai_draft(chat_history):
         ai_client = _get_client()
         if not ai_client:
             return "AI service is not configured."
-        system_prompt = "You are a professional customer support agent. Generate a concise, friendly, and helpful draft reply to the user's last message, taking into account the context of the conversation. Output ONLY the draft message."
+        system_prompt = (
+            "You are a professional customer support agent. Generate a concise, friendly, and helpful draft reply "
+            "to the user's last message, taking into account the context of the conversation.\n"
+            "CRITICAL LANGUAGE RULE: You MUST reply in the EXACT SAME language, dialect, and script as the customer's last message "
+            "(e.g., Romanized Hindi/Hinglish, Devanagari Hindi, Punjabi, Gujarati, Bengali, Marathi, English, etc.). "
+            "Never reply in English if the customer wrote in Hindi, Hinglish, or any regional language. Output ONLY the draft message."
+        )
         
         # Prepare messages
         messages = [{"role": "system", "content": system_prompt}]
@@ -398,3 +461,38 @@ def get_ai_draft(chat_history):
     except Exception as e:
         print(f"AI Draft Error: {str(e)}")
         return "I'm sorry, I couldn't generate a draft right now."
+
+
+def get_language_aware_fallback(text, business_name="our business"):
+    """
+    Returns a polite fallback greeting in the user's detected language/script
+    if AI is unavailable or produces an empty response.
+    """
+    import re
+    if not text:
+        return f"Thank you for contacting {business_name}. How can we assist you today?"
+        
+    # Check for Devanagari script (Hindi, Marathi, Nepali)
+    if any('\u0900' <= char <= '\u097F' for char in text):
+        return f"{business_name} में संपर्क करने के लिए धन्यवाद! आज हम आपकी क्या सहायता कर सकते हैं?"
+        
+    # Check for Gurmukhi script (Punjabi)
+    if any('\u0A00' <= char <= '\u0A7F' for char in text):
+        return f"{business_name} ਵਿੱਚ ਸੰਪਰਕ ਕਰਨ ਲਈ ਧੰਨਵਾਦ! ਅਸੀਂ ਅੱਜ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰ ਸਕਦੇ ਹਾਂ?"
+        
+    # Check for Gujarati script
+    if any('\u0A80' <= char <= '\u0AFF' for char in text):
+        return f"{business_name} માં સંપર્ક કરવા બદલ આભાર! અમે તમને કેવી રીતે મદદ કરી શકીએ?"
+
+    # Check for common Romanized Hindi / Hinglish keywords
+    text_lower = text.lower()
+    hinglish_markers = [
+        'kya', 'hai', 'hain', 'kaise', 'karein', 'krna', 'karna', 'bhai', 'batao',
+        'chahiye', 'chahie', 'chhaiye', 'kitna', 'kitne', 'milega', 'hume', 'humara',
+        'aap', 'aapka', 'shukriya', 'dhanyawad', 'namaste', 'namaskar', 'sirji', 'bolo'
+    ]
+    if any(re.search(r'\b' + re.escape(w) + r'\b', text_lower) for w in hinglish_markers):
+        return f"{business_name} me contact karne ke liye dhanyawad! Hum aaj aapki kya madad kar sakte hain?"
+        
+    return f"Thank you for contacting {business_name}. How can we assist you with our products or services today?"
+

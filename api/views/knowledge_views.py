@@ -47,11 +47,16 @@ class PlatformAssistantView(APIView):
         return Response({"response": response})
 
 
+from ..services.crawler_service import WebsiteCrawlerService
+from ..services.semantic_chunker import SemanticChunker
+from ..services.rag_service import HybridRAGService
+
+
 class KnowledgeBaseView(APIView):
     """
     RAG Knowledge Base API with Embeddings
-    GET  /api/knowledge/       → Client ke saare documents list karo
-    POST /api/knowledge/       → Document upload → Extract text → Chunk → Embed → Store
+    GET  /api/knowledge/        → Client ke saare documents list karo
+    POST /api/knowledge/        → Website Crawl / Document upload → Semantic Chunk → Embed → Store
     DELETE /api/knowledge/<pk>/ → Document + chunks delete karo
     """
     permission_classes = [IsAuthenticated]
@@ -60,44 +65,35 @@ class KnowledgeBaseView(APIView):
         client = get_tenant_client(request)
         if not client:
             return Response([], status=200)
-        
+
+        def serialize_doc(doc):
+            chunk_count = doc.chunks.count()
+            embedded_count = doc.chunks.exclude(embedding=[]).count()
+            return {
+                "id": str(doc.id),
+                "title": doc.title,
+                "file_type": doc.file_type,
+                "file_size": doc.file_size,
+                "source_url": getattr(doc, 'source_url', None) or '',
+                "crawl_status": getattr(doc, 'crawl_status', 'COMPLETED'),
+                "crawl_metadata": getattr(doc, 'crawl_metadata', {}) or {},
+                "has_text": bool(doc.extracted_text),
+                "text_preview": doc.extracted_text[:200] + "..." if len(doc.extracted_text) > 200 else doc.extracted_text,
+                "chunks": chunk_count,
+                "embedded": embedded_count,
+                "fully_embedded": chunk_count > 0 and chunk_count == embedded_count,
+                "created_at": doc.created_at,
+                "updated_at": getattr(doc, 'updated_at', doc.created_at),
+            }
+
         if pk:
             doc = KnowledgeRepository.filter_documents(client=client).filter(id=pk).first()
             if not doc:
                 return Response({"error": "Document not found"}, status=404)
-            chunk_count = doc.chunks.count()
-            embedded_count = doc.chunks.exclude(embedding=[]).count()
-            return Response({
-                "id": str(doc.id),
-                "title": doc.title,
-                "file_type": doc.file_type,
-                "file_size": doc.file_size,
-                "has_text": bool(doc.extracted_text),
-                "text_preview": doc.extracted_text[:200] + "..." if len(doc.extracted_text) > 200 else doc.extracted_text,
-                "chunks": chunk_count,
-                "embedded": embedded_count,
-                "fully_embedded": chunk_count > 0 and chunk_count == embedded_count,
-                "created_at": doc.created_at,
-            })
+            return Response(serialize_doc(doc))
 
         docs = KnowledgeRepository.filter_documents(client=client).order_by('-created_at')
-        data = []
-        for doc in docs:
-            chunk_count = doc.chunks.count()
-            embedded_count = doc.chunks.exclude(embedding=[]).count()
-            data.append({
-                "id": str(doc.id),
-                "title": doc.title,
-                "file_type": doc.file_type,
-                "file_size": doc.file_size,
-                "has_text": bool(doc.extracted_text),
-                "text_preview": doc.extracted_text[:200] + "..." if len(doc.extracted_text) > 200 else doc.extracted_text,
-                "chunks": chunk_count,
-                "embedded": embedded_count,
-                "fully_embedded": chunk_count > 0 and chunk_count == embedded_count,
-                "created_at": doc.created_at,
-            })
-        return Response(data)
+        return Response([serialize_doc(doc) for doc in docs])
 
     def post(self, request):
         client = get_tenant_client(request)
@@ -110,12 +106,150 @@ class KnowledgeBaseView(APIView):
         content_snippet = (request.data.get('content_snippet') or request.data.get('text') or '').strip()
         doc_type = (request.data.get('doc_type') or '').upper()
 
-        extracted_text = ""
-        file_type = "txt"
-        file_size = 0
+        chunker = SemanticChunker(target_chunk_words=500, overlap_words=80)
 
-        # === 1. File Upload (PDF, DOCX, TXT) ===
-        if file:
+        # === 1. Website URL Crawl & Multi-Page Ingestion ===
+        if website_url or doc_type == 'URL':
+            if not website_url:
+                return Response({"message": "Website URL is required"}, status=400)
+
+            try:
+                max_pages = int(request.data.get('max_pages') or 25)
+            except (ValueError, TypeError):
+                max_pages = 25
+
+            try:
+                max_depth = int(request.data.get('max_depth') or 3)
+            except (ValueError, TypeError):
+                max_depth = 3
+
+            respect_robots = bool(request.data.get('respect_robots', True))
+
+            crawler = WebsiteCrawlerService(
+                start_url=website_url,
+                max_pages=max_pages,
+                max_depth=max_depth,
+                respect_robots=respect_robots
+            )
+
+            # SSRF check on start URL before crawling
+            if not crawler.is_safe_url(crawler.raw_start_url):
+                return Response({
+                    "message": "The provided URL is blocked by security policy (Private IP, Localhost, or Cloud Metadata endpoint)."
+                }, status=400)
+
+            crawl_result = crawler.crawl()
+
+            if not crawl_result.get("success") or not crawl_result.get("crawled_pages"):
+                failed_reasons = []
+                for f in crawl_result.get("diagnostics", {}).get("failed_urls", []):
+                    failed_reasons.append(f"{f.get('url')}: {f.get('error')}")
+                for s in crawl_result.get("diagnostics", {}).get("skipped_urls", []):
+                    failed_reasons.append(f"{s.get('url')}: {s.get('reason')}")
+                
+                err_detail = "; ".join(failed_reasons[:3]) if failed_reasons else "No accessible HTML content could be extracted."
+                return Response({
+                    "message": f"Could not crawl website: {err_detail}",
+                    "diagnostics": crawl_result.get("diagnostics")
+                }, status=400)
+
+            crawled_pages = crawl_result["crawled_pages"]
+
+            # Aggregate all pages into combined text with clear page section boundaries
+            page_blocks = []
+            for p in crawled_pages:
+                page_blocks.append(f"=== PAGE: {p['title']} ({p['url']}) ===\n{p['structured_text']}")
+            combined_text = "\n\n".join(page_blocks)
+
+            doc_title = title or crawler.allowed_host
+
+            # Check if this exact source_url was previously crawled for this client
+            existing_doc = KnowledgeDocument.objects.filter(client=client, source_url=website_url).first()
+            if existing_doc:
+                knowledge_doc = existing_doc
+                knowledge_doc.title = doc_title
+                knowledge_doc.extracted_text = combined_text
+                knowledge_doc.file_type = 'url'
+                knowledge_doc.file_size = len(combined_text.encode('utf-8'))
+                knowledge_doc.crawl_status = 'COMPLETED'
+                knowledge_doc.crawl_metadata = {
+                    "total_pages_discovered": crawl_result["diagnostics"]["discovered_count"],
+                    "total_pages_crawled": len(crawled_pages),
+                    "total_pages_skipped": crawl_result["diagnostics"]["skipped_count"],
+                    "total_pages_failed": crawl_result["diagnostics"]["failed_count"],
+                    "duration_seconds": crawl_result["duration_seconds"],
+                    "crawled_urls": [{"url": p["url"], "title": p["title"], "chars": p["char_count"]} for p in crawled_pages],
+                    "skipped_urls": crawl_result["diagnostics"]["skipped_urls"],
+                    "failed_urls": crawl_result["diagnostics"]["failed_urls"],
+                }
+                knowledge_doc.save()
+                # Clean up old chunks for this document before adding new
+                KnowledgeChunk.objects.filter(document=knowledge_doc).delete()
+            else:
+                knowledge_doc = KnowledgeDocument.objects.create(
+                    client=client,
+                    title=doc_title,
+                    source_url=website_url,
+                    extracted_text=combined_text,
+                    file_type='url',
+                    file_size=len(combined_text.encode('utf-8')),
+                    crawl_status='COMPLETED',
+                    crawl_metadata={
+                        "total_pages_discovered": crawl_result["diagnostics"]["discovered_count"],
+                        "total_pages_crawled": len(crawled_pages),
+                        "total_pages_skipped": crawl_result["diagnostics"]["skipped_count"],
+                        "total_pages_failed": crawl_result["diagnostics"]["failed_count"],
+                        "duration_seconds": crawl_result["duration_seconds"],
+                        "crawled_urls": [{"url": p["url"], "title": p["title"], "chars": p["char_count"]} for p in crawled_pages],
+                        "skipped_urls": crawl_result["diagnostics"]["skipped_urls"],
+                        "failed_urls": crawl_result["diagnostics"]["failed_urls"],
+                    }
+                )
+
+            # Generate semantic chunks for all crawled pages
+            all_chunks = []
+            chunk_global_idx = 0
+            for page in crawled_pages:
+                page_chunks = chunker.chunk_extracted_page(page, global_chunk_start_idx=chunk_global_idx)
+                all_chunks.extend(page_chunks)
+                chunk_global_idx += len(page_chunks)
+
+            # Generate embeddings and store chunks
+            embedded_count = 0
+            for c_data in all_chunks:
+                embedding = get_embedding(c_data["chunk_text"])
+                KnowledgeChunk.objects.create(
+                    document=knowledge_doc,
+                    client=client,
+                    chunk_text=c_data["chunk_text"],
+                    chunk_index=c_data["chunk_index"],
+                    source_url=c_data.get("source_url") or website_url,
+                    page_title=c_data.get("page_title") or doc_title,
+                    heading_path=c_data.get("heading_path") or "",
+                    content_hash=c_data.get("content_hash") or "",
+                    embedding=embedding if embedding else []
+                )
+                if embedding:
+                    embedded_count += 1
+
+            return Response({
+                "id": str(knowledge_doc.id),
+                "title": knowledge_doc.title,
+                "file_type": knowledge_doc.file_type,
+                "file_size": knowledge_doc.file_size,
+                "source_url": knowledge_doc.source_url,
+                "pages_crawled": len(crawled_pages),
+                "chunks": len(all_chunks),
+                "embedded": embedded_count,
+                "fully_embedded": embedded_count == len(all_chunks),
+                "duration_seconds": crawl_result["duration_seconds"],
+                "created_at": knowledge_doc.created_at,
+                "crawl_metadata": knowledge_doc.crawl_metadata,
+                "message": f"Website indexed successfully! Crawled {len(crawled_pages)} pages, created {len(all_chunks)} semantic chunks ({embedded_count} embedded)."
+            }, status=201)
+
+        # === 2. File Upload (PDF, DOCX, TXT) ===
+        elif file:
             if file.size > 15 * 1024 * 1024:
                 return Response({"message": "File too large. Maximum size is 15MB."}, status=400)
 
@@ -125,8 +259,8 @@ class KnowledgeBaseView(APIView):
 
             file_type = ext
             file_size = file.size
-            if not title:
-                title = os.path.splitext(file.name)[0]
+            doc_title = title or os.path.splitext(file.name)[0]
+            extracted_text = ""
 
             try:
                 if ext == 'pdf':
@@ -145,105 +279,107 @@ class KnowledgeBaseView(APIView):
                 elif ext == 'txt':
                     extracted_text = file.read().decode('utf-8', errors='ignore')
             except Exception as e:
-                print(f"Text extraction error: {str(e)}")
                 return Response({"message": f"Could not extract text from file: {str(e)}"}, status=400)
 
-        # === 2. Website URL ===
-        elif website_url or doc_type == 'URL':
-            if not website_url:
-                return Response({"message": "Website URL is required"}, status=400)
+            if not extracted_text.strip():
+                return Response({"message": "No readable text content found in file."}, status=400)
 
-            if not website_url.startswith('http://') and not website_url.startswith('https://'):
-                website_url = 'https://' + website_url
+            knowledge_doc = KnowledgeDocument.objects.create(
+                client=client,
+                title=doc_title,
+                extracted_text=extracted_text.strip(),
+                file_type=file_type,
+                file_size=file_size,
+            )
+            knowledge_doc.file = file
+            knowledge_doc.save()
 
-            file_type = 'url'
-            if not title:
-                from urllib.parse import urlparse
-                parsed = urlparse(website_url)
-                title = parsed.netloc or website_url
+            page_data = {
+                "url": doc_title,
+                "title": doc_title,
+                "structured_text": extracted_text.strip()
+            }
+            chunks = chunker.chunk_extracted_page(page_data)
 
-            try:
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                }
-                resp = requests.get(website_url, headers=headers, timeout=15)
-                resp.raise_for_status()
+            embedded_count = 0
+            for c_data in chunks:
+                embedding = get_embedding(c_data["chunk_text"])
+                KnowledgeChunk.objects.create(
+                    document=knowledge_doc,
+                    client=client,
+                    chunk_text=c_data["chunk_text"],
+                    chunk_index=c_data["chunk_index"],
+                    page_title=doc_title,
+                    heading_path=c_data.get("heading_path") or doc_title,
+                    content_hash=c_data.get("content_hash") or "",
+                    embedding=embedding if embedding else []
+                )
+                if embedding:
+                    embedded_count += 1
 
-                try:
-                    from bs4 import BeautifulSoup
-                    soup = BeautifulSoup(resp.text, 'html.parser')
-                    for tag in soup(['script', 'style', 'nav', 'footer', 'noscript', 'header']):
-                        tag.decompose()
-                    extracted_text = soup.get_text(separator=' ', strip=True)
-                except Exception:
-                    import re
-                    clean = re.sub(r'<script.*?</script>', '', resp.text, flags=re.DOTALL | re.IGNORECASE)
-                    clean = re.sub(r'<style.*?</style>', '', clean, flags=re.DOTALL | re.IGNORECASE)
-                    clean = re.sub(r'<[^>]+>', ' ', clean)
-                    extracted_text = ' '.join(clean.split())
-
-                file_size = len(extracted_text.encode('utf-8'))
-            except Exception as e:
-                return Response({"message": f"Failed to fetch content from URL: {str(e)}"}, status=400)
+            return Response({
+                "id": str(knowledge_doc.id),
+                "title": knowledge_doc.title,
+                "file_type": knowledge_doc.file_type,
+                "file_size": knowledge_doc.file_size,
+                "chunks": len(chunks),
+                "embedded": embedded_count,
+                "fully_embedded": embedded_count == len(chunks),
+                "created_at": knowledge_doc.created_at,
+                "message": f"Document indexed! {len(chunks)} chunks created, {embedded_count} embedded."
+            }, status=201)
 
         # === 3. Direct Text / FAQ ===
         elif content_snippet or doc_type == 'TEXT':
             extracted_text = content_snippet
-            file_type = 'txt'
-            file_size = len(extracted_text.encode('utf-8'))
-            if not title:
-                title = (extracted_text[:40] + '...') if len(extracted_text) > 40 else 'Knowledge Note'
+            if not extracted_text.strip():
+                return Response({"message": "Text content cannot be empty."}, status=400)
 
-        else:
-            return Response({"message": "Please provide a document file, website URL, or text content to index."}, status=400)
-
-        if not extracted_text.strip():
-            return Response({"message": "No readable text content found to index."}, status=400)
-
-        knowledge_doc = KnowledgeRepository.create_knowledgedocument(
-            client=client,
-            title=title or 'Knowledge Document',
-            extracted_text=extracted_text.strip(),
-            file_type=file_type,
-            file_size=file_size,
-        )
-        if file:
-            knowledge_doc.file = file
-            knowledge_doc.save()
-
-        # === STEP 3: Chunk the text ===
-        chunks = chunk_text(extracted_text.strip(), chunk_size=800, overlap=100)
-        print(f"Document '{title}' split into {len(chunks)} chunks")
-
-        # === STEP 4: Generate embeddings for each chunk & save ===
-        embedded_count = 0
-        for i, chunk_content in enumerate(chunks):
-            embedding = get_embedding(chunk_content)
-            KnowledgeRepository.create_knowledgechunk(
-                document=knowledge_doc,
+            doc_title = title or ((extracted_text[:40] + '...') if len(extracted_text) > 40 else 'Knowledge Note')
+            knowledge_doc = KnowledgeDocument.objects.create(
                 client=client,
-                chunk_text=chunk_content,
-                chunk_index=i,
-                embedding=embedding if embedding else [],
+                title=doc_title,
+                extracted_text=extracted_text.strip(),
+                file_type='txt',
+                file_size=len(extracted_text.encode('utf-8'))
             )
-            if embedding:
-                embedded_count += 1
 
-        print(f"Successfully embedded {embedded_count}/{len(chunks)} chunks for '{title}'")
+            page_data = {
+                "url": doc_title,
+                "title": doc_title,
+                "structured_text": extracted_text.strip()
+            }
+            chunks = chunker.chunk_extracted_page(page_data)
 
-        return Response({
-            "id": str(knowledge_doc.id),
-            "title": knowledge_doc.title,
-            "file_type": knowledge_doc.file_type,
-            "file_size": knowledge_doc.file_size,
-            "has_text": True,
-            "text_preview": extracted_text[:200] + "..." if len(extracted_text) > 200 else extracted_text,
-            "chunks": len(chunks),
-            "embedded": embedded_count,
-            "fully_embedded": embedded_count == len(chunks),
-            "created_at": knowledge_doc.created_at,
-            "message": f"Knowledge indexed! {len(chunks)} chunks created, {embedded_count} embedded."
-        }, status=201)
+            embedded_count = 0
+            for c_data in chunks:
+                embedding = get_embedding(c_data["chunk_text"])
+                KnowledgeChunk.objects.create(
+                    document=knowledge_doc,
+                    client=client,
+                    chunk_text=c_data["chunk_text"],
+                    chunk_index=c_data["chunk_index"],
+                    page_title=doc_title,
+                    heading_path=c_data.get("heading_path") or doc_title,
+                    content_hash=c_data.get("content_hash") or "",
+                    embedding=embedding if embedding else []
+                )
+                if embedding:
+                    embedded_count += 1
+
+            return Response({
+                "id": str(knowledge_doc.id),
+                "title": knowledge_doc.title,
+                "file_type": knowledge_doc.file_type,
+                "file_size": knowledge_doc.file_size,
+                "chunks": len(chunks),
+                "embedded": embedded_count,
+                "fully_embedded": embedded_count == len(chunks),
+                "created_at": knowledge_doc.created_at,
+                "message": f"Knowledge note indexed! {len(chunks)} chunks created, {embedded_count} embedded."
+            }, status=201)
+
+        return Response({"message": "Please provide a document file, website URL, or text content to index."}, status=400)
 
     def delete(self, request, pk=None):
         target_id = pk or request.query_params.get('id') or request.data.get('id')
@@ -281,6 +417,136 @@ class KnowledgeBaseView(APIView):
         except Exception as e:
             print(f"Delete knowledge document error: {e}")
             return Response({"message": f"Failed to delete document: {str(e)}"}, status=500)
+
+
+class KnowledgeRecrawlView(APIView):
+    """
+    POST /api/knowledge/<pk>/recrawl/
+    Performs staged re-crawl of an existing website document.
+    Never deletes existing chunks if the crawl fails midway!
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        client = get_tenant_client(request)
+        if not client:
+            return Response({"message": "No client associated"}, status=400)
+
+        doc = KnowledgeDocument.objects.filter(id=pk, client=client).first()
+        if not doc:
+            return Response({"message": "Knowledge document not found"}, status=404)
+
+        if doc.file_type != 'url' or not doc.source_url:
+            return Response({"message": "Only website URL documents can be re-crawled"}, status=400)
+
+        max_pages = int(request.data.get('max_pages') or 25)
+        max_depth = int(request.data.get('max_depth') or 3)
+
+        crawler = WebsiteCrawlerService(
+            start_url=doc.source_url,
+            max_pages=max_pages,
+            max_depth=max_depth
+        )
+
+        crawl_result = crawler.crawl()
+        if not crawl_result.get("success") or not crawl_result.get("crawled_pages"):
+            return Response({
+                "message": "Re-crawl failed. The existing indexed content has been safely preserved.",
+                "diagnostics": crawl_result.get("diagnostics")
+            }, status=400)
+
+        crawled_pages = crawl_result["crawled_pages"]
+        chunker = SemanticChunker(target_chunk_words=500, overlap_words=80)
+
+        all_chunks = []
+        chunk_global_idx = 0
+        for page in crawled_pages:
+            page_chunks = chunker.chunk_extracted_page(page, global_chunk_start_idx=chunk_global_idx)
+            all_chunks.extend(page_chunks)
+            chunk_global_idx += len(page_chunks)
+
+        # Staged replacement:
+        # 1. Delete previous chunks only after new crawl has successfully yielded content
+        KnowledgeChunk.objects.filter(document=doc).delete()
+
+        # 2. Update document metadata
+        page_blocks = [f"=== PAGE: {p['title']} ({p['url']}) ===\n{p['structured_text']}" for p in crawled_pages]
+        combined_text = "\n\n".join(page_blocks)
+        doc.extracted_text = combined_text
+        doc.file_size = len(combined_text.encode('utf-8'))
+        doc.crawl_status = 'COMPLETED'
+        doc.crawl_metadata = {
+            "total_pages_discovered": crawl_result["diagnostics"]["discovered_count"],
+            "total_pages_crawled": len(crawled_pages),
+            "total_pages_skipped": crawl_result["diagnostics"]["skipped_count"],
+            "total_pages_failed": crawl_result["diagnostics"]["failed_count"],
+            "duration_seconds": crawl_result["duration_seconds"],
+            "crawled_urls": [{"url": p["url"], "title": p["title"], "chars": p["char_count"]} for p in crawled_pages],
+            "skipped_urls": crawl_result["diagnostics"]["skipped_urls"],
+            "failed_urls": crawl_result["diagnostics"]["failed_urls"],
+            "last_recrawl_at": time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()),
+        }
+        doc.save()
+
+        # 3. Insert new chunks with embeddings
+        embedded_count = 0
+        for c_data in all_chunks:
+            embedding = get_embedding(c_data["chunk_text"])
+            KnowledgeChunk.objects.create(
+                document=doc,
+                client=client,
+                chunk_text=c_data["chunk_text"],
+                chunk_index=c_data["chunk_index"],
+                source_url=c_data.get("source_url") or doc.source_url,
+                page_title=c_data.get("page_title") or doc.title,
+                heading_path=c_data.get("heading_path") or "",
+                content_hash=c_data.get("content_hash") or "",
+                embedding=embedding if embedding else []
+            )
+            if embedding:
+                embedded_count += 1
+
+        return Response({
+            "message": f"Website re-crawl completed successfully! {len(crawled_pages)} pages updated, {len(all_chunks)} semantic chunks re-indexed.",
+            "pages_crawled": len(crawled_pages),
+            "chunks": len(all_chunks),
+            "embedded": embedded_count,
+            "crawl_metadata": doc.crawl_metadata
+        }, status=200)
+
+
+class KnowledgeQueryView(APIView):
+    """
+    POST /api/knowledge/query/
+    RAG Search & Retrieval testing endpoint:
+    Evaluates Hybrid Search (Dense + Lexical) and generates answer with source citations.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = get_tenant_client(request)
+        if not client:
+            return Response({"message": "No client associated"}, status=400)
+
+        query = request.data.get('query', '').strip()
+        if not query:
+            return Response({"message": "Query parameter is required"}, status=400)
+
+        top_k = int(request.data.get('top_k') or 5)
+
+        # Retrieve relevant chunks using hybrid search
+        relevant_chunks = HybridRAGService.retrieve_relevant_chunks(client, query, top_k=top_k)
+
+        # Generate final answer with citations
+        answer = HybridRAGService.generate_rag_answer(query, relevant_chunks, client)
+
+        return Response({
+            "query": query,
+            "answer": answer,
+            "retrieved_count": len(relevant_chunks),
+            "chunks": relevant_chunks,
+            "sources": list({c.get("source_url") for c in relevant_chunks if c.get("source_url")})
+        }, status=200)
 
 
 def root_view(request):

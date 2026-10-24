@@ -46,7 +46,7 @@ class GmailConnectView(APIView):
             
         client_config = get_client_config()
         if not client_config['web']['client_id'] or not client_config['web']['client_secret']:
-            return Response({"error": "Gmail OAuth credentials not configured on backend."}, status=500)
+            return Response({"error": "Gmail OAuth credentials not configured on backend."}, status=400)
         
         flow = google_auth_oauthlib.flow.Flow.from_client_config(
             client_config,
