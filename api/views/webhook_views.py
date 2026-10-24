@@ -15,8 +15,11 @@ from ..models import User, Client, Automation, Message, Workflow, KnowledgeDocum
 import requests
 import os
 import json
+import logging
 from ..services.ai_service import get_ai_response, get_platform_assistance, get_rag_response, get_embedding, chunk_text, find_relevant_chunks
 from rest_framework.permissions import BasePermission
+
+logger = logging.getLogger(__name__)
 
 def get_tenant_client(request):
     if not request.user or not request.user.is_authenticated:
@@ -44,14 +47,28 @@ class WhatsAppWebhookView(APIView):
 
     def post(self, request):
         from ..services.meta_webhook_service import MetaWebhookService
+        # AppSec: Validate HMAC-SHA256 signature if app secret configured
+        app_secret = os.getenv('META_APP_SECRET') or os.getenv('WHATSAPP_APP_SECRET')
+        sig_header = request.headers.get("X-Hub-Signature-256") or request.META.get("HTTP_X_HUB_SIGNATURE_256")
+        
+        if app_secret:
+            if not sig_header or not MetaWebhookService.verify_signature(request.body, sig_header, app_secret):
+                logger.warning("[AppSec] WhatsApp Webhook rejected: missing or invalid HMAC signature")
+                return Response({"status": "forbidden", "detail": "Invalid signature"}, status=status.HTTP_403_FORBIDDEN)
+        elif sig_header:
+            logger.warning("[AppSec] Signature header received but META_APP_SECRET is not configured.")
+
         result = MetaWebhookService.handle_whatsapp_message(request.data)
         if result["status_code"] == 200:
             return Response({"status": "success"}, status=status.HTTP_200_OK)
         return Response({"status": "error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def send_whatsapp_message(self, client, to_number, text_body, phone_number_id):
+    def send_whatsapp_message(self, client, to_number, text_body, phone_number_id, media_url=None, media_type=None, media_filename=None):
         from ..services.meta_webhook_service import MetaWebhookService
-        return MetaWebhookService.send_whatsapp_message(client, to_number, text_body, phone_number_id)
+        return MetaWebhookService.send_whatsapp_message(
+            client, to_number, text_body, phone_number_id,
+            media_url=media_url, media_type=media_type, media_filename=media_filename
+        )
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -67,6 +84,17 @@ class FacebookInstagramWebhookView(APIView):
 
     def post(self, request):
         from ..services.meta_webhook_service import MetaWebhookService
+        # AppSec: Validate HMAC-SHA256 signature if app secret configured
+        app_secret = os.getenv('META_APP_SECRET') or os.getenv('FB_APP_SECRET') or os.getenv('WHATSAPP_APP_SECRET')
+        sig_header = request.headers.get("X-Hub-Signature-256") or request.META.get("HTTP_X_HUB_SIGNATURE_256")
+        
+        if app_secret:
+            if not sig_header or not MetaWebhookService.verify_signature(request.body, sig_header, app_secret):
+                logger.warning("[AppSec] FB/IG Webhook rejected: missing or invalid HMAC signature")
+                return Response({"status": "forbidden", "detail": "Invalid signature"}, status=status.HTTP_403_FORBIDDEN)
+        elif sig_header:
+            logger.warning("[AppSec] Signature header received but META_APP_SECRET is not configured.")
+
         result = MetaWebhookService.handle_fb_ig_message(request.data)
         if result["status_code"] == 200:
             return Response({"status": "success"}, status=status.HTTP_200_OK)

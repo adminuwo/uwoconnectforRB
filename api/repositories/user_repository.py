@@ -1,4 +1,4 @@
-from ..models import User, TeamInvite, PasswordResetOTP
+from ..models import User, TeamInvite, PasswordResetOTP, EmailVerificationOTP
 
 class UserRepository:
     @staticmethod
@@ -57,3 +57,16 @@ class PasswordResetOTPRepository:
     @staticmethod
     def get_all():
         return User.objects.all()
+
+class EmailVerificationOTPRepository:
+    @staticmethod
+    def create_otp(**kwargs):
+        return EmailVerificationOTP.objects.create(**kwargs)
+
+    @staticmethod
+    def filter_otps(**kwargs):
+        return EmailVerificationOTP.objects.filter(**kwargs)
+
+    @staticmethod
+    def get_latest_otp(email, **kwargs):
+        return EmailVerificationOTP.objects.filter(email=email, **kwargs).order_by('-created_at').first()

@@ -172,7 +172,19 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
         search = self.request.query_params.get('search')
         if search:
-            queryset = queryset.filter(contact_platform_id__icontains=search) | queryset.filter(last_message_summary__icontains=search)
+            matching_contact_pids = list(Contact.objects.filter(
+                Q(name__icontains=search) | Q(phone_number__icontains=search) | Q(platform_id__icontains=search)
+            ).values_list('platform_id', flat=True)[:50])
+
+            filter_q = (
+                Q(contact_platform_id__icontains=search) |
+                Q(contact__name__icontains=search) |
+                Q(contact__phone_number__icontains=search) |
+                Q(last_message_summary__icontains=search)
+            )
+            if matching_contact_pids:
+                filter_q = filter_q | Q(contact_platform_id__in=matching_contact_pids)
+            queryset = queryset.filter(filter_q)
             
         return queryset.order_by('-last_message_at', '-updated_at')
 

@@ -1,0 +1,832 @@
+{
+  "System & Health": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 2.6,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "Aisaconnect Python API is running..."
+    },
+    {
+      "path": "/health",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 36.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"status\":\"healthy\",\"service\":\"UWOConnect Backend API\",\"environment\":\"development\",\"database\":{\"status\":\"connected\",\"lat"
+    },
+    {
+      "path": "/health/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 36.9,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"status\":\"healthy\",\"service\":\"UWOConnect Backend API\",\"environment\":\"development\",\"database\":{\"status\":\"connected\",\"lat"
+    },
+    {
+      "path": "/robots.txt",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 1.8,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "User-agent: * Disallow: /admin/ Disallow: /api/"
+    },
+    {
+      "path": "/sitemap.xml",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 1.6,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">   <url>     <loc>htt"
+    }
+  ],
+  "Knowledge & RAG": [
+    {
+      "path": "/api/knowledge/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 108.9,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "[]"
+    },
+    {
+      "path": "/api/knowledge/query/",
+      "method": "POST",
+      "status": 200,
+      "duration_ms": 111.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"query\":\"test query\",\"answer\":\"AI service is not configured. Please add an OPENAI_API_KEY.\",\"retrieved_count\":0,\"chunks"
+    }
+  ],
+  "Authentication": [
+    {
+      "path": "/api/auth/login/",
+      "method": "POST",
+      "status": 401,
+      "duration_ms": 353.2,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"message\":\"Invalid email or password.\"}"
+    },
+    {
+      "path": "/api/auth/google/client-id/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 19.9,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/auth/qr/status/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 13.3,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/auth/linked-devices/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 75.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "[{\"id\":\"6aa006232bd6d5ee55e576ab\",\"device_name\":\"Web Browser on Desktop\",\"browser\":\"Web Browser\",\"operating_system\":\"Des"
+    },
+    {
+      "path": "/api/profile/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 268.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"id\":\"6a38f92e3a517dd9159ce0c0\",\"username\":\"admin@uwo24.com\",\"email\":\"admin@uwo24.com\",\"name\":\"admin@uwo24.com\",\"first_"
+    },
+    {
+      "path": "/api/user/preferences/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 77.4,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"id\":\"6aa12ee16781076af75c09ee\",\"theme_mode\":\"light\",\"primary_color\":\"#059669\",\"accent_color\":\"#10b981\",\"language\":\"en\""
+    }
+  ],
+  "Plans & Entitlements": [
+    {
+      "path": "/api/plans/public/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 112.6,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "[{\"id\":\"6ad366ea55a790de454b8505\",\"feature_keys\":[\"feature_workflow\",\"crm_leads\",\"channel_facebook\",\"channel_instagram\","
+    },
+    {
+      "path": "/api/plans/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 114.2,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":4,\"next\":null,\"previous\":null,\"results\":[{\"id\":\"6ad366ea55a790de454b8505\",\"feature_keys\":[\"feature_workflow\",\"c"
+    },
+    {
+      "path": "/api/features/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 112.8,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":35,\"next\":null,\"previous\":null,\"results\":[{\"id\":\"6a951baec08ae2b9e37ad044\",\"key\":\"feature_workflow\",\"name\":\"Aut"
+    },
+    {
+      "path": "/api/plan-features/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 218.9,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":60,\"next\":null,\"previous\":null,\"results\":[{\"id\":\"6ad366ea55a790de454b8506\",\"enabled\":true,\"limit_value\":null,\"l"
+    },
+    {
+      "path": "/api/client-feature-overrides/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 81.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    }
+  ],
+  "Client Core": [
+    {
+      "path": "/api/client/stats/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 287.6,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"totalConversations\":2,\"automationRuns\":0,\"activeUsers\":2,\"avgResponse\":\"14s\",\"resourceCounts\":{\"connectors\":1,\"project"
+    },
+    {
+      "path": "/api/client/messages/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 36.7,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/contacts/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 249.2,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":2,\"next\":null,\"previous\":null,\"results\":[{\"id\":\"6ab374fe903155a46573486c\",\"name\":\"Test Contact\",\"phone_number\":"
+    },
+    {
+      "path": "/api/conversations/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 186.8,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":1,\"next\":null,\"previous\":null,\"results\":[{\"id\":\"6ada150b707995a235de6672\",\"client\":\"Admin's Workspace\",\"assigne"
+    },
+    {
+      "path": "/api/templates/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 115.0,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/campaigns/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 113.9,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/client/platform-overview/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 30.1,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    }
+  ],
+  "Automation & AI": [
+    {
+      "path": "/api/automations/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 107.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/workflows/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 106.2,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/platform-assistant/",
+      "method": "GET",
+      "status": 405,
+      "duration_ms": 40.2,
+      "ok": false,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"detail\":\"Method \\\"GET\\\" not allowed.\"}"
+    }
+  ],
+  "Channels": [
+    {
+      "path": "/api/channels/effective/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 20.2,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/channels/status/global/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 16.0,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/gmail/connect/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 13.3,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/youtube/status/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 12.4,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/onedrive/status/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 79.0,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"connected\":false}"
+    },
+    {
+      "path": "/api/google-calendar/status/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 82.3,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"connected\":false}"
+    },
+    {
+      "path": "/api/google-sheets/list/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 71.8,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"connected\":false,\"spreadsheets\":[]}"
+    },
+    {
+      "path": "/api/google-docs/list/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 77.5,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"connected\":false,\"docs\":[]}"
+    },
+    {
+      "path": "/api/google-slides/list/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 74.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"connected\":false,\"presentations\":[]}"
+    },
+    {
+      "path": "/api/google-drive/status/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 75.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"connected\":false,\"account_email\":\"\",\"last_sync_time\":null,\"files_count\":0}"
+    },
+    {
+      "path": "/api/google-news/settings/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 71.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"enabled\":false,\"default_topic\":\"TECHNOLOGY\",\"keywords\":[\"ai\",\"technology\",\"business\"],\"language\":\"en\",\"country\":\"US\",\""
+    },
+    {
+      "path": "/api/outlook/status/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 22.0,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    }
+  ],
+  "Billing & Wallet": [
+    {
+      "path": "/api/client/wallet/dashboard/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 16.3,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/payments/history/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 108.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"orders\":[{\"id\":\"6ab375a7e3bfae49251c007b\",\"order_id\":\"rcpt_6aacfca5c8ac65aeeb5380c5_1790145959\",\"razorpay_order_id\":\"o"
+    },
+    {
+      "path": "/api/products/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 108.2,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/orders/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 115.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/invoices/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 113.9,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/sales-documents/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 111.5,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/quotations/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 107.8,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/proposals/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 109.3,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/sales/analytics/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 480.0,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"metrics\":{\"total_count\":0,\"total_value\":0.0,\"accepted_value\":0.0,\"rejected_value\":0.0,\"pending_value\":0.0,\"average_val"
+    },
+    {
+      "path": "/api/broadcast/entitlements/summary/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 27.0,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    }
+  ],
+  "Team & HR": [
+    {
+      "path": "/api/team/members/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 279.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "[{\"id\":\"6a38f92e3a517dd9159ce0c0\",\"username\":\"admin@uwo24.com\",\"email\":\"admin@uwo24.com\",\"name\":\"admin@uwo24.com\",\"first"
+    },
+    {
+      "path": "/api/team/projects/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 107.5,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/team/tasks/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 108.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/team/attendance/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 113.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/team/leaves/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 108.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":0,\"next\":null,\"previous\":null,\"results\":[]}"
+    },
+    {
+      "path": "/api/team/analytics/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 320.3,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"total_tasks\":0,\"completed_tasks\":0,\"in_progress_tasks\":0,\"blocked_tasks\":0,\"under_review_tasks\":0,\"completion_rate\":10"
+    }
+  ],
+  "Calls & WebRTC": [
+    {
+      "path": "/api/webrtc/ice-config/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 13.9,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/webrtc/history/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 112.2,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"history\":[]}"
+    },
+    {
+      "path": "/api/calls/analytics/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 174.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"total_calls\":0,\"completed_calls\":0,\"missed_calls\":0,\"answer_rate\":0}"
+    }
+  ],
+  "Guides & Learning": [
+    {
+      "path": "/api/guides/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 807.9,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":9,\"next\":null,\"previous\":null,\"results\":[{\"id\":\"6a7457a15686d0442d05f440\",\"slug\":\"connectors\",\"title\":\"Connecto"
+    },
+    {
+      "path": "/api/support/messages/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 378.0,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"count\":1,\"next\":null,\"previous\":null,\"results\":[{\"id\":\"6a702e164c4b089790cd015e\",\"client\":\"Unified Web Options Pvt Ltd"
+    }
+  ],
+  "Agency & Whitelabel": [
+    {
+      "path": "/api/agency/dashboard/stats/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 21.6,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/agency/sub-clients/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 107.3,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "[]"
+    },
+    {
+      "path": "/api/whitelabel/config/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 4.4,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"is_whitelabel\":false,\"client_id\":null,\"brand_name\":\"UWO Connect\",\"tagline\":\"Multi-channel automation platform\",\"logo_u"
+    }
+  ],
+  "Super Admin": [
+    {
+      "path": "/api/admin/overview/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 625.0,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"kpis\":{\"totalClients\":37,\"activeClients\":37,\"inactiveClients\":0,\"pendingClientApprovals\":6,\"approvedClients\":31,\"rejec"
+    },
+    {
+      "path": "/api/admin/clients/list/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 28.8,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/admin/stats/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 20.5,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/admin/users/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 14.4,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/admin/monitoring/stats/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 12.9,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/admin/monitoring/analytics/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 13.1,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/admin/audit-logs/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 11.8,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    }
+  ],
+  "CMS & Legal": [
+    {
+      "path": "/api/legal/documents/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 35.7,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"terms\":{\"document_type\":\"TERMS\",\"title\":\"Terms & Conditions\",\"version\":\"1.0\",\"effective_date\":\"2026-10-23T10:32:32.217"
+    },
+    {
+      "path": "/api/legal/consent-status/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 107.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"requires_consent\":false,\"terms\":{\"current_version\":\"1.0\",\"accepted_version\":\"1.0\",\"is_accepted\":true,\"accepted_at\":\"20"
+    },
+    {
+      "path": "/api/app/content/",
+      "method": "GET",
+      "status": 200,
+      "duration_ms": 295.3,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "{\"version\":9,\"lang\":\"en\",\"updated_at\":\"2026-10-07T11:00:12.654000+00:00\",\"content\":{\"announcement_active\":\"true\",\"announ"
+    },
+    {
+      "path": "/api/admin/banners/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 33.7,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/admin/feature-flags/",
+      "method": "GET",
+      "status": 404,
+      "duration_ms": 17.8,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    }
+  ],
+  "Public Webhooks": [
+    {
+      "path": "/api/webhook/whatsapp/",
+      "method": "GET",
+      "status": 400,
+      "duration_ms": 2.4,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "Bad Request"
+    },
+    {
+      "path": "/api/webhook/facebook-instagram/",
+      "method": "GET",
+      "status": 400,
+      "duration_ms": 2.1,
+      "ok": true,
+      "is_500": false,
+      "is_404": false,
+      "snippet": "Bad Request"
+    },
+    {
+      "path": "/api/webhook/cashfree/",
+      "method": "POST",
+      "status": 404,
+      "duration_ms": 15.4,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    },
+    {
+      "path": "/api/webhook/razorpay/",
+      "method": "POST",
+      "status": 404,
+      "duration_ms": 12.9,
+      "ok": false,
+      "is_500": false,
+      "is_404": true,
+      "snippet": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">   <title>P"
+    }
+  ]
+}

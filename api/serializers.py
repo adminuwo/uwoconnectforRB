@@ -1,3 +1,4 @@
+import re
 from rest_framework import serializers
 from django.utils import timezone
 from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion, CompetitorAnalysis
@@ -172,7 +173,7 @@ class UserSerializer(serializers.ModelSerializer):
             'employee_id', 'joining_date', 'working_hours', 'salary_visibility', 'skills',
             'availability_status', 'is_online', 'last_active_at', 'timezone', 'language',
             'current_page', 'last_login_ip', 'last_login_browser', 'last_login_os', 'login_history',
-            'meta_portfolio_eligible', 'meta_portfolio_name'
+            'meta_portfolio_eligible', 'meta_portfolio_name', 'email_verified', 'email_verified_at'
         )
         extra_kwargs = {'password': {'write_only': True}}
 
@@ -250,6 +251,13 @@ class RegisterSerializer(serializers.Serializer):
         if UserRepository.filter_users(email=email).exists() or UserRepository.filter_users(username=email).exists():
             raise serializers.ValidationError("A user with this email already exists.")
         return email
+
+    def validate_password(self, value):
+        from .utils.password_validator import validate_password_strength
+        is_valid, errors = validate_password_strength(value)
+        if not is_valid:
+            raise serializers.ValidationError(errors[0] if len(errors) == 1 else " ".join(errors))
+        return value
 
     def validate(self, attrs):
         # Resolve name and businessName from alternate field names
@@ -485,6 +493,25 @@ class ContactSerializer(serializers.ModelSerializer):
         if not data.get('platform_id'):
             data['platform_id'] = data.get('phone_number') or data.get('email') or f"contact_{timezone.now().strftime('%Y%m%d%H%M%S')}"
         return super().to_internal_value(data)
+
+    def validate_phone_number(self, value):
+        if not value:
+            return value
+        cleaned = str(value).strip()
+        if not cleaned:
+            return cleaned
+        has_plus = cleaned.startswith('+')
+        digits = re.sub(r'\D', '', cleaned)
+        if len(digits) < 7 or len(digits) > 15:
+            raise serializers.ValidationError("Phone number must contain between 7 and 15 digits (e.g. +919876543210).")
+        if set(digits) == {'0'}:
+            raise serializers.ValidationError("Phone number cannot consist solely of zeroes.")
+        return f"+{digits}" if has_plus else digits
+
+    def validate_notes(self, value):
+        if value and len(value) > 10000:
+            raise serializers.ValidationError("Notes cannot exceed 10,000 characters.")
+        return value
 
     def get_preferred_channel(self, obj):
         try:
@@ -925,6 +952,7 @@ class ConversationSerializer(serializers.ModelSerializer):
     locked_by_name = serializers.SerializerMethodField()
     contact_name = serializers.SerializerMethodField()
     contact_phone = serializers.SerializerMethodField()
+    contact_email = serializers.SerializerMethodField()
     bot_paused = serializers.SerializerMethodField()
 
     def get_client(self, obj):
@@ -962,27 +990,80 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_contact_name(self, obj):
         contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None
+        
+        # If not directly linked by contact_id, try to resolve Contact by platform_id or phone
+        if not contact and obj.contact_platform_id and getattr(obj, 'client_id', None):
+            try:
+                from ..models import Contact
+                raw_pid = str(obj.contact_platform_id).strip()
+                contact = Contact.objects.filter(client_id=obj.client_id, platform_id=raw_pid).first()
+                if not contact:
+                    contact = Contact.objects.filter(client_id=obj.client_id, phone_number=raw_pid).first()
+                if not contact and raw_pid.isdigit():
+                    contact = Contact.objects.filter(client_id=obj.client_id, phone_number=f"+{raw_pid}").first()
+                if not contact and raw_pid.startswith('+'):
+                    contact = Contact.objects.filter(client_id=obj.client_id, phone_number=raw_pid.lstrip('+')).first()
+            except Exception:
+                contact = None
+
         if contact:
             name = (contact.name or '').strip()
-            # If name is generic or 'Unknown', prefer phone number or formatted platform id
-            if not name or name.upper() in ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL']:
+            is_hex = len(name) == 24 and all(c in '0123456789abcdefABCDEF' for c in name)
+            # If name is generic, hex ID, or 'Unknown', prefer phone number or formatted platform id
+            if is_hex or not name or name.upper() in ['UNKNOWN', 'UNKNOWN USER', 'USER', 'CUSTOMER', 'NONE', 'NULL', 'UNDEFINED']:
                 phone = contact.phone_number or obj.contact_platform_id
                 if phone:
                     clean_phone = str(phone).strip()
-                    if not clean_phone.startswith('+') and clean_phone.isdigit() and len(clean_phone) >= 10:
-                        return f"+{clean_phone}"
-                    return clean_phone
+                    is_p_hex = len(clean_phone) == 24 and all(c in '0123456789abcdefABCDEF' for c in clean_phone)
+                    if not is_p_hex:
+                        if not clean_phone.startswith('+') and clean_phone.isdigit() and len(clean_phone) >= 10:
+                            return f"+{clean_phone}"
+                        return clean_phone
+                return 'Customer'
             return name
 
-        raw_id = obj.contact_platform_id or ''
-        if raw_id and str(raw_id).isdigit() and len(str(raw_id)) >= 10 and not str(raw_id).startswith('+'):
+        raw_id = str(obj.contact_platform_id or '').strip()
+        is_raw_hex = len(raw_id) == 24 and all(c in '0123456789abcdefABCDEF' for c in raw_id)
+        if is_raw_hex:
+            return 'Customer'
+        if raw_id and raw_id.isdigit() and len(raw_id) >= 10 and not raw_id.startswith('+'):
             return f"+{raw_id}"
         return raw_id or 'Customer'
 
     def get_contact_phone(self, obj):
         contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None
-        if contact:
+        if not contact and obj.contact_platform_id and getattr(obj, 'client_id', None):
+            try:
+                from ..models import Contact
+                raw_pid = str(obj.contact_platform_id).strip()
+                contact = Contact.objects.filter(client_id=obj.client_id, platform_id=raw_pid).first()
+                if not contact:
+                    contact = Contact.objects.filter(client_id=obj.client_id, phone_number=raw_pid).first()
+            except Exception:
+                contact = None
+
+        if contact and contact.phone_number:
             return contact.phone_number
+        raw_id = str(obj.contact_platform_id or '').strip()
+        is_raw_hex = len(raw_id) == 24 and all(c in '0123456789abcdefABCDEF' for c in raw_id)
+        if not is_raw_hex and raw_id and (raw_id.startswith('+') or raw_id.isdigit()):
+            return raw_id if raw_id.startswith('+') else f"+{raw_id}"
+        return None
+
+    def get_contact_email(self, obj):
+        contact = getattr(obj, 'contact', None) if getattr(obj, 'contact_id', None) else None
+        if not contact and obj.contact_platform_id and getattr(obj, 'client_id', None):
+            try:
+                from ..models import Contact
+                raw_pid = str(obj.contact_platform_id).strip()
+                contact = Contact.objects.filter(client_id=obj.client_id, platform_id=raw_pid).first()
+                if not contact:
+                    contact = Contact.objects.filter(client_id=obj.client_id, phone_number=raw_pid).first()
+            except Exception:
+                contact = None
+
+        if contact and contact.email:
+            return contact.email
         return None
 
     def get_bot_paused(self, obj):

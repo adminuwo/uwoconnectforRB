@@ -235,6 +235,10 @@ class User(AbstractUser):
     # Email Dispatch Tracking (Idempotence & Deduplication)
     welcome_email_sent = models.BooleanField(default=False)
 
+    # ── Email Verification Fields ──
+    email_verified = models.BooleanField(default=False, db_index=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+
     # ── Login Activity Tracking (Updated on Subsequent Logins) ──
     last_login_platform = models.CharField(max_length=20, default='web', blank=True)
     last_login_country = models.CharField(max_length=100, default='Unknown', blank=True)
@@ -287,6 +291,17 @@ class PasswordResetOTP(models.Model):
 
     def __str__(self):
         return f"{self.email} - {self.otp}"
+
+class EmailVerificationOTP(models.Model):
+    email = models.EmailField(db_index=True)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"EmailVerificationOTP({self.email} - {self.otp}, verified={self.is_verified})"
 
 class Automation(models.Model):
     TRIGGER_CHOICES = [
@@ -465,8 +480,11 @@ class KnowledgeDocument(models.Model):
     title = models.CharField(max_length=255)
     file = models.FileField(upload_to=client_directory_path, null=True, blank=True)
     extracted_text = models.TextField(blank=True, default='')
-    file_type = models.CharField(max_length=20, blank=True, default='')  # pdf, docx, txt
+    file_type = models.CharField(max_length=20, blank=True, default='')  # pdf, docx, txt, url
     file_size = models.IntegerField(default=0)  # bytes
+    source_url = models.URLField(max_length=1000, blank=True, null=True)
+    crawl_status = models.CharField(max_length=30, blank=True, default='COMPLETED')  # QUEUED, CRAWLING, COMPLETED, FAILED, PARTIAL
+    crawl_metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -484,6 +502,11 @@ class KnowledgeChunk(models.Model):
     chunk_text = models.TextField()  # 500-800 word chunk
     chunk_index = models.IntegerField(default=0)  # Order in the document
     embedding = models.JSONField(default=list, blank=True)  # OpenAI embedding vector (1536 dims)
+    source_url = models.URLField(max_length=1000, blank=True, null=True)
+    page_title = models.CharField(max_length=500, blank=True, default='')
+    heading_path = models.CharField(max_length=500, blank=True, default='')
+    content_hash = models.CharField(max_length=64, blank=True, default='')
+    metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

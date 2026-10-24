@@ -2,6 +2,8 @@ import os
 import json
 import re
 import requests
+import hmac
+import hashlib
 from django.http import HttpResponse
 from ..models import Client, Contact, Message, Automation, KnowledgeChunk
 from .ai_service import get_ai_response, get_rag_response, get_embedding, find_relevant_chunks
@@ -14,6 +16,27 @@ import logging
 logger = logging.getLogger(__name__)
 
 class MetaWebhookService:
+    @staticmethod
+    def verify_signature(payload_bytes: bytes, signature_header: str, app_secret: str) -> bool:
+        """
+        Validates Meta's X-Hub-Signature-256 header using HMAC-SHA256.
+        Meta formats this as 'sha256=<hex_digest>'.
+        """
+        if not signature_header or not app_secret or not payload_bytes:
+            return False
+        
+        signature = signature_header.strip()
+        if signature.startswith("sha256="):
+            signature = signature[7:]
+
+        expected = hmac.new(
+            key=app_secret.encode('utf-8'),
+            msg=payload_bytes,
+            digestmod=hashlib.sha256
+        ).hexdigest()
+
+        return hmac.compare_digest(expected, signature)
+
     @staticmethod
     def verify_whatsapp_webhook(mode, token, challenge):
         verify_token = os.getenv('WHATSAPP_VERIFY_TOKEN', 'aisaconnect_secure_token')
@@ -151,14 +174,34 @@ class MetaWebhookService:
                                     def _fetch_and_save_media(msg_obj_id, _media_id, _token, _media_type, _filename, _mime):
                                         try:
                                             from ..models import Message as MsgModel
+                                            from django.conf import settings
+                                            import os, re
                                             endpoint = f"https://graph.facebook.com/v19.0/{_media_id}"
                                             hdrs = {"Authorization": f"Bearer {_token}"}
-                                            r = requests.get(endpoint, headers=hdrs, timeout=8)
+                                            r = requests.get(endpoint, headers=hdrs, timeout=12)
                                             if r.status_code == 200:
                                                 _url = r.json().get('url')
                                                 if _url:
+                                                    saved_media_url = _url
+                                                    try:
+                                                        folder = 'documents' if _media_type == 'document' else ('images' if _media_type == 'image' else 'media')
+                                                        dest_dir = os.path.join(settings.MEDIA_ROOT, folder)
+                                                        os.makedirs(dest_dir, exist_ok=True)
+                                                        clean_fn = re.sub(r'[^a-zA-Z0-9_.-]', '_', _filename or f"media_{msg_obj_id}")
+                                                        if _media_type == 'document' and not any(clean_fn.lower().endswith(ext) for ext in ['.pdf', '.doc', '.docx', '.xlsx', '.csv', '.txt']):
+                                                            clean_fn += '.pdf'
+                                                        saved_filename = f"{msg_obj_id}_{clean_fn}"
+                                                        local_path = os.path.join(dest_dir, saved_filename)
+                                                        dl_resp = requests.get(_url, headers=hdrs, timeout=25)
+                                                        if dl_resp.status_code == 200 and len(dl_resp.content) > 0:
+                                                            with open(local_path, 'wb') as f:
+                                                                f.write(dl_resp.content)
+                                                            saved_media_url = f"/media/{folder}/{saved_filename}"
+                                                    except Exception as _dl_e:
+                                                        logger.warning("Failed permanent disk download of media: %s", _dl_e)
+
                                                     MsgModel.objects.filter(id=msg_obj_id).update(
-                                                        media_url=_url,
+                                                        media_url=saved_media_url,
                                                         media_type=_media_type,
                                                         media_filename=_filename,
                                                         media_mime_type=_mime
@@ -550,6 +593,8 @@ class MetaWebhookService:
                                     att_parts.append("🎵 [Audio]")
                                 elif att_type == 'video':
                                     att_parts.append("🎥 [Video]")
+                                elif att_type == 'template':
+                                    att_parts.append("📋 [Instagram Lead Form Application]")
                                 else:
                                     att_parts.append(f"📎 [{att_type.capitalize()}]")
                             
@@ -706,7 +751,8 @@ class MetaWebhookService:
                         logger.warning("OneDrive FB/IG hook error: %s", _ode)
 
                     # Only run AI bot automation if enabled AND bot not paused for this contact
-                    if body and client.automation_enabled:
+                    # Don't trigger AI response on raw lead form template cards
+                    if body and 'Template' not in body and 'Lead Form' not in body and client.automation_enabled:
                         if not contact.bot_paused:
                             # Bot Loop Prevention & Repeated Message Protection check
                             from .bot_loop_protection_service import BotLoopProtectionService
@@ -893,7 +939,7 @@ class MetaWebhookService:
         ai_session.variables['last_ai_time'] = time.time()
         ai_session.save()
 
-        from .ai_service import get_rag_response, get_ai_response, get_embedding, find_relevant_chunks
+        from .ai_service import get_rag_response, get_ai_response, get_embedding, find_relevant_chunks, get_language_aware_fallback
         from ..repositories.knowledge_repository import KnowledgeRepository
 
         ai_reply = None
@@ -904,9 +950,11 @@ class MetaWebhookService:
                 chunks_data = [{
                     'text': c.chunk_text,
                     'embedding': c.embedding,
-                    'doc_title': getattr(c.document, 'title', 'Knowledge') if hasattr(c, 'document') and c.document else 'Knowledge'
+                    'doc_title': getattr(c.document, 'title', 'Knowledge') if hasattr(c, 'document') and c.document else 'Knowledge',
+                    'source_url': getattr(c, 'source_url', None) or (getattr(c.document, 'source_url', '') if hasattr(c, 'document') and c.document else ''),
+                    'heading_path': getattr(c, 'heading_path', '')
                 } for c in chunks.select_related('document')]
-                relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5)
+                relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5, query_text=incoming_text)
 
                 if relevant and relevant[0]['score'] > 0.3:
                     ai_reply = get_rag_response(incoming_text, relevant, client_model=client)
@@ -918,7 +966,7 @@ class MetaWebhookService:
             ai_reply = get_ai_response(incoming_text, client.ai_context or "", client_model=client)
 
         if not ai_reply:
-            ai_reply = f"Thank you for contacting {client.business_name}. How can we assist you with our products or services today?"
+            ai_reply = get_language_aware_fallback(incoming_text, client.business_name or "our business")
 
         if platform == 'WHATSAPP':
             MetaWebhookService.send_whatsapp_message(
@@ -1304,9 +1352,11 @@ class MetaWebhookService:
                     chunks_data = [{
                         'text': c.chunk_text,
                         'embedding': c.embedding,
-                        'doc_title': c.document.title
+                        'doc_title': getattr(c.document, 'title', 'Knowledge') if hasattr(c, 'document') and c.document else 'Knowledge',
+                        'source_url': getattr(c, 'source_url', None) or (getattr(c.document, 'source_url', '') if hasattr(c, 'document') and c.document else ''),
+                        'heading_path': getattr(c, 'heading_path', '')
                     } for c in chunks.select_related('document')]
-                    relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5)
+                    relevant = find_relevant_chunks(query_embedding, chunks_data, top_k=5, query_text=incoming_text)
                     if relevant and relevant[0]['score'] > 0.3:
                         ai_reply = get_rag_response(incoming_text, relevant, client_model=client)
 
@@ -1338,7 +1388,7 @@ class MetaWebhookService:
         )
 
     @staticmethod
-    def send_whatsapp_message(client, to_number, text_body, phone_number_id=None, buttons=None, media_url=None, media_type=None, list_button_text=None, list_items=None):
+    def send_whatsapp_message(client, to_number, text_body, phone_number_id=None, buttons=None, media_url=None, media_type=None, list_button_text=None, list_items=None, media_filename=None):
         import re
         if not phone_number_id:
             phone_number_id = getattr(client, 'whatsapp_phone_number_id', None) or '100000000000000'
@@ -1408,6 +1458,8 @@ class MetaWebhookService:
                     "link": media_url
                 }
             }
+            if m_type == 'document' and media_filename:
+                payload[m_type]['filename'] = media_filename
             if text_body:
                 payload[m_type]["caption"] = text_body
         elif list_items and len(list_items) > 0:
@@ -1511,6 +1563,9 @@ class MetaWebhookService:
                 message_type='OUTGOING',
                 whatsapp_message_id=res_data.get('messages', [{}])[0].get('id') if 'messages' in res_data else None,
                 status='SENT' if response.status_code == 200 else 'FAILED',
+                media_url=media_url,
+                media_type=m_type if media_url else None,
+                media_filename=media_filename,
                 metadata={"payload": payload, "response": res_data}
             )
         except Exception as e:

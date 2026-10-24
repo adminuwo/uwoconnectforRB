@@ -62,7 +62,8 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # OAuth transport allowance across reverse proxies and local development
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+if DEBUG:
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 # Host header validation
@@ -78,7 +79,6 @@ else:
         'uwoconnect.aisa24.com',
         '.aisa24.com',
         '.run.app',
-        '.azurewebsites.net',
     ]
 
 # Application definition
@@ -174,15 +174,12 @@ CORS_ALLOWED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS = [
     'https://*.run.app',
     'https://*.aisa24.com',
-    'https://*.azurewebsites.net',
-    'https://*.azurestaticapps.net',
     'https://*.vercel.app',
     'https://*.ngrok-free.app',
     'https://uwoconnectforb-743978421487.asia-south1.run.app',
     'https://uwoconnectforf-743978421487.asia-south1.run.app',
     'https://uwoconnectforb-743928421487.asia-south1.run.app',
     'https://uwoconnectforf-743928421487.asia-south1.run.app',
-    'https://aisaconnectback-anaqbuapb6c6apgy.centralindia-01.azurewebsites.net',
     'https://uwoconnect.aisa24.com',
     'http://localhost:3000',
     'http://localhost:3001',

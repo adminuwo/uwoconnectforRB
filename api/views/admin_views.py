@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
-from ..permissions.custom_permissions import IsApprovedUser
+from ..permissions.custom_permissions import IsApprovedUser, IsSuperAdminUser
 
 from ..repositories.support_message_repository import SupportMessageRepository
 from ..repositories.client_repository import ClientRepository
@@ -373,7 +373,7 @@ class AdminImpersonateView(APIView):
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SystemRepository.get_all_auditlogs()
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperAdminUser]
 
     def get_queryset(self):
         if self.request.user.role != 'ADMIN':
