@@ -877,6 +877,73 @@ class YouTubeUploadView(APIView):
             return Response({"error": err_str}, status=400)
 
 
+class YouTubeUploadSessionView(APIView):
+    """Initiates a Google YouTube Resumable Upload session.
+    Returns the direct Google resumable upload URL, allowing client browsers
+    to upload videos of ANY size directly to YouTube with live
+    progress without hitting Cloud Run or proxy request payload limits.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.youtube_enabled:
+            return Response({"error": "YouTube not connected"}, status=400)
+
+        access_token = _get_youtube_access_token(client)
+        if not access_token:
+            return Response({"error": "No valid YouTube access token. Please reconnect YouTube under Channels."}, status=400)
+
+        title = request.data.get("title", "UWO Connect Upload")
+        description = request.data.get("description", "")
+        privacy_status = request.data.get("privacy_status", "public")
+        content_type = request.data.get("content_type", "video/mp4")
+        file_size = request.data.get("file_size")
+
+        import requests as http_requests
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": content_type,
+        }
+        if file_size:
+            headers["X-Upload-Content-Length"] = str(file_size)
+
+        body = {
+            "snippet": {
+                "title": title,
+                "description": description,
+                "tags": ["uwoconnect"]
+            },
+            "status": {
+                "privacyStatus": privacy_status
+            }
+        }
+
+        try:
+            res = http_requests.post(
+                "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+                headers=headers,
+                json=body,
+                timeout=15
+            )
+            upload_url = res.headers.get("Location")
+            if not upload_url or res.status_code not in (200, 201):
+                logger.error(f"Failed to create YouTube upload session: {res.status_code} - {res.text}")
+                err_msg = res.text
+                if "youtubeSignupRequired" in err_msg:
+                    return Response({"error": "No YouTube Channel found on this Google Account. Please create a channel on youtube.com first."}, status=400)
+                return Response({"error": f"YouTube session initialization failed: {res.text}"}, status=400)
+
+            return Response({
+                "upload_url": upload_url,
+                "message": "Resumable upload session initiated successfully"
+            })
+        except Exception as e:
+            logger.error(f"Error creating YouTube upload session: {e}")
+            return Response({"error": str(e)}, status=500)
+
+
 class YouTubeChannelProfileView(APIView):
     """Edit YouTube channel snippet details like description."""
     permission_classes = [IsAuthenticated]
