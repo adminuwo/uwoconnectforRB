@@ -20,7 +20,7 @@ class Client(models.Model):
     phone_number = models.CharField(max_length=50, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     automation_enabled = models.BooleanField(default=True)
-    plan = models.CharField(max_length=50, default='FREE')
+    plan = models.CharField(max_length=50, default='STARTER')
     assigned_plan = models.ForeignKey('Plan', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_clients')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
     

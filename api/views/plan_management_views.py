@@ -210,7 +210,14 @@ class ClientEntitlementsView(APIView):
         if not client:
             return Response({"error": "No client workspace associated with this user."}, status=status.HTTP_404_NOT_FOUND)
 
+        from django.core.cache import cache
+        cache_key = f"client_entitlements_{client.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data, status=status.HTTP_200_OK)
+
         entitlements = EntitlementService.get_full_client_entitlements(client)
+        cache.set(cache_key, entitlements, 45)
         return Response(entitlements, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -220,12 +227,16 @@ class ClientEntitlementsView(APIView):
         if not client:
             return Response({"error": "No client workspace found."}, status=status.HTTP_404_NOT_FOUND)
 
+        from django.core.cache import cache
+        cache.delete(f"client_entitlements_{client.id}")
+
         if action_type == 'select_channel':
             channel_key = request.data.get('channel') or request.data.get('channel_key')
             if not channel_key:
                 return Response({"error": "Channel key is required."}, status=status.HTTP_400_BAD_REQUEST)
             try:
                 res = EntitlementService.select_channel_for_client(client, channel_key)
+                cache.delete(f"client_entitlements_{client.id}")
                 return Response(res, status=status.HTTP_200_OK)
             except Exception as e:
                 return Response({"error": str(e), "code": "UPGRADE_REQUIRED"}, status=status.HTTP_403_FORBIDDEN)
@@ -246,6 +257,7 @@ class ClientEntitlementsView(APIView):
             client.save()
 
             entitlements = EntitlementService.get_full_client_entitlements(client)
+            cache.delete(f"client_entitlements_{client.id}")
             return Response({
                 "message": f"Successfully subscribed to {client.plan} ({billing_period}).",
                 "entitlements": entitlements

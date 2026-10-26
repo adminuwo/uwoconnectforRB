@@ -332,6 +332,21 @@ class UWOLoginView(views.APIView):
         name = str(req.data.get('name') or '').strip()
         uwo_token = str(req.data.get('uwo_token') or '').strip()
 
+        # SECURITY: The UWO SSO token MUST be cryptographically verified.
+        # Previously any email was accepted without verification (full account takeover).
+        sso_secret = os.getenv('UWO_SSO_SECRET', '').strip()
+        if not sso_secret:
+            return Response({"message": "UWO SSO login is not enabled on this server."}, status=status.HTTP_403_FORBIDDEN)
+        if not uwo_token:
+            return Response({"message": "uwo_token is required."}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            import jwt as pyjwt
+            sso_claims = pyjwt.decode(uwo_token, sso_secret, algorithms=['HS256'], options={"require": ["exp"]})
+        except Exception:
+            return Response({"message": "Invalid or expired UWO token."}, status=status.HTTP_401_UNAUTHORIZED)
+        if str(sso_claims.get('email', '')).strip().lower() != email:
+            return Response({"message": "UWO token does not match the provided email."}, status=status.HTTP_401_UNAUTHORIZED)
+
         # Extract client IP address
         x_forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
