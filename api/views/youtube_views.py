@@ -809,15 +809,34 @@ class YouTubeUploadView(APIView):
             creds = _build_google_credentials(client)
             youtube = build("youtube", "v3", credentials=creds)
 
-            video_data = video_file.read()
             from googleapiclient.http import MediaIoBaseUpload
             mimetype = video_file.content_type if video_file.content_type else "video/mp4"
-            media = MediaIoBaseUpload(
-                io.BytesIO(video_data),
-                mimetype=mimetype,
-                chunksize=-1,
-                resumable=True
-            )
+
+            if hasattr(video_file, "file"):
+                try:
+                    video_file.file.seek(0)
+                    media = MediaIoBaseUpload(
+                        video_file.file,
+                        mimetype=mimetype,
+                        chunksize=1024 * 1024,
+                        resumable=True
+                    )
+                except Exception:
+                    video_data = video_file.read()
+                    media = MediaIoBaseUpload(
+                        io.BytesIO(video_data),
+                        mimetype=mimetype,
+                        chunksize=1024 * 1024,
+                        resumable=True
+                    )
+            else:
+                video_data = video_file.read()
+                media = MediaIoBaseUpload(
+                    io.BytesIO(video_data),
+                    mimetype=mimetype,
+                    chunksize=1024 * 1024,
+                    resumable=True
+                )
 
             body = {
                 "snippet": {
