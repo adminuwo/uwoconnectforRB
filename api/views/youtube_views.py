@@ -217,11 +217,10 @@ def _get_youtube_access_token(client_obj):
     # Try to refresh using refresh_token
     if refresh_token:
         try:
-            from dotenv import load_dotenv
-            load_dotenv(override=True)
+            creds = get_google_credentials()
             res = http_requests.post("https://oauth2.googleapis.com/token", data={
-                "client_id": os.environ.get("GMAIL_CLIENT_ID", ""),
-                "client_secret": os.environ.get("GMAIL_CLIENT_SECRET", ""),
+                "client_id": creds.get("client_id") or os.environ.get("GMAIL_CLIENT_ID", ""),
+                "client_secret": creds.get("client_secret") or os.environ.get("GMAIL_CLIENT_SECRET", ""),
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token",
             }, timeout=10)
