@@ -97,6 +97,12 @@ class GmailCallbackView(APIView):
         state_meta = cache.get(f"google_oauth_state_{state}") or {}
         service = state_meta.get("service", "").lower().replace("google_", "").strip()
 
+        # Resilient state string inspection: format is f"{client_id}__{service}__{token}"
+        if not service and state and "__" in state:
+            parts = state.split("__")
+            if len(parts) >= 2:
+                service = parts[1].lower().replace("google_", "").strip()
+
         # Check if state belongs to Google Sheets OAuth
         if service == "sheets" or (state and cache.get(f'gsheets_state_{state}')):
             from .google_sheets_views import GoogleSheetsCallbackView
@@ -116,6 +122,16 @@ class GmailCallbackView(APIView):
         if service == "calendar" or (state and cache.get(f'gcal_state_{state}')):
             from .google_calendar_views import GoogleCalendarCallbackView
             return GoogleCalendarCallbackView().get(request)
+
+        # Check if state belongs to Google Drive OAuth
+        if service in ("drive", "google_drive") or (state and cache.get(f'gdrive_state_{state}')):
+            from .google_drive_views import GoogleDriveCallbackView
+            return GoogleDriveCallbackView().get(request)
+
+        # Check if state belongs to YouTube OAuth
+        if service == "youtube" or (state and cache.get(f'youtube_state_{state}')):
+            from .youtube_views import YouTubeCallbackView
+            return YouTubeCallbackView().get(request)
 
         if error:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?gmail_error={error}")

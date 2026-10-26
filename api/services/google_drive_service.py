@@ -19,10 +19,12 @@ GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 def get_valid_drive_token(client_obj):
     """
     Retrieves a valid Google Drive OAuth access token for the given client.
-    First checks google_drive_config, then falls back to any connected Google service
-    with Drive scope (docs, sheets, slides, or gmail).
+    Requires google_drive_enabled to be True and checks google_drive_config.
     Refreshes automatically if expired.
     """
+    if not getattr(client_obj, "google_drive_enabled", False):
+        raise ValueError("Google Drive is not connected. Please connect Google Drive.")
+
     config = getattr(client_obj, "google_drive_config", {}) or {}
     access_token = config.get("access_token")
     refresh_token = config.get("refresh_token")
@@ -51,47 +53,12 @@ def get_valid_drive_token(client_obj):
                 config["access_token"] = new_token
                 config["token_expires_at"] = time.time() + expires_in
                 client_obj.google_drive_config = config
-                client_obj.google_drive_enabled = True
-                client_obj.save(update_fields=["google_drive_config", "google_drive_enabled"])
+                client_obj.save(update_fields=["google_drive_config"])
                 return new_token
         except Exception as e:
             logger.warning("Drive token refresh failed: %s", e)
 
-    # Fallback to Docs token
-    if client_obj.google_docs_enabled:
-        try:
-            from .google_docs_service import get_valid_docs_token
-            return get_valid_docs_token(client_obj)
-        except Exception:
-            pass
-
-    # Fallback to Sheets token
-    if client_obj.google_sheets_enabled:
-        try:
-            from .google_sheets_service import get_valid_sheets_token
-            return get_valid_sheets_token(client_obj)
-        except Exception:
-            pass
-
-    # Fallback to Slides token
-    if client_obj.google_slides_enabled:
-        try:
-            from .google_slides_service import get_valid_slides_token
-            return get_valid_slides_token(client_obj)
-        except Exception:
-            pass
-
-    # Fallback to Gmail token
-    if client_obj.gmail_enabled:
-        try:
-            g_cfg = client_obj.gmail_config or {}
-            tok = g_cfg.get("token") or g_cfg.get("access_token")
-            if tok:
-                return tok
-        except Exception:
-            pass
-
-    raise ValueError("Google Drive is not connected. Please connect Google Workspace or Google Drive.")
+    raise ValueError("Google Drive token is invalid or expired. Please reconnect Google Drive.")
 
 
 def list_drive_files(client_obj, mime_type=None, search=None, page_size=30, page_token=None):

@@ -32,6 +32,7 @@ from .views import (
     GoogleSlidesConnectView, GoogleSlidesCallbackView, GoogleSlidesStatusView, GoogleSlidesSyncView, GoogleSlidesCreatePresentationView, GoogleSlidesDisconnectView,
     GoogleSlidesListView, GoogleSlidesDetailView, GoogleSlidesAddSlideView, GoogleSlidesDeleteView, GoogleSlidesAIGenerateView,
     GoogleDriveStatusView, GoogleDriveFilesView, GoogleDriveCreateFolderView, GoogleDriveUploadView, GoogleDriveDeleteView, GoogleDriveRenameView,
+    GoogleDriveConnectView, GoogleDriveCallbackView, GoogleDriveDisconnectView,
     GoogleWorkspaceAICommandView,
     PublicCalendarSlotsView, PublicCalendarBookView,
     ConversationViewSet, MonitoringStatsView, MonitoringAnalyticsView,
@@ -509,6 +510,12 @@ urlpatterns = [
     path('google-slides/disconnect/', GoogleSlidesDisconnectView.as_view()),
 
     # Google Drive Integration
+    path('google-drive/connect', GoogleDriveConnectView.as_view(), name='gdrive-connect'),
+    path('google-drive/connect/', GoogleDriveConnectView.as_view()),
+    path('google-drive/callback', GoogleDriveCallbackView.as_view(), name='gdrive-callback'),
+    path('google-drive/callback/', GoogleDriveCallbackView.as_view()),
+    path('google-drive/disconnect', GoogleDriveDisconnectView.as_view(), name='gdrive-disconnect'),
+    path('google-drive/disconnect/', GoogleDriveDisconnectView.as_view()),
     path('google-drive/status', GoogleDriveStatusView.as_view(), name='gdrive-status'),
     path('google-drive/status/', GoogleDriveStatusView.as_view()),
     path('google-drive/files', GoogleDriveFilesView.as_view(), name='gdrive-files'),

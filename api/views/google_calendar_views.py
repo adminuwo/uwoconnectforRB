@@ -76,6 +76,11 @@ class GoogleCalendarCallbackView(APIView):
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_calendar_error=missing_code_or_state")
 
         client_id_val = state_meta.get("client_id") or cache.get(f"gcal_state_{state}") or cache.get(f"calendar_state_{state}")
+        if not client_id_val and state and "__" in state:
+            potential_client_id = state.split("__")[0]
+            if Client.objects.filter(id=potential_client_id).exists():
+                client_id_val = potential_client_id
+
         if not client_id_val:
             return HttpResponseRedirect(f"{frontend_url}/client/channels?google_calendar_error=invalid_or_expired_state")
 

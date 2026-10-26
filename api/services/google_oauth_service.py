@@ -85,9 +85,15 @@ YOUTUBE_SCOPES = [
     "https://www.googleapis.com/auth/youtube.force-ssl",
 ] + BASE_IDENTITY_SCOPES
 
+# 7. Google Drive Integration
+# Retained: Dedicated scope for uploading, browsing and managing customer assets and documents in Drive
+DRIVE_SCOPES = [
+    "https://www.googleapis.com/auth/drive.file",
+] + BASE_IDENTITY_SCOPES
+
 # Full Bundle for Reviewer Workspace Demo (Shows all active scopes in one consent screen)
 ALL_ACTIVE_SCOPES = list(dict.fromkeys(
-    SHEETS_SCOPES + GMAIL_SCOPES + SLIDES_SCOPES + DOCS_SCOPES + CALENDAR_SCOPES + YOUTUBE_SCOPES
+    SHEETS_SCOPES + GMAIL_SCOPES + SLIDES_SCOPES + DOCS_SCOPES + CALENDAR_SCOPES + YOUTUBE_SCOPES + DRIVE_SCOPES
 ))
 ALL_REQUESTED_GOOGLE_SCOPES = ALL_ACTIVE_SCOPES
 
@@ -259,9 +265,9 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
         if val and val.strip():
             return val.strip()
 
-    # 2. For unified services that share the verified Google OAuth callback (gmail, sheets, docs, slides, all),
+    # 2. For unified services that share the verified Google OAuth callback (gmail, sheets, docs, slides, drive, all),
     # prioritize the registered GMAIL_REDIRECT_URI if configured in environment
-    if norm in ("gmail", "sheets", "docs", "slides", "all") and os.environ.get("GMAIL_REDIRECT_URI"):
+    if norm in ("gmail", "sheets", "docs", "slides", "drive", "all") and os.environ.get("GMAIL_REDIRECT_URI"):
         return os.environ["GMAIL_REDIRECT_URI"].strip()
 
     # 3. Dynamic fallback for remote requests
@@ -370,6 +376,8 @@ def generate_google_auth_url(
         cache.set(f"gslides_state_{state}", str(effective_client_id), timeout=3600)
     elif norm_service == "youtube":
         cache.set(f"youtube_state_{state}", str(effective_client_id), timeout=3600)
+    elif norm_service in ("drive", "google_drive"):
+        cache.set(f"gdrive_state_{state}", str(effective_client_id), timeout=3600)
 
     params = {
         "client_id": creds["client_id"],
