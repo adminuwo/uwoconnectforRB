@@ -210,14 +210,9 @@ class GoogleDriveFilesView(APIView):
                 page_size=page_size,
                 page_token=page_token,
             )
-<<<<<<< HEAD
-        except ValueError as e:
-            logger.info("Google Drive not connected or parameter error: %s", e)
-=======
             return Response(result)
         except ValueError as e:
             logger.warning("Google Drive client configuration/API error: %s", e)
->>>>>>> 16ecc3ad29fd5437bf2cef87768f172ac267aa73
             return Response({"error": str(e), "files": [], "connected": False}, status=400)
         except Exception as e:
             logger.warning("Failed fetching Google Drive files: %s", e)

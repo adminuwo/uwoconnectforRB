@@ -714,13 +714,11 @@ class EntitlementService:
         
         max_channels = plan_config.get('max_channels', 1)
         billing_period = client.billing_period if client else 'MONTHLY'
-
-<<<<<<< HEAD
         # Check Subscription Details & Expiration
         from api.services.wallet_services import SubscriptionService
         sub_info = SubscriptionService.get_subscription_details(client)
         is_expired = sub_info.get('is_expired', False)
-=======
+
         # Build in-memory lookup cache to eliminate N+1 queries during evaluation
         is_verification = False
         try:
@@ -780,7 +778,6 @@ class EntitlementService:
             'overrides_map': overrides_map,
             'plan_config': plan_config
         }
->>>>>>> 16ecc3ad29fd5437bf2cef87768f172ac267aa73
 
         # Evaluate Channels
         all_channels = ['whatsapp', 'facebook', 'instagram']
