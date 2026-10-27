@@ -217,11 +217,10 @@ def _get_youtube_access_token(client_obj):
     # Try to refresh using refresh_token
     if refresh_token:
         try:
-            from dotenv import load_dotenv
-            load_dotenv(override=True)
+            creds = get_google_credentials()
             res = http_requests.post("https://oauth2.googleapis.com/token", data={
-                "client_id": os.environ.get("GMAIL_CLIENT_ID", ""),
-                "client_secret": os.environ.get("GMAIL_CLIENT_SECRET", ""),
+                "client_id": creds.get("client_id") or os.environ.get("GMAIL_CLIENT_ID", ""),
+                "client_secret": creds.get("client_secret") or os.environ.get("GMAIL_CLIENT_SECRET", ""),
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token",
             }, timeout=10)
@@ -809,15 +808,34 @@ class YouTubeUploadView(APIView):
             creds = _build_google_credentials(client)
             youtube = build("youtube", "v3", credentials=creds)
 
-            video_data = video_file.read()
             from googleapiclient.http import MediaIoBaseUpload
             mimetype = video_file.content_type if video_file.content_type else "video/mp4"
-            media = MediaIoBaseUpload(
-                io.BytesIO(video_data),
-                mimetype=mimetype,
-                chunksize=-1,
-                resumable=True
-            )
+
+            if hasattr(video_file, "file"):
+                try:
+                    video_file.file.seek(0)
+                    media = MediaIoBaseUpload(
+                        video_file.file,
+                        mimetype=mimetype,
+                        chunksize=1024 * 1024,
+                        resumable=True
+                    )
+                except Exception:
+                    video_data = video_file.read()
+                    media = MediaIoBaseUpload(
+                        io.BytesIO(video_data),
+                        mimetype=mimetype,
+                        chunksize=1024 * 1024,
+                        resumable=True
+                    )
+            else:
+                video_data = video_file.read()
+                media = MediaIoBaseUpload(
+                    io.BytesIO(video_data),
+                    mimetype=mimetype,
+                    chunksize=1024 * 1024,
+                    resumable=True
+                )
 
             body = {
                 "snippet": {
@@ -856,6 +874,85 @@ class YouTubeUploadView(APIView):
                     status=400
                 )
             return Response({"error": err_str}, status=400)
+
+
+class YouTubeUploadSessionView(APIView):
+    """Initiates a Google YouTube Resumable Upload session.
+    Returns the direct Google resumable upload URL, allowing client browsers
+    to upload videos of ANY size directly to YouTube with live
+    progress without hitting Cloud Run or proxy request payload limits.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        client = getattr(request.user, "client", None)
+        if not client or not client.youtube_enabled:
+            return Response({"error": "YouTube not connected"}, status=400)
+
+        access_token = _get_youtube_access_token(client)
+        if not access_token:
+            return Response({"error": "No valid YouTube access token. Please reconnect YouTube under Channels."}, status=400)
+
+        title = request.data.get("title", "UWO Connect Upload")
+        description = request.data.get("description", "")
+        privacy_status = request.data.get("privacy_status", "public")
+        content_type = request.data.get("content_type", "video/mp4")
+        file_size = request.data.get("file_size")
+
+        import requests as http_requests
+
+        origin = (
+            request.headers.get("Origin")
+            or request.META.get("HTTP_ORIGIN")
+            or request.META.get("HTTP_REFERER", "")
+            or "https://uwoconnect.aisa24.com"
+        ).strip()
+        if "://" in origin:
+            parts = origin.split("/")
+            origin = f"{parts[0]}//{parts[2]}"
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": content_type,
+            "Origin": origin,
+        }
+        if file_size:
+            headers["X-Upload-Content-Length"] = str(file_size)
+
+        body = {
+            "snippet": {
+                "title": title,
+                "description": description,
+                "tags": ["uwoconnect"]
+            },
+            "status": {
+                "privacyStatus": privacy_status
+            }
+        }
+
+        try:
+            res = http_requests.post(
+                "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+                headers=headers,
+                json=body,
+                timeout=15
+            )
+            upload_url = res.headers.get("Location")
+            if not upload_url or res.status_code not in (200, 201):
+                logger.error(f"Failed to create YouTube upload session: {res.status_code} - {res.text}")
+                err_msg = res.text
+                if "youtubeSignupRequired" in err_msg:
+                    return Response({"error": "No YouTube Channel found on this Google Account. Please create a channel on youtube.com first."}, status=400)
+                return Response({"error": f"YouTube session initialization failed: {res.text}"}, status=400)
+
+            return Response({
+                "upload_url": upload_url,
+                "message": "Resumable upload session initiated successfully"
+            })
+        except Exception as e:
+            logger.error(f"Error creating YouTube upload session: {e}")
+            return Response({"error": str(e)}, status=500)
 
 
 class YouTubeChannelProfileView(APIView):

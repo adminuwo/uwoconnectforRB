@@ -62,6 +62,11 @@ class GoogleSlidesCallbackView(APIView):
             return redirect(f"{frontend_url}/client/channels?gslides_error=access_denied")
 
         client_id_str = state_meta.get("client_id") or cache.get(f"gslides_state_{state}")
+        if not client_id_str and state and "__" in state:
+            potential_client_id = state.split("__")[0]
+            if Client.objects.filter(id=potential_client_id).exists():
+                client_id_str = potential_client_id
+
         if not client_id_str:
             logger.error("Invalid or expired state token for Google Slides: %s", state)
             return redirect(f"{frontend_url}/client/channels?gslides_error=invalid_state")

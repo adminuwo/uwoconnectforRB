@@ -7,11 +7,34 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def payments_mock_allowed():
+    """
+    Mock/sandbox payment success is ONLY allowed for local development when BOTH
+    DEBUG=True and ALLOW_MOCK_PAYMENTS=true are set. Never in production.
+    """
+    return bool(getattr(settings, 'DEBUG', False)) and os.getenv('ALLOW_MOCK_PAYMENTS', 'false').strip().lower() in ('1', 'true', 'yes')
+
+
 class RazorpayService:
     def __init__(self):
-        self.key_id = getattr(settings, 'RAZORPAY_KEY_ID', None) or os.getenv('RAZORPAY_KEY_ID', '') or 'rzp_test_TGv2xByWyhTGoM'
-        self.key_secret = getattr(settings, 'RAZORPAY_KEY_SECRET', None) or os.getenv('RAZORPAY_KEY_SECRET', '') or 'PNbRUxPh9kOtnTUHxp3rbUbs'
+        self.key_id = getattr(settings, 'RAZORPAY_KEY_ID', None) or os.getenv('RAZORPAY_KEY_ID', '')
+        self.key_secret = getattr(settings, 'RAZORPAY_KEY_SECRET', None) or os.getenv('RAZORPAY_KEY_SECRET', '')
+        if payments_mock_allowed():
+            self.key_id = self.key_id or 'rzp_test_TGv2xByWyhTGoM'
         self.base_url = 'https://api.razorpay.com/v1'
+
+    def _mock_or_error_order(self, receipt_id, amount_paise, error_message):
+        """Returns a mock order only in local mock mode; otherwise an explicit failure."""
+        if payments_mock_allowed():
+            return {
+                'razorpay_order_id': f"order_rzp_mock_{receipt_id}",
+                'razorpay_key_id': self.key_id or 'rzp_test_1DP5mmOlF5G5ag',
+                'amount': amount_paise,
+                'currency': 'INR',
+                'is_mock': True,
+                'error_message': error_message,
+            }
+        raise RuntimeError(f"Payment gateway unavailable: {error_message}")
 
     def create_order(self, amount_in_inr, receipt_id, notes=None):
         """
@@ -20,17 +43,10 @@ class RazorpayService:
         """
         amount_paise = int(float(amount_in_inr) * 100)
 
-        # Fallback to test sandbox mode if credentials are not configured
+        # Credentials missing: mock only in local mock mode, otherwise fail loudly
         if not self.key_id or not self.key_secret:
-            logger.warning("RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set. Using test sandbox mock mode.")
-            mock_order_id = f"order_rzp_mock_{receipt_id}"
-            return {
-                'razorpay_order_id': mock_order_id,
-                'razorpay_key_id': self.key_id or 'rzp_test_1DP5mmOlF5G5ag',
-                'amount': amount_paise,
-                'currency': 'INR',
-                'is_mock': True,
-            }
+            logger.warning("RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set.")
+            return self._mock_or_error_order(receipt_id, amount_paise, 'Razorpay credentials are not configured')
 
         safe_notes = {str(k): str(v) for k, v in (notes or {'platform': 'UWO Connect'}).items()}
         payload = {
@@ -61,36 +77,26 @@ class RazorpayService:
                 }
             else:
                 logger.error(f"Razorpay Order Error: {res.status_code} - {data}")
-                mock_order_id = f"order_rzp_mock_{receipt_id}"
-                return {
-                    'razorpay_order_id': mock_order_id,
-                    'razorpay_key_id': self.key_id or 'rzp_test_1DP5mmOlF5G5ag',
-                    'amount': amount_paise,
-                    'currency': 'INR',
-                    'is_mock': True,
-                    'error_message': data.get('error', {}).get('description', 'Failed to create Razorpay order')
-                }
+                return self._mock_or_error_order(
+                    receipt_id, amount_paise,
+                    data.get('error', {}).get('description', 'Failed to create Razorpay order')
+                )
+        except RuntimeError:
+            raise
         except Exception as e:
             logger.error(f"Razorpay Connection Exception: {str(e)}")
-            mock_order_id = f"order_rzp_mock_{receipt_id}"
-            return {
-                'razorpay_order_id': mock_order_id,
-                'razorpay_key_id': self.key_id or 'rzp_test_1DP5mmOlF5G5ag',
-                'amount': amount_paise,
-                'currency': 'INR',
-                'is_mock': True,
-                'error_message': str(e)
-            }
+            return self._mock_or_error_order(receipt_id, amount_paise, str(e))
 
     def verify_signature(self, razorpay_order_id, razorpay_payment_id, razorpay_signature):
         """
         Verifies Razorpay HMAC SHA256 signature for standard orders.
+        SECURITY: No magic-word bypass ('test', 'mock', 'valid' ...). Always HMAC-verified,
+        except in explicit local mock mode for mock orders.
         """
-        if not self.key_secret or 'mock' in str(razorpay_order_id) or 'test' in str(razorpay_signature) or 'passed' in str(razorpay_signature) or 'valid' in str(razorpay_signature):
-            # Sandbox test mode auto-verification
+        if payments_mock_allowed() and 'mock' in str(razorpay_order_id):
             return True
 
-        if not razorpay_order_id or not razorpay_payment_id or not razorpay_signature:
+        if not self.key_secret or not razorpay_order_id or not razorpay_payment_id or not razorpay_signature:
             return False
 
         try:
@@ -111,6 +117,8 @@ class RazorpayService:
         amount_paise = int(float(amount_in_inr) * 100)
 
         if not self.key_id or not self.key_secret:
+            if not payments_mock_allowed():
+                return {'id': None, 'short_url': None, 'error': 'Razorpay credentials are not configured'}
             return {
                 'id': f"plink_mock_{receipt_id}",
                 'short_url': None,
@@ -157,10 +165,10 @@ class RazorpayService:
         """
         Verifies HMAC SHA256 signature for Razorpay Payment Links callback.
         """
-        if not self.key_secret or 'mock' in str(signature) or 'test' in str(signature):
+        if payments_mock_allowed() and 'mock' in str(payment_link_id):
             return True
 
-        if not all([payment_link_id, payment_link_ref_id, payment_link_status, payment_id, signature]):
+        if not self.key_secret or not all([payment_link_id, payment_link_ref_id, payment_link_status, payment_id, signature]):
             return False
 
         try:

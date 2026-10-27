@@ -18,7 +18,7 @@ from .views import (
     SuggestDraftView, TeamMemberViewSet, TeamInviteView, TeamInviteQRView, TeamInviteValidateView, TeamChatView, ProductViewSet, OrderViewSet,
     CreatePaymentOrderView, VerifyPaymentView, PaymentHistoryView, CashfreeWebhookView, RazorpayWebhookView,
     PlanUpgradeCheckoutView, PlanUpgradeCallbackView,
-    WhatsAppEmbeddedSignupView, GmailConnectView, GmailCallbackView, GmailSyncView, GmailDisconnectView, YouTubeConnectView, YouTubeCallbackView, YouTubeStatusView, YouTubeSyncView, YouTubeAnalyticsView, YouTubeVideosView, YouTubeCommentsView, YouTubeSettingsView, YouTubeCheckNewView, YouTubeUploadView, YouTubeChannelProfileView, YouTubeDeleteView, YouTubeAISuggestReplyView,
+    WhatsAppEmbeddedSignupView, GmailConnectView, GmailCallbackView, GmailSyncView, GmailDisconnectView, YouTubeConnectView, YouTubeCallbackView, YouTubeStatusView, YouTubeSyncView, YouTubeAnalyticsView, YouTubeVideosView, YouTubeCommentsView, YouTubeSettingsView, YouTubeCheckNewView, YouTubeUploadView, YouTubeUploadSessionView, YouTubeChannelProfileView, YouTubeDeleteView, YouTubeAISuggestReplyView,
     InstagramEmbeddedSignupView, FacebookEmbeddedSignupView, InstagramOAuthCallbackView, InstagramSyncMessagesView,
     ProjectViewSet, TaskViewSet, WorkReportView, WorkApprovalView, TeamChannelView,
     TeamChatMessageView, TeamAnalyticsView, TeamAICopilotView, AttendanceViewSet, LeaveRequestViewSet,
@@ -32,6 +32,7 @@ from .views import (
     GoogleSlidesConnectView, GoogleSlidesCallbackView, GoogleSlidesStatusView, GoogleSlidesSyncView, GoogleSlidesCreatePresentationView, GoogleSlidesDisconnectView,
     GoogleSlidesListView, GoogleSlidesDetailView, GoogleSlidesAddSlideView, GoogleSlidesDeleteView, GoogleSlidesAIGenerateView,
     GoogleDriveStatusView, GoogleDriveFilesView, GoogleDriveCreateFolderView, GoogleDriveUploadView, GoogleDriveDeleteView, GoogleDriveRenameView,
+    GoogleDriveConnectView, GoogleDriveCallbackView, GoogleDriveDisconnectView,
     GoogleWorkspaceAICommandView,
     PublicCalendarSlotsView, PublicCalendarBookView,
     ConversationViewSet, MonitoringStatsView, MonitoringAnalyticsView,
@@ -40,6 +41,7 @@ from .views import (
     OutlookConnectView, OutlookCallbackView, OutlookStatusView, OutlookSyncView, OutlookSendMailView, OutlookDisconnectView,
     OutlookCalendarEventsView, OutlookTeamsView, OutlookContactsView, OutlookExcelView,
     EmailAccountViewSet, EmailMessageViewSet, EmailAutoReplyViewSet, EmailAutomationWorkflowViewSet, EmailAnalyticsView, EmailComposeView,
+    EmailAutomationSettingsViewSet, EmailAutomationLogViewSet,
     WebRTCIceConfigView, WebRTCInitiateCallView, WebRTCCallSignalView, WebRTCHistoryView,
     WebRTCActiveCallCheckView, WebRTCCallActionView,
     CallScheduleView, CallAISummaryView, CallAnalyticsView, HealthCheckView,
@@ -125,6 +127,8 @@ router.register(r'email/accounts', EmailAccountViewSet, basename='email-account'
 router.register(r'email/messages', EmailMessageViewSet, basename='email-message')
 router.register(r'email/auto-replies', EmailAutoReplyViewSet, basename='email-auto-reply')
 router.register(r'email/automations', EmailAutomationWorkflowViewSet, basename='email-automation')
+router.register(r'email/automation-settings', EmailAutomationSettingsViewSet, basename='email-automation-settings')
+router.register(r'email/automation-logs', EmailAutomationLogViewSet, basename='email-automation-log')
 router.register(r'sales-documents', SalesDocumentViewSet, basename='sales-document')
 router.register(r'sales-document-templates', SalesDocumentTemplateViewSet, basename='sales-document-template')
 router.register(r'invoices', InvoiceViewSet, basename='invoice')
@@ -193,15 +197,25 @@ urlpatterns = [
     path('auth/apple', AppleLoginView.as_view(), name='apple-auth'),
     path('auth/apple/', AppleLoginView.as_view()),
     path('auth/gmail/connect', GmailConnectView.as_view(), name='gmail-connect'),
+    path('auth/gmail/connect/', GmailConnectView.as_view()),
+    path('gmail/connect', GmailConnectView.as_view(), name='gmail-connect-alt'),
+    path('gmail/connect/', GmailConnectView.as_view()),
     path('auth/gmail/callback', GmailCallbackView.as_view(), name='gmail-callback'),
+    path('auth/gmail/callback/', GmailCallbackView.as_view()),
+    path('gmail/callback', GmailCallbackView.as_view()),
+    path('gmail/callback/', GmailCallbackView.as_view()),
     path('auth/gmail/disconnect', GmailDisconnectView.as_view(), name='gmail-disconnect'),
+    path('auth/gmail/disconnect/', GmailDisconnectView.as_view()),
     path('auth/google-calendar/connect', GoogleCalendarConnectView.as_view(), name='google-calendar-connect'),
+    path('auth/google-calendar/connect/', GoogleCalendarConnectView.as_view()),
     path('auth/google-calendar/callback', GoogleCalendarCallbackView.as_view(), name='google-calendar-callback'),
+    path('auth/google-calendar/callback/', GoogleCalendarCallbackView.as_view()),
     path('auth/google-sheets/connect', GoogleSheetsConnectView.as_view(), name='auth-gsheets-connect'),
     path('auth/google-sheets/connect/', GoogleSheetsConnectView.as_view()),
     path('auth/google-sheets/callback', GoogleSheetsCallbackView.as_view(), name='auth-gsheets-callback'),
     path('auth/google-sheets/callback/', GoogleSheetsCallbackView.as_view()),
     path('auth/gmail/sync', GmailSyncView.as_view(), name='gmail-sync'),
+    path('auth/gmail/sync/', GmailSyncView.as_view()),
     path('auth/firebase-login', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/uwo-login', UWOLoginView.as_view(), name='uwo-login'),
     path('auth/delete-account', AccountDeletionView.as_view(), name='account-delete'),
@@ -509,6 +523,12 @@ urlpatterns = [
     path('google-slides/disconnect/', GoogleSlidesDisconnectView.as_view()),
 
     # Google Drive Integration
+    path('google-drive/connect', GoogleDriveConnectView.as_view(), name='gdrive-connect'),
+    path('google-drive/connect/', GoogleDriveConnectView.as_view()),
+    path('google-drive/callback', GoogleDriveCallbackView.as_view(), name='gdrive-callback'),
+    path('google-drive/callback/', GoogleDriveCallbackView.as_view()),
+    path('google-drive/disconnect', GoogleDriveDisconnectView.as_view(), name='gdrive-disconnect'),
+    path('google-drive/disconnect/', GoogleDriveDisconnectView.as_view()),
     path('google-drive/status', GoogleDriveStatusView.as_view(), name='gdrive-status'),
     path('google-drive/status/', GoogleDriveStatusView.as_view()),
     path('google-drive/files', GoogleDriveFilesView.as_view(), name='gdrive-files'),
@@ -548,6 +568,8 @@ urlpatterns = [
     path('youtube/broadcast-check/', YouTubeCheckNewView.as_view()),
     path('youtube/upload', YouTubeUploadView.as_view(), name='youtube-upload'),
     path('youtube/upload/', YouTubeUploadView.as_view()),
+    path('youtube/upload-session', YouTubeUploadSessionView.as_view(), name='youtube-upload-session'),
+    path('youtube/upload-session/', YouTubeUploadSessionView.as_view()),
     path('youtube/profile', YouTubeChannelProfileView.as_view(), name='youtube-profile'),
     path('youtube/profile/', YouTubeChannelProfileView.as_view()),
     path('youtube/delete', YouTubeDeleteView.as_view(), name='youtube-delete'),

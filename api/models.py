@@ -20,7 +20,7 @@ class Client(models.Model):
     phone_number = models.CharField(max_length=50, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     automation_enabled = models.BooleanField(default=True)
-    plan = models.CharField(max_length=50, default='FREE')
+    plan = models.CharField(max_length=50, default='STARTER')
     assigned_plan = models.ForeignKey('Plan', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_clients')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
     
@@ -1343,6 +1343,128 @@ class EmailTeamNote(models.Model):
 
     def __str__(self):
         return f"Note by {self.author.username} on Msg #{self.message.id}"
+
+
+class EmailAutomationSettings(models.Model):
+    """
+    Client-controlled email automation and filtering configuration.
+    Supports client-wide defaults (account=None) and per-mailbox overrides.
+    """
+    UNCERTAIN_CHOICES = [
+        ('skip', 'Skip Automation (Safe Default)'),
+        ('require_review', 'Require Review / Pending Review'),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='email_automation_settings')
+    account = models.ForeignKey(EmailAccount, on_delete=models.CASCADE, null=True, blank=True, related_name='automation_settings')
+
+    # Master toggle: Enable or disable email automation
+    is_enabled = models.BooleanField(default=True)
+
+    # Sender and Domain filters
+    allowed_senders = models.JSONField(default=list, blank=True)   # ['vip@partner.com']
+    excluded_senders = models.JSONField(default=list, blank=True)  # ['ad@vendor.com']
+    allowed_domains = models.JSONField(default=list, blank=True)   # ['partner.com']
+    excluded_domains = models.JSONField(default=list, blank=True)  # ['marketing.com']
+
+    # Email Category filters (which incoming types should trigger auto-reply)
+    auto_reply_business_inquiry = models.BooleanField(default=True)
+    auto_reply_customer_support = models.BooleanField(default=True)
+    auto_reply_sales_inquiry = models.BooleanField(default=True)
+    auto_reply_advertisement = models.BooleanField(default=False)
+    auto_reply_newsletter = models.BooleanField(default=False)
+    auto_reply_promotion = models.BooleanField(default=False)
+    auto_reply_notification = models.BooleanField(default=False)
+    auto_reply_spam = models.BooleanField(default=False)
+
+    # Keyword and Subject filters
+    include_keywords = models.JSONField(default=list, blank=True)  # keywords required in subject or body
+    exclude_keywords = models.JSONField(default=list, blank=True)  # keywords that skip automation
+
+    # Optional Allowlist mode (only matching allowlist rules get replies)
+    allowlist_mode = models.BooleanField(default=False)
+
+    # Default behavior for uncertain classifications
+    uncertain_fallback = models.CharField(max_length=30, choices=UNCERTAIN_CHOICES, default='skip')
+
+    # Conversation thread handling: allow auto-replying to new incoming messages in existing threads
+    reply_to_threads = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        acc = self.account.email_address if self.account else 'Global'
+        return f"EmailAutomationSettings({self.client_id} - {acc})"
+
+
+class EmailAutomationLog(models.Model):
+    """
+    Records every automation evaluation, classification result, and reply dispatch.
+    Enforces idempotency and provides an audit log for clients.
+    """
+    DECISION_CHOICES = [
+        ('replied', 'Replied'),
+        ('skipped', 'Skipped'),
+        ('pending_review', 'Pending Review'),
+        ('failed', 'Failed'),
+        ('processing', 'Processing'),
+    ]
+    CATEGORY_CHOICES = [
+        ('business_inquiry', 'Business Inquiry'),
+        ('customer_support', 'Customer Support'),
+        ('sales_inquiry', 'Sales Inquiry'),
+        ('advertisement', 'Advertisement'),
+        ('newsletter', 'Newsletter'),
+        ('promotion', 'Promotional'),
+        ('notification', 'Automated Notification'),
+        ('spam', 'Spam / Phishing'),
+        ('uncertain', 'Uncertain / Ambiguous'),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='email_automation_logs')
+    account = models.ForeignKey(EmailAccount, on_delete=models.SET_NULL, null=True, blank=True, related_name='automation_logs')
+    provider = models.CharField(max_length=30, default='gmail')
+    provider_message_id = models.CharField(max_length=255, db_index=True)
+    incoming_message = models.ForeignKey(EmailMessage, on_delete=models.SET_NULL, null=True, blank=True, related_name='automation_logs')
+
+    # Stable unique key for idempotency: {client_id}:{provider}:{provider_message_id}
+    idempotency_key = models.CharField(max_length=255, unique=True, db_index=True)
+
+    # Header / Sender details (without exposing sensitive email bodies)
+    sender_email = models.CharField(max_length=255)
+    sender_name = models.CharField(max_length=255, blank=True, default='')
+    subject = models.CharField(max_length=500, blank=True, default='')
+    mailbox = models.CharField(max_length=255, blank=True, default='')
+
+    # Classification & Reasoning
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='uncertain')
+    confidence_score = models.FloatField(default=0.0)
+    classification_details = models.JSONField(default=dict, blank=True)
+
+    # Decision & Applied Rules
+    decision = models.CharField(max_length=30, choices=DECISION_CHOICES, default='skipped', db_index=True)
+    reason = models.TextField(blank=True, default='')
+    rule_applied = models.ForeignKey(EmailAutoReplyRule, on_delete=models.SET_NULL, null=True, blank=True, related_name='applied_logs')
+    workflow_applied = models.ForeignKey(EmailAutomationWorkflow, on_delete=models.SET_NULL, null=True, blank=True, related_name='applied_logs')
+
+    # Execution Tracking
+    reply_message = models.ForeignKey(EmailMessage, on_delete=models.SET_NULL, null=True, blank=True, related_name='generated_reply_logs')
+    reply_status = models.CharField(max_length=30, default='none')
+    replied_at = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(blank=True, default='')
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.decision.upper()}] {self.sender_email} -> {self.category} ({self.reason[:50]})"
 
 
 class CallHistory(models.Model):

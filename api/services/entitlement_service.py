@@ -590,16 +590,21 @@ class EntitlementService:
         return False, status
 
     @staticmethod
-    def evaluate_item_access(item_key: str, item_type: str, client: Client) -> str:
+    def evaluate_item_access(item_key: str, item_type: str, client: Client, context: dict = None) -> str:
         """
         Evaluates item access state:
         Returns COMING_SOON | AVAILABLE | UPGRADE_REQUIRED
+        Supports optional pre-fetched context to eliminate N+1 queries.
         """
         # Google Reviewer / Verification account bypass (Phase 6):
         try:
-            from .google_oauth_service import is_google_verification_account
-            if is_google_verification_account(client):
-                return 'AVAILABLE'
+            if context and 'is_verification_account' in context:
+                if context['is_verification_account']:
+                    return 'AVAILABLE'
+            else:
+                from .google_oauth_service import is_google_verification_account
+                if is_google_verification_account(client):
+                    return 'AVAILABLE'
         except Exception:
             pass
 
@@ -607,28 +612,50 @@ class EntitlementService:
         clean_k = item_key.lower().replace('feature_', '').replace('connector_', '').replace('channel_', '')
 
         # Check GlobalConnector
-        gc = (
-            GlobalConnector.objects.filter(connector_key__iexact=item_key).first() or
-            GlobalConnector.objects.filter(connector_key__iexact=clean_k).first()
-        )
+        if context and 'connectors_map' in context:
+            cmap = context['connectors_map']
+            gc = cmap.get(item_key.lower()) or cmap.get(clean_k)
+        else:
+            gc = (
+                GlobalConnector.objects.filter(connector_key__iexact=item_key).first() or
+                GlobalConnector.objects.filter(connector_key__iexact=clean_k).first()
+            )
         if gc:
             if getattr(gc, 'is_coming_soon', False) or not getattr(gc, 'is_active', True):
                 return 'COMING_SOON'
 
         # Check Feature
-        feat = (
-            Feature.objects.filter(key__iexact=item_key).first() or
-            Feature.objects.filter(key__iexact=clean_k).first() or
-            Feature.objects.filter(key__iexact=f"feature_{clean_k}").first() or
-            Feature.objects.filter(key__iexact=f"channel_{clean_k}").first() or
-            Feature.objects.filter(key__iexact=f"connector_{clean_k}").first()
-        )
+        if context and 'features_map' in context:
+            fmap = context['features_map']
+            feat = (
+                fmap.get(item_key.lower()) or
+                fmap.get(clean_k) or
+                fmap.get(f"feature_{clean_k}") or
+                fmap.get(f"channel_{clean_k}") or
+                fmap.get(f"connector_{clean_k}")
+            )
+        else:
+            feat = (
+                Feature.objects.filter(key__iexact=item_key).first() or
+                Feature.objects.filter(key__iexact=clean_k).first() or
+                Feature.objects.filter(key__iexact=f"feature_{clean_k}").first() or
+                Feature.objects.filter(key__iexact=f"channel_{clean_k}").first() or
+                Feature.objects.filter(key__iexact=f"connector_{clean_k}").first()
+            )
         if feat:
             if getattr(feat, 'is_coming_soon', False) or getattr(feat, 'status', 'ACTIVE') != 'ACTIVE' or not getattr(feat, 'is_active', True):
                 return 'COMING_SOON'
 
         # 2. Check if item is override-added or override-removed by Admin for this client
-        if client:
+        if context and 'overrides_map' in context:
+            omap = context['overrides_map']
+            clean_k = item_key.lower().replace('feature_', '').replace('connector_', '')
+            ov_type = omap.get(item_key.lower()) or omap.get(clean_k) or omap.get(f"feature_{clean_k}")
+            if ov_type == 'ADD':
+                return 'AVAILABLE'
+            elif ov_type == 'REMOVE':
+                return 'UPGRADE_REQUIRED'
+        elif client:
             try:
                 from api.models import ClientFeatureOverride
                 from django.db.models import Q
@@ -649,7 +676,7 @@ class EntitlementService:
                 pass
 
         # 3. Check if included in client's plan configuration
-        plan_config = EntitlementService.get_client_plan_config(client)
+        plan_config = context['plan_config'] if (context and 'plan_config' in context) else EntitlementService.get_client_plan_config(client)
         slug = (plan_config.get('slug') or plan_config.get('name') or '').lower()
 
         # Advanced tier has access to all active features and connectors
@@ -688,16 +715,78 @@ class EntitlementService:
         max_channels = plan_config.get('max_channels', 1)
         billing_period = client.billing_period if client else 'MONTHLY'
 
+<<<<<<< HEAD
         # Check Subscription Details & Expiration
         from api.services.wallet_services import SubscriptionService
         sub_info = SubscriptionService.get_subscription_details(client)
         is_expired = sub_info.get('is_expired', False)
+=======
+        # Build in-memory lookup cache to eliminate N+1 queries during evaluation
+        is_verification = False
+        try:
+            from .google_oauth_service import is_google_verification_account
+            is_verification = is_google_verification_account(client)
+        except Exception:
+            pass
+
+        all_connectors = list(GlobalConnector.objects.all())
+        connectors_map = {}
+        for gc in all_connectors:
+            if gc.connector_key:
+                k_norm = gc.connector_key.strip().lower()
+                connectors_map[k_norm] = gc
+                clean = k_norm.replace('connector_', '')
+                connectors_map[clean] = gc
+                connectors_map[f'connector_{clean}'] = gc
+
+        all_features = list(Feature.objects.all())
+        features_map = {}
+        for ft in all_features:
+            if ft.key:
+                k_norm = ft.key.strip().lower()
+                features_map[k_norm] = ft
+                clean = k_norm.replace('feature_', '').replace('channel_', '').replace('connector_', '')
+                features_map[clean] = ft
+                features_map[f'feature_{clean}'] = ft
+                features_map[f'channel_{clean}'] = ft
+                features_map[f'connector_{clean}'] = ft
+
+        overrides_map = {}
+        raw_added = []
+        raw_removed = []
+        if client:
+            try:
+                from api.models import ClientFeatureOverride
+                overrides = list(ClientFeatureOverride.objects.filter(client=client).select_related('feature'))
+                for ov in overrides:
+                    fkey = getattr(ov.feature, 'key', '') if ov.feature else ''
+                    if fkey:
+                        fk_norm = fkey.strip().lower()
+                        overrides_map[fk_norm] = ov.override_type
+                        clean = fk_norm.replace('feature_', '').replace('connector_', '')
+                        overrides_map[clean] = ov.override_type
+                        overrides_map[f'feature_{clean}'] = ov.override_type
+                        if ov.override_type == 'ADD':
+                            raw_added.append(fkey)
+                        elif ov.override_type == 'REMOVE':
+                            raw_removed.append(fkey)
+            except Exception:
+                pass
+
+        eval_context = {
+            'is_verification_account': is_verification,
+            'connectors_map': connectors_map,
+            'features_map': features_map,
+            'overrides_map': overrides_map,
+            'plan_config': plan_config
+        }
+>>>>>>> 16ecc3ad29fd5437bf2cef87768f172ac267aa73
 
         # Evaluate Channels
         all_channels = ['whatsapp', 'facebook', 'instagram']
         channels_eval = {}
         for ch in all_channels:
-            access_state = EntitlementService.evaluate_item_access(ch, 'channel', client)
+            access_state = EntitlementService.evaluate_item_access(ch, 'channel', client, context=eval_context)
             is_selected = ch.lower() in [s.lower() for s in selected_channels]
             
             if is_expired:
@@ -729,11 +818,10 @@ class EntitlementService:
             }
 
         # Evaluate Connectors
-        all_connectors = list(GlobalConnector.objects.all())
         connectors_eval = {}
         for gc in all_connectors:
             k = gc.connector_key
-            st = EntitlementService.evaluate_item_access(k, 'connector', client)
+            st = EntitlementService.evaluate_item_access(k, 'connector', client, context=eval_context)
             item_data = {
                 'key': k,
                 'name': gc.name,
@@ -747,11 +835,10 @@ class EntitlementService:
             connectors_eval[f'connector_{clean_k}'] = item_data
 
         # Evaluate Features
-        all_features = list(Feature.objects.all())
         features_eval = {}
         for ft in all_features:
             k = ft.key
-            st = EntitlementService.evaluate_item_access(k, 'feature', client)
+            st = EntitlementService.evaluate_item_access(k, 'feature', client, context=eval_context)
             item_data = {
                 'key': k,
                 'name': ft.name,
@@ -769,11 +856,6 @@ class EntitlementService:
         custom_removed = []
         if client:
             try:
-                from api.models import ClientFeatureOverride
-                overrides = ClientFeatureOverride.objects.filter(client=client)
-                raw_added = list(overrides.filter(override_type='ADD').values_list('feature__key', flat=True))
-                raw_removed = list(overrides.filter(override_type='REMOVE').values_list('feature__key', flat=True))
-
                 custom_added_set = set()
                 for k in raw_added:
                     custom_added_set.add(k)

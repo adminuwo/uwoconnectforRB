@@ -118,7 +118,7 @@ def sync_outlook_emails(client):
         
         received_date = msg.get('receivedDateTime')
         
-        EmailMessage.objects.create(
+        incoming_msg = EmailMessage.objects.create(
             client=client,
             account=account,
             folder=folder,
@@ -134,6 +134,23 @@ def sync_outlook_emails(client):
             metadata={'graph_id': graph_id, 'original_date': received_date}
         )
         synced_count += 1
+
+        # Evaluate Automation via Enterprise Idempotency & Classification Engine
+        from .email_automation_engine import process_incoming_email_automation
+        try:
+            process_incoming_email_automation(
+                client=client,
+                account=account,
+                provider_message_id=graph_id,
+                sender_email=sender_email,
+                sender_name=sender_name,
+                subject=subject,
+                body_text=body_preview or body_content,
+                incoming_email_message=incoming_msg,
+                provider='outlook'
+            )
+        except Exception as auto_err:
+            logger.error(f"[OutlookSync] Automation error: {auto_err}")
         
     if synced_count > 0:
         now_str = datetime.now(timezone.utc).isoformat()

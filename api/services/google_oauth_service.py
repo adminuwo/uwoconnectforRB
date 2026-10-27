@@ -85,9 +85,15 @@ YOUTUBE_SCOPES = [
     "https://www.googleapis.com/auth/youtube.force-ssl",
 ] + BASE_IDENTITY_SCOPES
 
+# 7. Google Drive Integration
+# Retained: Dedicated scope for uploading, browsing and managing customer assets and documents in Drive
+DRIVE_SCOPES = [
+    "https://www.googleapis.com/auth/drive.file",
+] + BASE_IDENTITY_SCOPES
+
 # Full Bundle for Reviewer Workspace Demo (Shows all active scopes in one consent screen)
 ALL_ACTIVE_SCOPES = list(dict.fromkeys(
-    SHEETS_SCOPES + GMAIL_SCOPES + SLIDES_SCOPES + DOCS_SCOPES + CALENDAR_SCOPES + YOUTUBE_SCOPES
+    SHEETS_SCOPES + GMAIL_SCOPES + SLIDES_SCOPES + DOCS_SCOPES + CALENDAR_SCOPES + YOUTUBE_SCOPES + DRIVE_SCOPES
 ))
 ALL_REQUESTED_GOOGLE_SCOPES = ALL_ACTIVE_SCOPES
 
@@ -237,19 +243,7 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
     }
     callback_path = callback_paths.get(norm, "/api/auth/gmail/callback")
 
-    # If running locally (DEBUG=True) or request is from localhost, use localhost callback
-    is_local = False
-    if request:
-        host = request.get_host()
-        if "localhost" in host or "127.0.0.1" in host:
-            is_local = True
-    elif getattr(settings, 'DEBUG', False):
-        is_local = True
-
-    if is_local:
-        return f"http://localhost:8080{callback_path}"
-
-    # 1. Check dedicated service environment variable (production / deployment override)
+    # 1. Check dedicated service environment variable (production / deployment override from .env)
     candidate_keys = [
         f"GOOGLE_{norm.upper()}_REDIRECT_URI",
         f"{norm.upper()}_REDIRECT_URI",
@@ -259,22 +253,23 @@ def get_google_redirect_uri(service_name: str = "gmail", request=None) -> str:
         if val and val.strip():
             return val.strip()
 
-    # 2. For unified services that share the verified Google OAuth callback (gmail, sheets, docs, slides, all),
+    # 2. For unified services that share the verified Google OAuth callback (gmail, sheets, docs, slides, drive, all),
     # prioritize the registered GMAIL_REDIRECT_URI if configured in environment
-    if norm in ("gmail", "sheets", "docs", "slides", "all") and os.environ.get("GMAIL_REDIRECT_URI"):
+    if norm in ("gmail", "sheets", "docs", "slides", "drive", "all") and os.environ.get("GMAIL_REDIRECT_URI"):
         return os.environ["GMAIL_REDIRECT_URI"].strip()
-
-    # 3. Dynamic fallback for remote requests
-    if request:
-        return f"https://uwoconnectforrb-743928421487.asia-south1.run.app{callback_path}"
 
     if os.environ.get("GOOGLE_REDIRECT_URI"):
         return os.environ["GOOGLE_REDIRECT_URI"].strip()
 
-    if os.environ.get("GMAIL_REDIRECT_URI"):
-        return os.environ["GMAIL_REDIRECT_URI"].strip()
+    # 3. If running locally and no explicit redirect URI configured, use local callback
+    if request:
+        host = request.get_host()
+        if "localhost" in host or "127.0.0.1" in host:
+            return f"http://{host}{callback_path}"
+    elif getattr(settings, 'DEBUG', False):
+        return f"http://localhost:8080{callback_path}"
 
-    return f"http://localhost:8080{callback_path}"
+    return f"https://uwoconnectforrb-743928421487.asia-south1.run.app{callback_path}"
 
 
 
@@ -359,7 +354,7 @@ def generate_google_auth_url(
 
     # Store ONLY the service-specific cache key matching the requested service
     if norm_service in ("gmail", "all"):
-        cache.set(f"gmail_state_{state}", {"client_id": str(effective_client_id), "return_origin": frontend_url}, timeout=3600)
+        cache.set(f"gmail_state_{state}", {"client_id": str(effective_client_id), "return_origin": frontend_url, "redirect_uri": redirect_uri}, timeout=3600)
     elif norm_service == "calendar":
         cache.set(f"gcal_state_{state}", str(effective_client_id), timeout=3600)
     elif norm_service == "sheets":
@@ -370,6 +365,8 @@ def generate_google_auth_url(
         cache.set(f"gslides_state_{state}", str(effective_client_id), timeout=3600)
     elif norm_service == "youtube":
         cache.set(f"youtube_state_{state}", str(effective_client_id), timeout=3600)
+    elif norm_service in ("drive", "google_drive"):
+        cache.set(f"gdrive_state_{state}", str(effective_client_id), timeout=3600)
 
     params = {
         "client_id": creds["client_id"],

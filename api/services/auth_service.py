@@ -1,5 +1,8 @@
 import secrets
 import datetime
+import os
+import logging
+logger = logging.getLogger(__name__)
 from .welcome_email_service import DEFAULT_WEB_URL, DEFAULT_APP_URL, DEFAULT_SUPPORT_EMAIL
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -265,7 +268,9 @@ class AuthService:
         id_token_str = id_token_str.strip()
         decoded_token = None
 
-        # 1. Try Google OAuth2 server-side cryptographic token verification
+        # 1. Google OAuth2 server-side cryptographic token verification
+        # SECURITY: No unverified-decode fallback. The token audience must be one of OUR OAuth clients,
+        # otherwise a Google token issued to any other app could be replayed here.
         try:
             from google.oauth2 import id_token as google_id_token
             from google.auth.transport import requests as google_requests
@@ -273,20 +278,22 @@ class AuthService:
                 id_token_str, 
                 google_requests.Request()
             )
+            allowed_auds = [a.strip() for a in os.getenv('GOOGLE_ALLOWED_CLIENT_IDS', '').split(',') if a.strip()]
+            project_prefix = os.getenv('GOOGLE_OAUTH_PROJECT_NUMBER', '876129590251').strip() + '-'
+            token_aud = str(decoded_token.get('aud', ''))
+            if token_aud not in allowed_auds and not token_aud.startswith(project_prefix):
+                return {"error": "Google token was not issued for this application.", "status_code": 401}
+            if decoded_token.get('email_verified') is False:
+                return {"error": "Google email address is not verified.", "status_code": 401}
         except Exception as google_err:
-            # 2. Try Firebase ID Token verification as fallback
+            # 2. Firebase ID Token verification (cryptographically verified by firebase_admin)
             try:
                 decoded_token = firebase_auth.verify_id_token(id_token_str)
-            except Exception as fb_err:
-                # 3. Fallback to unverified decode for development/testing
-                import jwt
-                try:
-                    decoded_token = jwt.decode(id_token_str, options={"verify_signature": False})
-                except Exception:
-                    return {
-                        "error": f"Invalid Google token. Verification failed: {str(google_err)}", 
-                        "status_code": 401
-                    }
+            except Exception:
+                return {
+                    "error": "Invalid Google token. Verification failed.", 
+                    "status_code": 401
+                }
 
         if not decoded_token:
             return {"error": "Failed to decode Google token claims.", "status_code": 400}
@@ -506,35 +513,21 @@ class AuthService:
                     break
 
             if public_key:
-                try:
-                    decoded_token = pyjwt.decode(
-                        identity_token_str,
-                        public_key,
-                        algorithms=["RS256"],
-                        audience=["com.uwo.uwoconnect", "host.exp.Exponent", "com.uwo.uwoconnect.service"],
-                        options={"verify_exp": True},
-                    )
-                except Exception:
-                    # If audience check failed, decode signature verified with relaxed audience
-                    decoded_token = pyjwt.decode(
-                        identity_token_str,
-                        public_key,
-                        algorithms=["RS256"],
-                        options={"verify_signature": True, "verify_aud": False, "verify_exp": True},
-                    )
+                # SECURITY: signature, expiry, issuer AND audience must all be valid.
+                decoded_token = pyjwt.decode(
+                    identity_token_str,
+                    public_key,
+                    algorithms=["RS256"],
+                    audience=["com.uwo.uwoconnect", "host.exp.Exponent", "com.uwo.uwoconnect.service"],
+                    issuer="https://appleid.apple.com",
+                    options={"verify_exp": True},
+                )
             else:
                 raise ValueError("Matching Apple public key not found")
         except Exception as apple_err:
-            # 2. Fallback: unverified decode (dev/testing)
-            try:
-                import jwt as pyjwt
-                decoded_token = pyjwt.decode(
-                    identity_token_str,
-                    options={"verify_signature": False, "verify_aud": False},
-                )
-                print(f"[AppleLogin] Falling back to unverified decode: {apple_err}")
-            except Exception as fallback_err:
-                return {"error": f"Apple token verification failed: {str(apple_err)}", "status_code": 401}
+            # No unverified fallback — reject the token.
+            logger.warning(f"[AppleLogin] Apple token verification failed: {apple_err}")
+            return {"error": "Apple token verification failed.", "status_code": 401}
 
         if not decoded_token:
             return {"error": "Failed to decode Apple identity token.", "status_code": 400}
@@ -697,12 +690,9 @@ class AuthService:
 
         try:
             decoded_token = firebase_auth.verify_id_token(id_token)
-        except Exception as e:
-            import jwt
-            try:
-                decoded_token = jwt.decode(id_token, options={"verify_signature": False})
-            except Exception:
-                return {"error": f"Token verification failed: {str(e)}", "status_code": 400}
+        except Exception:
+            # SECURITY: No unverified-decode fallback.
+            return {"error": "Firebase token verification failed.", "status_code": 401}
 
         email = decoded_token.get('email', '').lower().strip()
         name = name or decoded_token.get('name', '').strip() or 'User'

@@ -27,32 +27,12 @@ class JWTQueryParamAuthentication(JWTAuthentication):
         if not raw_token:
             return None
 
-        # 1. Try standard SimpleJWT validation with signature verification
+        # Standard SimpleJWT validation WITH signature verification.
+        # SECURITY: Never fall back to decoding tokens without verifying the signature —
+        # that allowed anyone to forge a token for any user (including admins).
         try:
             validated_token = self.get_validated_token(raw_token)
             return self.get_user(validated_token), validated_token
-        except Exception:
-            pass
-
-        # 2. Fallback: Parse token payload directly (handles cross-environment dev/prod tokens)
-        try:
-            token_str = raw_token.decode('utf-8') if isinstance(raw_token, bytes) else str(raw_token)
-            payload = jwt.decode(token_str, options={"verify_signature": False})
-            user_id = payload.get('user_id') or payload.get('sub') or payload.get('id')
-            email = payload.get('email')
-
-            user = None
-            if user_id:
-                try:
-                    user = User.objects.filter(id=ObjectId(user_id)).first()
-                except Exception:
-                    user = User.objects.filter(id=user_id).first()
-
-            if not user and email:
-                user = User.objects.filter(email=email).first()
-
-            if user and user.is_active:
-                return (user, None)
         except Exception:
             pass
 

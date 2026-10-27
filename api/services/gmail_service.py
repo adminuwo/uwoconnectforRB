@@ -132,50 +132,27 @@ def extract_email_body(payload, snippet=""):
 
     return body_text, body_html
 
-def should_skip_autoreply(sender_email, sender_name, subject, headers, client_email):
+def should_skip_autoreply(sender_email, sender_name, subject, headers, client_email, body_text="", gmail_labels=None):
     """
-    Returns True if incoming email is automated, a bounce, no-reply, or self-sent.
+    Returns True if incoming email is automated, a bounce, no-reply, promotional,
+    newsletter, advertisement, or self-sent.
+    Uses multi-signal classification.
     """
     if not sender_email:
         return True
-        
-    s_email = sender_email.lower().strip()
-    s_subj = (subject or "").lower()
-    
-    # Do not reply to self
-    if client_email and s_email == client_email.lower().strip():
-        return True
 
-    # Senders to skip (bots, daemons, notifications, noreply)
-    skip_sender_keywords = [
-        'mailer-daemon', 'postmaster', 'no-reply', 'noreply', 'donotreply',
-        'do-not-reply', 'bounce', 'system', 'notification', 'alert', 'support@razorpay',
-        'downtime-alerts', 'em.linkedin.com', 'googlemail.com'
-    ]
-    if any(k in s_email for k in skip_sender_keywords):
-        return True
+    from .email_classifier import EmailClassifier
+    result = EmailClassifier.classify(
+        sender_email=sender_email,
+        sender_name=sender_name,
+        subject=subject,
+        headers=headers,
+        body_text=body_text,
+        gmail_labels=gmail_labels,
+        client_email=client_email
+    )
+    return result.is_unwanted
 
-    # Subjects indicating automated/bounce responses
-    skip_subject_keywords = [
-        'delivery status notification', 'undelivered mail', 'failure notice',
-        'returned to sender', 'auto-reply', 'automatic reply', 'out of office',
-        'vacation', 'mail delivery failed', 'failed delivery'
-    ]
-    if any(k in s_subj for k in skip_subject_keywords):
-        return True
-
-    # Check headers for automation flags
-    for h in headers:
-        h_name = h.get('name', '').lower()
-        h_val = h.get('value', '').lower()
-        if h_name == 'auto-submitted' and h_val != 'no':
-            return True
-        if h_name == 'precedence' and h_val in ['bulk', 'junk', 'list']:
-            return True
-        if h_name == 'x-autoreply' and h_val == 'yes':
-            return True
-
-    return False
 
 def sync_incoming_gmails(client):
     """
@@ -300,61 +277,24 @@ def sync_incoming_gmails(client):
                     metadata={'gmail_id': msg_id}
                 )
                 new_messages_count += 1
-
-                # Trigger Auto-Replies ONLY for legitimate incoming emails (skip bots, bounces, and self)
-                client_email = config.get('email_address', '')
-                if not should_skip_autoreply(sender_email, contact.name, subject, headers, client_email):
-                    from api.models import EmailAutoReplyRule
-                    active_rules = EmailAutoReplyRule.objects.filter(client=client, is_active=True)
-                    for rule in active_rules:
-                        # Match pattern
-                        matches = True
-                        if rule.subject_pattern and rule.subject_pattern.lower() not in subject.lower():
-                            matches = False
-                        if rule.sender_pattern and rule.sender_pattern.lower() not in sender_email.lower():
-                            matches = False
-                        if rule.keyword_match:
-                            kw = rule.keyword_match.lower()
-                            if kw not in subject.lower() and kw not in body_text.lower():
-                                matches = False
-                        
-                        if matches:
-                            # Personalize template
-                            first_name = contact.name.split(' ')[0] if contact.name else "there"
-                            last_name = contact.name.split(' ')[-1] if contact.name and ' ' in contact.name else ""
-                            full_name = contact.name or "Valued Customer"
-                            
-                            r_body = rule.reply_body
-                            r_body = r_body.replace('{{first_name}}', first_name)
-                            r_body = r_body.replace('{{last_name}}', last_name)
-                            r_body = r_body.replace('{{full_name}}', full_name)
-                            r_body = r_body.replace('{{email}}', sender_email)
-                            
-                            r_subject = rule.reply_subject or f"Re: {subject}"
-                            r_subject = r_subject.replace('{{first_name}}', first_name)
-                            r_subject = r_subject.replace('{{last_name}}', last_name)
-                            r_subject = r_subject.replace('{{full_name}}', full_name)
-                            r_subject = r_subject.replace('{{email}}', sender_email)
-
-                            try:
-                                send_gmail_message(client, sender_email, r_body, r_subject)
-                                # Log auto-reply as sent email
-                                EmailMessage.objects.create(
-                                    client=client,
-                                    account=account,
-                                    folder='sent',
-                                    sender_email=client_email,
-                                    sender_name=account.display_name or client_email,
-                                    to_recipients=[sender_email],
-                                    subject=r_subject,
-                                    body_text=r_body,
-                                    body_html=r_body,
-                                    status='delivered',
-                                    priority='normal',
-                                    metadata={'reply_to_gmail_id': msg_id, 'auto_reply_rule_id': str(rule.id)}
-                                )
-                            except Exception as e:
-                                print(f"AutoReply Send Error: {str(e)}")
+                # Evaluate Automation via Enterprise Idempotency & Classification Engine
+                from .email_automation_engine import process_incoming_email_automation
+                try:
+                    process_incoming_email_automation(
+                        client=client,
+                        account=account,
+                        provider_message_id=msg_id,
+                        sender_email=sender_email,
+                        sender_name=contact.name,
+                        subject=subject,
+                        body_text=body_text,
+                        headers=headers,
+                        gmail_labels=full_msg.get('labelIds', []),
+                        incoming_email_message=incoming_msg,
+                        provider='gmail'
+                    )
+                except Exception as auto_err:
+                    print(f"Gmail Automation Engine Error: {str(auto_err)}")
 
         return new_messages_count
     except Exception as e:
