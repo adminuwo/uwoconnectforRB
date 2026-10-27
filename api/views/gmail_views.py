@@ -21,6 +21,7 @@ from ..services.google_oauth_service import (
     get_google_credentials,
     get_google_redirect_uri,
     get_frontend_return_url,
+    generate_google_auth_url,
 )
 
 SCOPES = GMAIL_SCOPES
@@ -40,39 +41,19 @@ class GmailConnectView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        client = request.user.client
+        client = getattr(request.user, 'client', None)
         if not client:
             return Response({"error": "User does not have an associated client."}, status=400)
             
-        client_config = get_client_config()
-        if not client_config['web']['client_id'] or not client_config['web']['client_secret']:
-            return Response({"error": "Gmail OAuth credentials not configured on backend."}, status=400)
+        auth_data = generate_google_auth_url("gmail", client.id, scopes=SCOPES, request=request)
+        if "error" in auth_data:
+            return Response({"error": auth_data["error"]}, status=auth_data.get("status_code", 503))
         
-        flow = google_auth_oauthlib.flow.Flow.from_client_config(
-            client_config,
-            scopes=SCOPES
-        )
-        
-        redirect_uri = get_google_redirect_uri("gmail", request=request)
-        flow.redirect_uri = redirect_uri
-        
-        authorization_url, state = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='false',
-            prompt='consent' # Force consent to ensure we get a refresh token
-        )
-        
-        # Determine tenant origin dynamically
-        client_origin = get_frontend_return_url(client=client, request=request)
+        accept_header = request.headers.get("Accept", "")
+        if "text/html" in accept_header or request.GET.get("redirect") == "true":
+            return HttpResponseRedirect(auth_data["url"])
 
-        # Save mapping from state to client info in cache for 1 hour
-        cache.set(f'gmail_state_{state}', {'client_id': str(client.id), 'return_origin': client_origin, 'redirect_uri': redirect_uri}, timeout=3600)
-        cache.set(f'google_oauth_state_{state}', {'client_id': str(client.id), 'service': 'gmail', 'redirect_uri': redirect_uri, 'frontend_url': client_origin}, timeout=3600)
-        # Save the PKCE code_verifier
-        if hasattr(flow, 'code_verifier'):
-            cache.set(f'gmail_verifier_{state}', flow.code_verifier, timeout=3600)
-        
-        return Response({"url": authorization_url, "auth_url": authorization_url})
+        return Response({"url": auth_data["url"], "auth_url": auth_data["url"]})
 
 class GmailCallbackView(APIView):
     # This endpoint is called by Google, so no auth classes

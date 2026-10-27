@@ -41,6 +41,7 @@ from .views import (
     OutlookConnectView, OutlookCallbackView, OutlookStatusView, OutlookSyncView, OutlookSendMailView, OutlookDisconnectView,
     OutlookCalendarEventsView, OutlookTeamsView, OutlookContactsView, OutlookExcelView,
     EmailAccountViewSet, EmailMessageViewSet, EmailAutoReplyViewSet, EmailAutomationWorkflowViewSet, EmailAnalyticsView, EmailComposeView,
+    EmailAutomationSettingsViewSet, EmailAutomationLogViewSet,
     WebRTCIceConfigView, WebRTCInitiateCallView, WebRTCCallSignalView, WebRTCHistoryView,
     WebRTCActiveCallCheckView, WebRTCCallActionView,
     CallScheduleView, CallAISummaryView, CallAnalyticsView, HealthCheckView,
@@ -126,6 +127,8 @@ router.register(r'email/accounts', EmailAccountViewSet, basename='email-account'
 router.register(r'email/messages', EmailMessageViewSet, basename='email-message')
 router.register(r'email/auto-replies', EmailAutoReplyViewSet, basename='email-auto-reply')
 router.register(r'email/automations', EmailAutomationWorkflowViewSet, basename='email-automation')
+router.register(r'email/automation-settings', EmailAutomationSettingsViewSet, basename='email-automation-settings')
+router.register(r'email/automation-logs', EmailAutomationLogViewSet, basename='email-automation-log')
 router.register(r'sales-documents', SalesDocumentViewSet, basename='sales-document')
 router.register(r'sales-document-templates', SalesDocumentTemplateViewSet, basename='sales-document-template')
 router.register(r'invoices', InvoiceViewSet, basename='invoice')
@@ -194,15 +197,25 @@ urlpatterns = [
     path('auth/apple', AppleLoginView.as_view(), name='apple-auth'),
     path('auth/apple/', AppleLoginView.as_view()),
     path('auth/gmail/connect', GmailConnectView.as_view(), name='gmail-connect'),
+    path('auth/gmail/connect/', GmailConnectView.as_view()),
+    path('gmail/connect', GmailConnectView.as_view(), name='gmail-connect-alt'),
+    path('gmail/connect/', GmailConnectView.as_view()),
     path('auth/gmail/callback', GmailCallbackView.as_view(), name='gmail-callback'),
+    path('auth/gmail/callback/', GmailCallbackView.as_view()),
+    path('gmail/callback', GmailCallbackView.as_view()),
+    path('gmail/callback/', GmailCallbackView.as_view()),
     path('auth/gmail/disconnect', GmailDisconnectView.as_view(), name='gmail-disconnect'),
+    path('auth/gmail/disconnect/', GmailDisconnectView.as_view()),
     path('auth/google-calendar/connect', GoogleCalendarConnectView.as_view(), name='google-calendar-connect'),
+    path('auth/google-calendar/connect/', GoogleCalendarConnectView.as_view()),
     path('auth/google-calendar/callback', GoogleCalendarCallbackView.as_view(), name='google-calendar-callback'),
+    path('auth/google-calendar/callback/', GoogleCalendarCallbackView.as_view()),
     path('auth/google-sheets/connect', GoogleSheetsConnectView.as_view(), name='auth-gsheets-connect'),
     path('auth/google-sheets/connect/', GoogleSheetsConnectView.as_view()),
     path('auth/google-sheets/callback', GoogleSheetsCallbackView.as_view(), name='auth-gsheets-callback'),
     path('auth/google-sheets/callback/', GoogleSheetsCallbackView.as_view()),
     path('auth/gmail/sync', GmailSyncView.as_view(), name='gmail-sync'),
+    path('auth/gmail/sync/', GmailSyncView.as_view()),
     path('auth/firebase-login', FirebaseLoginView.as_view(), name='firebase-login'),
     path('auth/uwo-login', UWOLoginView.as_view(), name='uwo-login'),
     path('auth/delete-account', AccountDeletionView.as_view(), name='account-delete'),

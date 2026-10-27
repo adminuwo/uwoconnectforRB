@@ -1,7 +1,7 @@
 import re
 from rest_framework import serializers
 from django.utils import timezone
-from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion, CompetitorAnalysis
+from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, EmailAutomationSettings, EmailAutomationLog, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion, CompetitorAnalysis
 from .repositories.contact_repository import ContactRepository
 from .repositories.workflow_repository import WorkflowRepository
 from .repositories.automation_repository import AutomationRepository
@@ -1199,6 +1199,30 @@ class EmailAutomationWorkflowSerializer(serializers.ModelSerializer):
         model = EmailAutomationWorkflow
         fields = '__all__'
         read_only_fields = ('client', 'created_at')
+
+
+class EmailAutomationSettingsSerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    client = ObjectIdField(read_only=True)
+    account_email = serializers.CharField(source='account.email_address', read_only=True)
+
+    class Meta:
+        model = EmailAutomationSettings
+        fields = '__all__'
+        read_only_fields = ('client', 'created_at', 'updated_at')
+
+
+class EmailAutomationLogSerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    client = ObjectIdField(read_only=True)
+    rule_name = serializers.CharField(source='rule_applied.name', read_only=True)
+    workflow_name = serializers.CharField(source='workflow_applied.name', read_only=True)
+
+    class Meta:
+        model = EmailAutomationLog
+        fields = '__all__'
+        read_only_fields = ('client', 'created_at', 'updated_at')
+
 
 
 class SalesDocumentTemplateSerializer(serializers.ModelSerializer):

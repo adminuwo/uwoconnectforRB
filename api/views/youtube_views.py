@@ -900,10 +900,22 @@ class YouTubeUploadSessionView(APIView):
         file_size = request.data.get("file_size")
 
         import requests as http_requests
+
+        origin = (
+            request.headers.get("Origin")
+            or request.META.get("HTTP_ORIGIN")
+            or request.META.get("HTTP_REFERER", "")
+            or "https://uwoconnect.aisa24.com"
+        ).strip()
+        if "://" in origin:
+            parts = origin.split("/")
+            origin = f"{parts[0]}//{parts[2]}"
+
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json; charset=UTF-8",
             "X-Upload-Content-Type": content_type,
+            "Origin": origin,
         }
         if file_size:
             headers["X-Upload-Content-Length"] = str(file_size)

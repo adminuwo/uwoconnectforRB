@@ -17,11 +17,13 @@ from django.db.models import Q, Count
 
 from ..models import (
     Client, User, EmailAccount, EmailMessage,
-    EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote
+    EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote,
+    EmailAutomationSettings, EmailAutomationLog
 )
 from ..serializers import (
     EmailAccountSerializer, EmailMessageSerializer,
-    EmailAutoReplyRuleSerializer, EmailAutomationWorkflowSerializer, EmailTeamNoteSerializer
+    EmailAutoReplyRuleSerializer, EmailAutomationWorkflowSerializer, EmailTeamNoteSerializer,
+    EmailAutomationSettingsSerializer, EmailAutomationLogSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -243,6 +245,178 @@ class EmailAutomationWorkflowViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(client=self.request.user.client)
+
+
+class EmailAutomationSettingsViewSet(viewsets.ModelViewSet):
+    """
+    CRUD and active configuration endpoints for Client Email Automation Settings.
+    Supports global settings and per-mailbox overrides.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = EmailAutomationSettingsSerializer
+
+    def get_queryset(self):
+        client = getattr(self.request.user, 'client', None)
+        if not client:
+            return EmailAutomationSettings.objects.none()
+        return EmailAutomationSettings.objects.filter(client=client)
+
+    def perform_create(self, serializer):
+        serializer.save(client=self.request.user.client)
+
+    @action(detail=False, methods=['get', 'post', 'patch'], url_path='current')
+    def current(self, request):
+        client = getattr(request.user, 'client', None)
+        if not client:
+            return Response({'error': 'Client not found'}, status=400)
+
+        account_id = request.query_params.get('account_id')
+        account = None
+        if account_id:
+            try:
+                if str(account_id).isdigit() or len(str(account_id)) == 24:
+                    account = EmailAccount.objects.filter(client=client, id=account_id).first()
+                if not account:
+                    account = EmailAccount.objects.filter(client=client, provider=account_id).first()
+                if not account:
+                    account = EmailAccount.objects.filter(client=client, email_address=account_id).first()
+            except Exception:
+                account = None
+
+        # Retrieve or create default settings
+        from ..services.email_automation_engine import get_or_create_client_settings
+        settings_obj = get_or_create_client_settings(client, account)
+
+        if request.method in ['POST', 'PATCH']:
+            serializer = self.get_serializer(settings_obj, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            instance = serializer.save()
+
+            # Ensure all EmailAutomationSettings records for this client stay synchronized
+            sync_data = {
+                'excluded_senders': instance.excluded_senders,
+                'excluded_domains': instance.excluded_domains,
+                'exclude_keywords': instance.exclude_keywords,
+                'include_keywords': instance.include_keywords,
+                'allowed_senders': instance.allowed_senders,
+                'allowed_domains': instance.allowed_domains,
+                'allowlist_mode': instance.allowlist_mode,
+                'is_enabled': instance.is_enabled,
+                'uncertain_fallback': instance.uncertain_fallback,
+                'auto_reply_business_inquiry': instance.auto_reply_business_inquiry,
+                'auto_reply_customer_support': instance.auto_reply_customer_support,
+                'auto_reply_sales_inquiry': instance.auto_reply_sales_inquiry,
+                'auto_reply_advertisement': instance.auto_reply_advertisement,
+                'auto_reply_newsletter': instance.auto_reply_newsletter,
+                'auto_reply_promotion': instance.auto_reply_promotion,
+                'auto_reply_notification': instance.auto_reply_notification,
+                'auto_reply_spam': instance.auto_reply_spam,
+            }
+            EmailAutomationSettings.objects.filter(client=client).exclude(id=instance.id).update(**sync_data)
+            return Response(serializer.data)
+
+        serializer = self.get_serializer(settings_obj)
+        return Response(serializer.data)
+
+
+class EmailAutomationLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Audit and decision log showing classification, decisions, reasons, and reply dispatches.
+    Helps clients understand why incoming emails were replied to, skipped, or held for review.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = EmailAutomationLogSerializer
+
+    def get_queryset(self):
+        client = getattr(self.request.user, 'client', None)
+        if not client:
+            return EmailAutomationLog.objects.none()
+
+        qs = EmailAutomationLog.objects.filter(client=client)
+
+        decision = self.request.query_params.get('decision')
+        if decision:
+            qs = qs.filter(decision=decision)
+
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category=category)
+
+        account_id = self.request.query_params.get('account_id')
+        if account_id:
+            qs = qs.filter(account_id=account_id)
+
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(
+                Q(sender_email__icontains=search) |
+                Q(sender_name__icontains=search) |
+                Q(subject__icontains=search) |
+                Q(reason__icontains=search)
+            )
+
+        return qs.order_by('-created_at')
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """Returns statistics breakdown of automation decisions and categories"""
+        client = getattr(request.user, 'client', None)
+        if not client:
+            return Response({'error': 'Client not found'}, status=400)
+
+        logs = EmailAutomationLog.objects.filter(client=client)
+        total = logs.count()
+        replied = logs.filter(decision='replied').count()
+        skipped = logs.filter(decision='skipped').count()
+        pending = logs.filter(decision='pending_review').count()
+        failed = logs.filter(decision='failed').count()
+
+        # Breakdown by category
+        categories = ['business_inquiry', 'customer_support', 'sales_inquiry', 'advertisement', 'newsletter', 'promotion', 'notification', 'spam', 'uncertain']
+        cat_counts = {c: logs.filter(category=c).count() for c in categories}
+
+        return Response({
+            'total_evaluated': total,
+            'replied': replied,
+            'skipped': skipped,
+            'pending_review': pending,
+            'failed': failed,
+            'categories': cat_counts
+        })
+
+    @action(detail=True, methods=['post'], url_path='approve_review')
+    def approve_review(self, request, pk=None):
+        """Allows client to manually approve an email currently in pending_review"""
+        log_entry = self.get_object()
+        client = getattr(request.user, 'client', None)
+        if log_entry.decision != 'pending_review':
+            return Response({'error': 'Only logs in pending_review state can be approved'}, status=400)
+
+        from ..models import EmailAutoReplyRule
+        matched_rule = EmailAutoReplyRule.objects.filter(client=client, is_active=True).first()
+        if not matched_rule:
+            return Response({'error': 'No active auto-reply rule found to dispatch'}, status=400)
+
+        from ..services.gmail_service import send_gmail_message
+        try:
+            r_subject = f"Re: {log_entry.subject}"
+            r_body = matched_rule.reply_body.replace('{{first_name}}', log_entry.sender_name or 'there')
+            send_gmail_message(client, log_entry.sender_email, r_body, r_subject)
+
+            log_entry.decision = 'replied'
+            log_entry.reply_status = 'delivered'
+            log_entry.replied_at = timezone.now()
+            log_entry.reason = f"Manually approved by client. Replied with rule '{matched_rule.name}'."
+            log_entry.rule_applied = matched_rule
+            log_entry.save()
+
+            return Response({'status': 'replied', 'message': 'Reply sent successfully'})
+        except Exception as e:
+            log_entry.decision = 'failed'
+            log_entry.error_message = str(e)
+            log_entry.save()
+            return Response({'error': str(e)}, status=500)
+
 
 
 class EmailAnalyticsView(APIView):
