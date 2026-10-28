@@ -2793,5 +2793,129 @@ class CompetitorAnalysis(models.Model):
         return f"{self.competitor_name} ({self.client.business_name if self.client else 'No Client'}) - {self.status}"
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# CONTACT US & FEEDBACK MANAGEMENT (WEB & MOBILE APP)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class ContactMessage(models.Model):
+    SOURCE_CHOICES = [
+        ('WEB', 'Web'),
+        ('APP', 'Mobile App'),
+    ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('REPLIED', 'Replied'),
+        ('RESOLVED', 'Resolved'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='contact_messages')
+    client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, related_name='contact_messages')
+    name = models.CharField(max_length=255)
+    email = models.EmailField(max_length=255)
+    phone = models.CharField(max_length=50, blank=True, default='')
+    subject = models.CharField(max_length=255, blank=True, default='Contact Inquiry')
+    message = models.TextField()
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='WEB')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.source}] {self.name} - {self.subject} ({self.status})"
+
+
+class ContactMessageReply(models.Model):
+    SENDER_ROLE_CHOICES = [
+        ('ADMIN', 'Admin'),
+        ('USER', 'User'),
+    ]
+    contact_message = models.ForeignKey(ContactMessage, on_delete=models.CASCADE, related_name='replies')
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='contact_replies')
+    sender_role = models.CharField(max_length=20, choices=SENDER_ROLE_CHOICES, default='ADMIN')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Reply by {self.sender_role} on Contact #{self.contact_message_id}"
+
+
+class UserFeedback(models.Model):
+    SOURCE_CHOICES = [
+        ('WEB', 'Web'),
+        ('APP', 'Mobile App'),
+    ]
+    CATEGORY_CHOICES = [
+        ('GENERAL', 'General Feedback'),
+        ('BUG', 'Bug Report'),
+        ('FEATURE', 'Feature Request'),
+        ('UX', 'UI / UX Improvement'),
+        ('PERFORMANCE', 'Performance Issue'),
+        ('BILLING', 'Billing / Subscription'),
+    ]
+    STATUS_CHOICES = [
+        ('NEW', 'New'),
+        ('IN_REVIEW', 'In Review'),
+        ('REPLIED', 'Replied'),
+        ('RESOLVED', 'Resolved'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedbacks')
+    client = models.ForeignKey(Client, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedbacks')
+    name = models.CharField(max_length=255, blank=True, default='')
+    email = models.EmailField(max_length=255, blank=True, default='')
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='GENERAL')
+    rating = models.PositiveSmallIntegerField(default=5)
+    message = models.TextField()
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='WEB')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='NEW')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.source} - {self.category}] {self.name or self.email} (Rating: {self.rating})"
+
+
+class UserFeedbackReply(models.Model):
+    SENDER_ROLE_CHOICES = [
+        ('ADMIN', 'Admin'),
+        ('USER', 'User'),
+    ]
+    feedback = models.ForeignKey(UserFeedback, on_delete=models.CASCADE, related_name='replies')
+    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedback_replies')
+    sender_role = models.CharField(max_length=20, choices=SENDER_ROLE_CHOICES, default='ADMIN')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Reply by {self.sender_role} on Feedback #{self.feedback_id}"
+
+
+class InAppNotification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='in_app_notifications')
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    notification_type = models.CharField(max_length=50, default='SYSTEM')
+    link = models.CharField(max_length=255, blank=True, default='')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification for {self.user.username}: {self.title}"
+
+
+
 
 
