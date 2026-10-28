@@ -1821,6 +1821,15 @@ class SuperAdminClientActionView(APIView):
                 # Use Django's set_password to hash correctly
                 primary_user.set_password(new_password)
                 primary_user.save()
+                try:
+                    from ..services.password_change_notification_service import PasswordChangeNotificationService
+                    from django.utils import timezone
+                    PasswordChangeNotificationService.send_password_change_confirmation(
+                        user=primary_user,
+                        change_time=timezone.now()
+                    )
+                except Exception as e:
+                    logger.error(f"[SuperAdminClientAction] Failed to dispatch password change confirmation: {e}")
             log_super_admin_action(request, client.business_name, 'CLIENT_MANAGEMENT', 'CHANGE_PASSWORD', after_val='Password updated')
             return Response({"message": f"Password for {client.business_name} updated successfully."})
 

@@ -1426,6 +1426,17 @@ class AuthService:
             user.save()
             # Clean up all OTP records for this email immediately
             PasswordResetOTPRepository.filter_passwordresetotps(email=email).delete()
+
+            # Dispatch password change confirmation email
+            try:
+                from .password_change_notification_service import PasswordChangeNotificationService
+                PasswordChangeNotificationService.send_password_change_confirmation(
+                    user=user,
+                    change_time=timezone.now()
+                )
+            except Exception as e:
+                logger.error(f"[ForgotPasswordReset] Failed to dispatch password change confirmation email: {e}")
+
             return {"message": "Password reset successfully. You can now log in with your new password.", "status_code": 200}
         except User.DoesNotExist:
             return {"message": "User account not found.", "status_code": 404}

@@ -240,7 +240,8 @@ def sync_incoming_gmails(client):
 
             # Check if this message was already synced in Message
             if not Message.objects.filter(client=client, channel='GMAIL', metadata__gmail_id=msg_id).exists():
-                Message.objects.create(
+                from ..repositories.message_repository import MessageRepository
+                MessageRepository.create_message(
                     client=client,
                     channel='GMAIL',
                     from_address=sender_email,

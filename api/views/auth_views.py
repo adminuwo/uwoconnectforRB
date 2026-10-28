@@ -665,6 +665,22 @@ class ChangePasswordView(views.APIView):
         user.set_password(new_password)
         user.save()
 
+        # Send confirmation email to user's registered email
+        try:
+            from ..services.password_change_notification_service import PasswordChangeNotificationService
+            ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
+            if ip and ',' in ip:
+                ip = ip.split(',')[0].strip()
+            user_agent = request.META.get('HTTP_USER_AGENT')
+            PasswordChangeNotificationService.send_password_change_confirmation(
+                user=user,
+                change_time=timezone.now(),
+                ip_address=ip,
+                user_agent=user_agent
+            )
+        except Exception as e:
+            logger.error(f"[ChangePasswordView] Failed to dispatch password change confirmation email: {e}")
+
         return Response({
             "success": True,
             "message": "Password changed successfully."

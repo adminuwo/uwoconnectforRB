@@ -770,10 +770,52 @@ class ClientMessagesView(APIView):
 
         messages = MessageRepository.filter_messages(client=client)
 
+        contact_obj = None
+        convo_obj = None
+        if contact_id:
+            # 1. Try to resolve Conversation by ID or contact_platform_id
+            try:
+                convo_q = Q(contact_platform_id=contact_id)
+                if ObjectId.is_valid(str(contact_id)):
+                    convo_q |= Q(id=contact_id)
+                convo_obj = Conversation.objects.filter(Q(client=client) & convo_q).first()
+                if convo_obj and convo_obj.contact:
+                    contact_obj = convo_obj.contact
+            except Exception:
+                pass
+
+            # 2. Try to resolve Contact by platform_id, phone_number, email, or ObjectId
+            if not contact_obj:
+                try:
+                    contact_q = Q(platform_id=contact_id) | Q(phone_number=contact_id) | Q(email=contact_id)
+                    if ObjectId.is_valid(str(contact_id)):
+                        contact_q |= Q(id=contact_id)
+                    contact_obj = Contact.objects.filter(Q(client=client) & contact_q).first()
+                except Exception:
+                    pass
+
+            # 3. If contact resolved but convo not found, try to locate convo via contact
+            if contact_obj and not convo_obj:
+                try:
+                    convo_obj = Conversation.objects.filter(
+                        Q(client=client) & (Q(contact=contact_obj) | Q(contact_platform_id=contact_obj.platform_id))
+                    ).first()
+                except Exception:
+                    pass
+
         channel_filter = request.query_params.get('channel')
+        # If no explicit channel filter passed, automatically inherit from the active conversation
+        if (not channel_filter or channel_filter == 'ALL') and convo_obj and convo_obj.channel:
+            channel_filter = convo_obj.channel
+
+        # If still no channel filter and contact_id is an email address, infer GMAIL
+        if (not channel_filter or channel_filter == 'ALL') and contact_id and '@' in str(contact_id):
+            channel_filter = 'GMAIL'
+
         if channel_filter and channel_filter != 'ALL':
-            if channel_filter.upper() in allowed_channels or request.user.role == 'ADMIN':
-                messages = messages.filter(channel=channel_filter.upper())
+            norm_channel = channel_filter.upper()
+            if norm_channel in allowed_channels or request.user.role == 'ADMIN':
+                messages = messages.filter(channel=norm_channel)
             else:
                 return Response([])
         else:
@@ -782,76 +824,72 @@ class ClientMessagesView(APIView):
 
         if contact_id:
             search_terms = set([contact_id, str(contact_id).strip()])
-            clean_digits = ''.join(filter(str.isdigit, str(contact_id)))
-            if clean_digits:
-                search_terms.add(clean_digits)
-                if len(clean_digits) == 10:
-                    search_terms.add(f"91{clean_digits}")
-                    search_terms.add(f"+91{clean_digits}")
-                    search_terms.add(f"0{clean_digits}")
-                elif len(clean_digits) == 11 and clean_digits.startswith('0'):
-                    r10 = clean_digits[1:]
-                    search_terms.add(r10)
-                    search_terms.add(f"91{r10}")
-                    search_terms.add(f"+91{r10}")
-                elif clean_digits.startswith("91") and len(clean_digits) == 12:
-                    r10 = clean_digits[2:]
-                    search_terms.add(r10)
-                    search_terms.add(f"0{r10}")
-                    search_terms.add(f"+{clean_digits}")
+            norm_channel = (channel_filter or '').upper()
 
-            # Safely lookup matching Contact without ValidationError on non-ObjectId strings
-            contact_obj = None
-            try:
-                contact_q = Q(platform_id=contact_id) | Q(phone_number=contact_id) | Q(email=contact_id)
-                if ObjectId.is_valid(str(contact_id)):
-                    contact_q |= Q(id=contact_id)
-                contact_obj = Contact.objects.filter(Q(client=client) & contact_q).first()
-            except Exception as lookup_err:
-                pass
-
-            # Fallback: if contact_id is a Conversation ID or matches Conversation
-            if not contact_obj:
-                try:
-                    convo_q = Q(contact_platform_id=contact_id)
-                    if ObjectId.is_valid(str(contact_id)):
-                        convo_q |= Q(id=contact_id)
-                    convo_obj = Conversation.objects.filter(Q(client=client) & convo_q).first()
-                    if convo_obj:
-                        if getattr(convo_obj, 'contact_platform_id', None):
-                            search_terms.add(str(convo_obj.contact_platform_id))
-                        if getattr(convo_obj, 'contact_id', None):
-                            search_terms.add(str(convo_obj.contact_id))
-                        if getattr(convo_obj, 'contact', None):
-                            contact_obj = convo_obj.contact
-                except Exception:
-                    pass
+            # Phone number expansion for WhatsApp or non-email channels
+            if norm_channel != 'GMAIL':
+                clean_digits = ''.join(filter(str.isdigit, str(contact_id)))
+                if clean_digits:
+                    search_terms.add(clean_digits)
+                    if len(clean_digits) == 10:
+                        search_terms.add(f"91{clean_digits}")
+                        search_terms.add(f"+91{clean_digits}")
+                        search_terms.add(f"0{clean_digits}")
+                    elif len(clean_digits) == 11 and clean_digits.startswith('0'):
+                        r10 = clean_digits[1:]
+                        search_terms.add(r10)
+                        search_terms.add(f"91{r10}")
+                        search_terms.add(f"+91{r10}")
+                    elif clean_digits.startswith("91") and len(clean_digits) == 12:
+                        r10 = clean_digits[2:]
+                        search_terms.add(r10)
+                        search_terms.add(f"0{r10}")
+                        search_terms.add(f"+{clean_digits}")
 
             if contact_obj:
-                if contact_obj.platform_id:
-                    search_terms.add(str(contact_obj.platform_id))
-                if contact_obj.phone_number:
-                    search_terms.add(str(contact_obj.phone_number))
-                    p_digits = ''.join(filter(str.isdigit, str(contact_obj.phone_number)))
-                    if p_digits:
-                        search_terms.add(p_digits)
-                        if len(p_digits) == 10:
-                            search_terms.add(f"91{p_digits}")
-                            search_terms.add(f"+91{p_digits}")
-                            search_terms.add(f"0{p_digits}")
-                        elif len(p_digits) == 11 and p_digits.startswith('0'):
-                            r10 = p_digits[1:]
-                            search_terms.add(r10)
-                            search_terms.add(f"91{r10}")
-                            search_terms.add(f"+91{r10}")
-                        elif p_digits.startswith("91") and len(p_digits) == 12:
-                            r10 = p_digits[2:]
-                            search_terms.add(r10)
-                            search_terms.add(f"0{r10}")
-                            search_terms.add(f"+{p_digits}")
-                if contact_obj.email:
-                    search_terms.add(str(contact_obj.email))
-                search_terms.add(str(contact_obj.id))
+                if norm_channel == 'GMAIL':
+                    # Only search email addresses for Gmail channel
+                    if contact_obj.email:
+                        search_terms.add(str(contact_obj.email).strip().lower())
+                    if contact_obj.platform_id and '@' in str(contact_obj.platform_id):
+                        search_terms.add(str(contact_obj.platform_id).strip().lower())
+                elif norm_channel == 'WHATSAPP':
+                    # Strictly search phone numbers and WhatsApp platform IDs for WhatsApp
+                    if contact_obj.phone_number:
+                        search_terms.add(str(contact_obj.phone_number))
+                        p_digits = ''.join(filter(str.isdigit, str(contact_obj.phone_number)))
+                        if p_digits:
+                            search_terms.add(p_digits)
+                            if len(p_digits) == 10:
+                                search_terms.add(f"91{p_digits}")
+                                search_terms.add(f"+91{p_digits}")
+                                search_terms.add(f"0{p_digits}")
+                            elif len(p_digits) == 11 and p_digits.startswith('0'):
+                                r10 = p_digits[1:]
+                                search_terms.add(r10)
+                                search_terms.add(f"91{r10}")
+                                search_terms.add(f"+91{r10}")
+                            elif p_digits.startswith("91") and len(p_digits) == 12:
+                                r10 = p_digits[2:]
+                                search_terms.add(r10)
+                                search_terms.add(f"0{r10}")
+                                search_terms.add(f"+{p_digits}")
+                    if contact_obj.platform_id and '@' not in str(contact_obj.platform_id):
+                        search_terms.add(str(contact_obj.platform_id))
+                else:
+                    # Instagram, Facebook, etc.
+                    if contact_obj.platform_id:
+                        search_terms.add(str(contact_obj.platform_id))
+                    if contact_obj.phone_number:
+                        search_terms.add(str(contact_obj.phone_number))
+
+            if convo_obj and convo_obj.contact_platform_id:
+                if norm_channel == 'WHATSAPP' and '@' in str(convo_obj.contact_platform_id):
+                    pass # Do not add email address to WhatsApp search terms
+                elif norm_channel == 'GMAIL' and not ('@' in str(convo_obj.contact_platform_id) or '.' in str(convo_obj.contact_platform_id)):
+                    pass # Do not add phone number to Gmail search terms
+                else:
+                    search_terms.add(str(convo_obj.contact_platform_id))
 
             q_filter = Q()
             for term in search_terms:

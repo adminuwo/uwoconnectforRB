@@ -208,6 +208,16 @@ class AgencySubClientActionView(views.APIView):
             if target_user:
                 target_user.set_password(new_pass)
                 target_user.save()
+                try:
+                    from ..services.password_change_notification_service import PasswordChangeNotificationService
+                    from django.utils import timezone
+                    PasswordChangeNotificationService.send_password_change_confirmation(
+                        user=target_user,
+                        change_time=timezone.now()
+                    )
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).error(f"[AgencySubClientAction] Failed to dispatch password change confirmation: {e}")
             return Response({"message": f"Password updated for {sub_client.business_name}."})
 
         elif action == 'CHANGE_PLAN':

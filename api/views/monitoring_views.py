@@ -198,8 +198,33 @@ class ConversationViewSet(viewsets.ModelViewSet):
             self.check_object_permissions(self.request, obj)
             return obj
         
-        # 2. String fallback (contact_platform_id / phone_number lookup)
+        # 2. String fallback (contact_platform_id / phone_number / contact_id lookup)
         formatted_num = str(pk).replace('+', '').strip()
+        from bson import ObjectId
+        contact = None
+        user = self.request.user
+        client = getattr(user, 'client', None)
+
+        if client and ObjectId.is_valid(str(pk)):
+            contact = Contact.objects.filter(client=client, id=pk).first()
+
+        if not contact and client:
+            contact = Contact.objects.filter(
+                Q(client=client) & (
+                    Q(platform_id=pk) |
+                    Q(email=pk) |
+                    Q(phone_number=pk) |
+                    Q(phone_number__icontains=formatted_num)
+                )
+            ).first()
+
+        # If contact found, check if a conversation already exists for this contact
+        if contact:
+            obj = queryset.filter(Q(contact=contact) | Q(contact_platform_id=contact.platform_id)).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+
         obj = queryset.filter(
             Q(contact_platform_id=pk) |
             Q(contact_platform_id=formatted_num) |
@@ -207,26 +232,29 @@ class ConversationViewSet(viewsets.ModelViewSet):
             Q(contact__phone_number__icontains=formatted_num)
         ).first()
 
-        if not obj:
-            # 3. Create or resolve Conversation if missing
-            user = self.request.user
-            client = user.client
-            if client:
-                contact = Contact.objects.filter(
-                    Q(client=client) & (
-                        Q(platform_id=pk) |
-                        Q(phone_number__icontains=formatted_num)
-                    )
-                ).first()
-                obj, _ = Conversation.objects.get_or_create(
-                    client=client,
-                    contact_platform_id=pk,
-                    defaults={
-                        'contact': contact,
-                        'channel': (contact.preferred_channel if contact and contact.preferred_channel else 'WHATSAPP').upper(),
-                        'status': 'OPEN'
-                    }
-                )
+        if not obj and client:
+            # 3. Create or resolve Conversation if missing with accurate channel
+            inferred_channel = 'WHATSAPP'
+            pk_str = str(pk).lower()
+            if '@' in pk_str or (contact and contact.email and ('@' in str(contact.platform_id or '') or not contact.phone_number)):
+                inferred_channel = 'GMAIL'
+            elif 'instagram' in pk_str or pk_str.startswith('ig_') or (contact and 'instagram' in str(contact.platform_id or '').lower()):
+                inferred_channel = 'INSTAGRAM'
+            elif 'facebook' in pk_str or pk_str.startswith('fb_') or (contact and 'facebook' in str(contact.platform_id or '').lower()):
+                inferred_channel = 'FACEBOOK'
+            elif contact and getattr(contact, 'preferred_channel', None):
+                inferred_channel = contact.preferred_channel.upper()
+
+            convo_platform_id = contact.platform_id if (contact and contact.platform_id) else pk
+            obj, _ = Conversation.objects.get_or_create(
+                client=client,
+                contact_platform_id=convo_platform_id,
+                channel=inferred_channel,
+                defaults={
+                    'contact': contact,
+                    'status': 'OPEN'
+                }
+            )
 
         if not obj:
             from rest_framework.exceptions import NotFound

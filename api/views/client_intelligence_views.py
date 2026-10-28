@@ -1436,6 +1436,16 @@ class ClientIntelligenceActionView(APIView):
                 return Response({'error': 'No user account associated with this client'}, status=status.HTTP_404_NOT_FOUND)
             target_user.set_password(new_password)
             target_user.save()
+            try:
+                from ..services.password_change_notification_service import PasswordChangeNotificationService
+                from django.utils import timezone
+                PasswordChangeNotificationService.send_password_change_confirmation(
+                    user=target_user,
+                    change_time=timezone.now()
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"[AdminClientIntelligence] Failed to dispatch password change confirmation: {e}")
             log_admin_intelligence_action(
                 request,
                 client.business_name,
