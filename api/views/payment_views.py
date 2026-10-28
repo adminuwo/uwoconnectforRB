@@ -173,11 +173,18 @@ class VerifyPaymentView(APIView):
             payment_order.payment_method = 'Razorpay'
             payment_order.save()
 
-            # Upgrade Client Workspace Plan
+            # Upgrade Client Workspace Plan & Activate Subscription
             client = payment_order.client
-            client.plan = payment_order.plan
-            client.status = 'ACTIVE'
-            client.save()
+            from api.services.wallet_services import SubscriptionService
+            req_channels = request.data.get('channels') or request.data.get('selected_channels')
+            sub = SubscriptionService.activate_or_renew_subscription(
+                client=client,
+                plan_name=payment_order.plan,
+                billing_cycle=payment_order.billing_cycle,
+                channels=req_channels,
+                amount=payment_order.amount
+            )
+            sub_details = SubscriptionService.get_subscription_details(client)
 
             # Audit Log
             Log.objects.create(
@@ -193,7 +200,8 @@ class VerifyPaymentView(APIView):
                 'plan': client.plan,
                 'status': 'PAID',
                 'order_id': payment_order.order_id,
-                'razorpay_payment_id': payment_order.razorpay_payment_id
+                'razorpay_payment_id': payment_order.razorpay_payment_id,
+                'subscription': sub_details
             }, status=status.HTTP_200_OK)
         else:
             payment_order.status = 'FAILED'
@@ -254,9 +262,13 @@ class RazorpayWebhookView(APIView):
                     payment_order.save()
 
                     client = payment_order.client
-                    client.plan = payment_order.plan
-                    client.status = 'ACTIVE'
-                    client.save()
+                    from api.services.wallet_services import SubscriptionService
+                    SubscriptionService.activate_or_renew_subscription(
+                        client=client,
+                        plan_name=payment_order.plan,
+                        billing_cycle=payment_order.billing_cycle,
+                        amount=payment_order.amount
+                    )
 
                     Log.objects.create(
                         client=client,
@@ -691,11 +703,15 @@ class PlanUpgradeCheckoutView(APIView):
             payment_order.payment_method = 'Razorpay'
             payment_order.save()
 
-            # Upgrade Client Plan
+            # Upgrade Client Plan & Activate Subscription
             client = payment_order.client
-            client.plan = payment_order.plan
-            client.status = 'ACTIVE'
-            client.save()
+            from api.services.wallet_services import SubscriptionService
+            SubscriptionService.activate_or_renew_subscription(
+                client=client,
+                plan_name=payment_order.plan,
+                billing_cycle=payment_order.billing_cycle,
+                amount=payment_order.amount
+            )
 
             # Audit log
             Log.objects.create(

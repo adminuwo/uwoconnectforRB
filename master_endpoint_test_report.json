@@ -1,0 +1,4880 @@
+{
+  "title": "UwoConnect Master API Endpoint Test Report",
+  "timestamp": "2026-10-27 13:32:30",
+  "total_registered_patterns": 931,
+  "total_evaluated_endpoints": 477,
+  "healthy_endpoints": 477,
+  "crashed_500_endpoints": 0,
+  "health_percentage": 100.0,
+  "total_duration_seconds": 424.92,
+  "category_breakdown": {
+    "General": {
+      "total": 125,
+      "passed": 125,
+      "failed": 0,
+      "avg_latency_ms": 178.0
+    },
+    "Workflows & Automation": {
+      "total": 14,
+      "passed": 14,
+      "failed": 0,
+      "avg_latency_ms": 280.9
+    },
+    "CRM & Contacts": {
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "avg_latency_ms": 562.8
+    },
+    "Unified Inbox": {
+      "total": 23,
+      "passed": 23,
+      "failed": 0,
+      "avg_latency_ms": 4608.3
+    },
+    "Team & Operations": {
+      "total": 33,
+      "passed": 33,
+      "failed": 0,
+      "avg_latency_ms": 135.7
+    },
+    "GST Sales & Invoicing": {
+      "total": 49,
+      "passed": 49,
+      "failed": 0,
+      "avg_latency_ms": 326.5
+    },
+    "White-Label Agency": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "avg_latency_ms": 4.2
+    },
+    "Auth & Sessions": {
+      "total": 54,
+      "passed": 54,
+      "failed": 0,
+      "avg_latency_ms": 6.3
+    },
+    "Cloud Connectors": {
+      "total": 53,
+      "passed": 53,
+      "failed": 0,
+      "avg_latency_ms": 51.9
+    },
+    "Meta Omni-Channel": {
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "avg_latency_ms": 1765.8
+    },
+    "Super Admin & Management": {
+      "total": 70,
+      "passed": 70,
+      "failed": 0,
+      "avg_latency_ms": 3612.5
+    },
+    "AI & Knowledge Base": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "avg_latency_ms": 18.1
+    },
+    "Client Merchant Gateway": {
+      "total": 14,
+      "passed": 14,
+      "failed": 0,
+      "avg_latency_ms": 44.2
+    },
+    "Wallet & SaaS Billing": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "avg_latency_ms": 79.3
+    },
+    "YouTube Integration": {
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "avg_latency_ms": 2.1
+    },
+    "Zoho CRM Integration": {
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "avg_latency_ms": 13.8
+    }
+  },
+  "endpoints": [
+    {
+      "num": 1,
+      "category": "General",
+      "method": "GET",
+      "url": "/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 10.9
+    },
+    {
+      "num": 2,
+      "category": "General",
+      "method": "GET",
+      "url": "/health/",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.6
+    },
+    {
+      "num": 3,
+      "category": "General",
+      "method": "GET",
+      "url": "/robots.txt",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 4,
+      "category": "General",
+      "method": "GET",
+      "url": "/sitemap.xml",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 5,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plans/public/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 993.0
+    },
+    {
+      "num": 6,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/client/entitlements/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1419.4
+    },
+    {
+      "num": 7,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/client/select-channel/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 8,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/client/subscribe/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 9,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 201.3
+    },
+    {
+      "num": 10,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 40.7
+    },
+    {
+      "num": 11,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/disconnect_meta/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 12,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/get_whatsapp_business_profile/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.3
+    },
+    {
+      "num": 13,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/get_whatsapp_profile_picture/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 289.6
+    },
+    {
+      "num": 14,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/reactivate/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 15,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/reset_ai/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 16,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/reset_workflows/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 17,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/suspend/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 18,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/toggle_feature/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 0.6
+    },
+    {
+      "num": 19,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/update_whatsapp_business_profile/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 20,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/clients/6ad0601cab7f4b9bdc83d073/update_whatsapp_profile_picture/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 21,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/competitor-analysis/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.9
+    },
+    {
+      "num": 22,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/competitor-analysis/discover/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 6791.1
+    },
+    {
+      "num": 23,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/competitor-analysis/stats/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.6
+    },
+    {
+      "num": 24,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/competitor-analysis/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 280.9
+    },
+    {
+      "num": 25,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/competitor-analysis/6ad0601cab7f4b9bdc83d073/reanalyze/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 26,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/automations/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.6
+    },
+    {
+      "num": 27,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/automations/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 277.1
+    },
+    {
+      "num": 28,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/workflows/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2051.5
+    },
+    {
+      "num": 29,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/workflows/upload_media/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 30,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/workflows/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 39.7
+    },
+    {
+      "num": 31,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3850.5
+    },
+    {
+      "num": 32,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/export_csv/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 252.8
+    },
+    {
+      "num": 33,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/import_csv/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 34,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/upcoming_followups/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 43.3
+    },
+    {
+      "num": 35,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 233.0
+    },
+    {
+      "num": 36,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/6ad0601cab7f4b9bdc83d073/follow_ups/create/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 9.3
+    },
+    {
+      "num": 37,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/6ad0601cab7f4b9bdc83d073/follow_ups/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 108.1
+    },
+    {
+      "num": 38,
+      "category": "CRM & Contacts",
+      "method": "GET",
+      "url": "/api/contacts/6ad0601cab7f4b9bdc83d073/follow_ups/6ad0601cab7f4b9bdc83d073/update/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 5.7
+    },
+    {
+      "num": 39,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2646.6
+    },
+    {
+      "num": 40,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 123.8
+    },
+    {
+      "num": 41,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/add_note/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 42,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/audit_logs/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 94.6
+    },
+    {
+      "num": 43,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/lock_toggle/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 14.6
+    },
+    {
+      "num": 44,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/mark_read/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.1
+    },
+    {
+      "num": 45,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/resume_bot/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 46,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/takeover/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 47,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/conversations/6ad0601cab7f4b9bdc83d073/transfer/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 48,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/templates/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 449.8
+    },
+    {
+      "num": 49,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/templates/sync_from_meta/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 6.8
+    },
+    {
+      "num": 50,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/templates/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.8
+    },
+    {
+      "num": 51,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/campaigns/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 426.6
+    },
+    {
+      "num": 52,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/campaigns/ai_generate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 53,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/campaigns/parse_excel/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 54,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/campaigns/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 47.1
+    },
+    {
+      "num": 55,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/campaigns/6ad0601cab7f4b9bdc83d073/retry_failed/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 56,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/support/messages/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.6
+    },
+    {
+      "num": 57,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/support/messages/clients/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 58,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/support/messages/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.4
+    },
+    {
+      "num": 59,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/audit-logs/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 60,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/audit-logs/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 61,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/members/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 195.1
+    },
+    {
+      "num": 62,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/members/connected_social_channels/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 63,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/members/live_activity/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 65.0
+    },
+    {
+      "num": 64,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/members/login_monitoring/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 124.8
+    },
+    {
+      "num": 65,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/members/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 76.4
+    },
+    {
+      "num": 66,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/members/6ad0601cab7f4b9bdc83d073/suspend/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 5.9
+    },
+    {
+      "num": 67,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/members/6ad0601cab7f4b9bdc83d073/update_permissions/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 68,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/projects/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.0
+    },
+    {
+      "num": 69,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/projects/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.1
+    },
+    {
+      "num": 70,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/tasks/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.6
+    },
+    {
+      "num": 71,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/tasks/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.3
+    },
+    {
+      "num": 72,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/tasks/6ad0601cab7f4b9bdc83d073/add_comment/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 6.2
+    },
+    {
+      "num": 73,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/tasks/6ad0601cab7f4b9bdc83d073/clone/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 74,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/tasks/6ad0601cab7f4b9bdc83d073/submit_for_approval/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 75,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/tasks/6ad0601cab7f4b9bdc83d073/toggle_checklist/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 76,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/attendance/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 39.9
+    },
+    {
+      "num": 77,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/attendance/clock_in/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 78,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/attendance/clock_out/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 79,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/attendance/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.1
+    },
+    {
+      "num": 80,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/leaves/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 524.9
+    },
+    {
+      "num": 81,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/leaves/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 317.8
+    },
+    {
+      "num": 82,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/leaves/6ad0601cab7f4b9bdc83d073/approve/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 10.2
+    },
+    {
+      "num": 83,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 599.0
+    },
+    {
+      "num": 84,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.9
+    },
+    {
+      "num": 85,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/bulk_action/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 86,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/import_csv/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.9
+    },
+    {
+      "num": 87,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/upload_image/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 88,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.8
+    },
+    {
+      "num": 89,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/6ad0601cab7f4b9bdc83d073/redirect_link/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 64.2
+    },
+    {
+      "num": 90,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/products/6ad0601cab7f4b9bdc83d073/track_click/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 91,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/orders/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.6
+    },
+    {
+      "num": 92,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/orders/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 281.3
+    },
+    {
+      "num": 93,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 848.5
+    },
+    {
+      "num": 94,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 331.6
+    },
+    {
+      "num": 95,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/6ad0601cab7f4b9bdc83d073/add_section/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.1
+    },
+    {
+      "num": 96,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/6ad0601cab7f4b9bdc83d073/add_step/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 97,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/email/accounts/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 558.7
+    },
+    {
+      "num": 98,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/email/accounts/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.5
+    },
+    {
+      "num": 99,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 98427.6
+    },
+    {
+      "num": 100,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/process_scheduled/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 101,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.2
+    },
+    {
+      "num": 102,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/6ad0601cab7f4b9bdc83d073/add_note/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 103,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/6ad0601cab7f4b9bdc83d073/delete_message/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 104,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/6ad0601cab7f4b9bdc83d073/mark_read/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 105,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/6ad0601cab7f4b9bdc83d073/move_folder/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 106,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/6ad0601cab7f4b9bdc83d073/schedule_action/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 107,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/email/messages/6ad0601cab7f4b9bdc83d073/toggle_star/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 108,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/email/auto-replies/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 277.6
+    },
+    {
+      "num": 109,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/email/auto-replies/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.4
+    },
+    {
+      "num": 110,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automations/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.7
+    },
+    {
+      "num": 111,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automations/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.1
+    },
+    {
+      "num": 112,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automation-settings/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 113,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automation-settings/current/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 96.9
+    },
+    {
+      "num": 114,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automation-settings/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.9
+    },
+    {
+      "num": 115,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automation-logs/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 116,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automation-logs/summary/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 946.7
+    },
+    {
+      "num": 117,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automation-logs/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 310.8
+    },
+    {
+      "num": 118,
+      "category": "Workflows & Automation",
+      "method": "GET",
+      "url": "/api/email/automation-logs/6ad0601cab7f4b9bdc83d073/approve_review/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 119,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3748.5
+    },
+    {
+      "num": 120,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 288.4
+    },
+    {
+      "num": 121,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/6ad0601cab7f4b9bdc83d073/activity/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.1
+    },
+    {
+      "num": 122,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/6ad0601cab7f4b9bdc83d073/convert_invoice/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 123,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/6ad0601cab7f4b9bdc83d073/duplicate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 124,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/6ad0601cab7f4b9bdc83d073/pdf/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.6
+    },
+    {
+      "num": 125,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/6ad0601cab7f4b9bdc83d073/send/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 126,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-documents/6ad0601cab7f4b9bdc83d073/versions/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 127,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-document-templates/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.7
+    },
+    {
+      "num": 128,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales-document-templates/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.5
+    },
+    {
+      "num": 129,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 386.6
+    },
+    {
+      "num": 130,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/by-customer/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.2
+    },
+    {
+      "num": 131,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/by-order/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 132,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/settings/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 133,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.8
+    },
+    {
+      "num": 134,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/6ad0601cab7f4b9bdc83d073/download/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.9
+    },
+    {
+      "num": 135,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/6ad0601cab7f4b9bdc83d073/regenerate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 136,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/invoices/6ad0601cab7f4b9bdc83d073/send/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 137,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 6043.1
+    },
+    {
+      "num": 138,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 39.2
+    },
+    {
+      "num": 139,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/6ad0601cab7f4b9bdc83d073/activity/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.2
+    },
+    {
+      "num": 140,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/6ad0601cab7f4b9bdc83d073/convert_invoice/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 141,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/6ad0601cab7f4b9bdc83d073/duplicate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 142,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/6ad0601cab7f4b9bdc83d073/pdf/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.2
+    },
+    {
+      "num": 143,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/6ad0601cab7f4b9bdc83d073/send/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 144,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/quotations/6ad0601cab7f4b9bdc83d073/versions/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 145,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4211.8
+    },
+    {
+      "num": 146,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.4
+    },
+    {
+      "num": 147,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/6ad0601cab7f4b9bdc83d073/activity/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.4
+    },
+    {
+      "num": 148,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/6ad0601cab7f4b9bdc83d073/convert_invoice/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 149,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/6ad0601cab7f4b9bdc83d073/duplicate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 150,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/6ad0601cab7f4b9bdc83d073/pdf/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.1
+    },
+    {
+      "num": 151,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/6ad0601cab7f4b9bdc83d073/send/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 152,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/proposals/6ad0601cab7f4b9bdc83d073/versions/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.6
+    },
+    {
+      "num": 153,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/features/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.7
+    },
+    {
+      "num": 154,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/features/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 44.9
+    },
+    {
+      "num": 155,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plans/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 987.6
+    },
+    {
+      "num": 156,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plans/public_plans/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 327.6
+    },
+    {
+      "num": 157,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plans/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 1043.6
+    },
+    {
+      "num": 158,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plans/6ad0601cab7f4b9bdc83d073/monthly/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 159,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plans/6ad0601cab7f4b9bdc83d073/yearly/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.6
+    },
+    {
+      "num": 160,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plan-features/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.1
+    },
+    {
+      "num": 161,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plan-features/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.4
+    },
+    {
+      "num": 162,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/client-feature-overrides/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.6
+    },
+    {
+      "num": 163,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/client-feature-overrides/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.1
+    },
+    {
+      "num": 164,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plan-audit-logs/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.2
+    },
+    {
+      "num": 165,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/plan-audit-logs/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 166,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 87.0
+    },
+    {
+      "num": 167,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 31.9
+    },
+    {
+      "num": 168,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/health/",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 283.6
+    },
+    {
+      "num": 169,
+      "category": "White-Label Agency",
+      "method": "GET",
+      "url": "/api/whitelabel/config/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 170,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/email/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 109.5
+    },
+    {
+      "num": 171,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/progress/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 67.0
+    },
+    {
+      "num": 172,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/progress/getting-started/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.9
+    },
+    {
+      "num": 173,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/sections/1/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 174,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/guides/steps/1/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 175,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/monitoring/stats/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 702.0
+    },
+    {
+      "num": 176,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/monitoring/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 423.6
+    },
+    {
+      "num": 177,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/invites/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 102.3
+    },
+    {
+      "num": 178,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/invites/generate-qr/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.3
+    },
+    {
+      "num": 179,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/invites/validate/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.5
+    },
+    {
+      "num": 180,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/chat/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.5
+    },
+    {
+      "num": 181,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/reports/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 36.9
+    },
+    {
+      "num": 182,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/approvals/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 38.4
+    },
+    {
+      "num": 183,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/channels/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1472.8
+    },
+    {
+      "num": 184,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/channel-messages/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 185,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 756.8
+    },
+    {
+      "num": 186,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/ai-copilot/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 187,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/register/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 188,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/register/verify-otp/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 189,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/register/resend-otp/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 190,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/verify-email-otp/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 191,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/resend-email-otp/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 192,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/login/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 193,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 194,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google-login/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 195,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google-client-id/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 131.0
+    },
+    {
+      "num": 196,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google/diagnostic/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 197,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google/scopes/",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 198,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google/connect-all/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 199,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/apple/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 200,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/gmail/connect/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 0.5
+    },
+    {
+      "num": 201,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/gmail/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 202,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/gmail/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 203,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/gmail/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 204,
+      "category": "Auth & Sessions",
+      "method": "POST",
+      "url": "/api/auth/gmail/disconnect/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 205,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google-calendar/connect/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 206,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google-calendar/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 207,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google-sheets/connect/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 208,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/google-sheets/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 209,
+      "category": "Auth & Sessions",
+      "method": "POST",
+      "url": "/api/auth/gmail/sync/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 210,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/firebase-login/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.3
+    },
+    {
+      "num": 211,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/uwo-login/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 38.6
+    },
+    {
+      "num": 212,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/delete-account/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 213,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/legal/documents/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 32.9
+    },
+    {
+      "num": 214,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/legal/consent-status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 64.2
+    },
+    {
+      "num": 215,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/legal/consent/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 216,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/qr/create/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.7
+    },
+    {
+      "num": 217,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/qr/status/test_token_123/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.8
+    },
+    {
+      "num": 218,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/qr/scan/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 219,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/qr/approve/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 4.5
+    },
+    {
+      "num": 220,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/qr/reject/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 221,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/linked-devices/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 222,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/linked-devices/6ad0601cab7f4b9bdc83d073/revoke/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 223,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/linked-devices/revoke-all/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 224,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/forgot-password/send-otp/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 225,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/forgot-password/verify-otp/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 226,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/forgot-password/reset/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 227,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/change-password/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 228,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/whatsapp/embedded-signup/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 229,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/instagram/embedded-signup/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 230,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/facebook/embedded-signup/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 231,
+      "category": "Meta Omni-Channel",
+      "method": "POST",
+      "url": "/api/client/instagram/sync/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 10584.0
+    },
+    {
+      "num": 232,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/profile/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 476.2
+    },
+    {
+      "num": 233,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/media-proxy/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 234,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/messages/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4560.3
+    },
+    {
+      "num": 235,
+      "category": "Unified Inbox",
+      "method": "GET",
+      "url": "/api/messages/suggest_draft/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 236,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/client/stats/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 449.6
+    },
+    {
+      "num": 237,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/stats/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 36.9
+    },
+    {
+      "num": 238,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/clients/overview/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2183.5
+    },
+    {
+      "num": 239,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/clients/6ad0601cab7f4b9bdc83d073/details/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 50.5
+    },
+    {
+      "num": 240,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/client-intelligence/stats/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 6922.9
+    },
+    {
+      "num": 241,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/client-intelligence/clients/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 857.5
+    },
+    {
+      "num": 242,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/client-intelligence/clients/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 290.2
+    },
+    {
+      "num": 243,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/client-intelligence/clients/6ad0601cab7f4b9bdc83d073/action/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 244,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/client-intelligence/export/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2427.3
+    },
+    {
+      "num": 245,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/overview/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2932.0
+    },
+    {
+      "num": 246,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/clients-directory/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 13613.2
+    },
+    {
+      "num": 247,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/clients/6ad0601cab7f4b9bdc83d073/dashboard/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.1
+    },
+    {
+      "num": 248,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/clients/6ad0601cab7f4b9bdc83d073/action/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 249,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-team/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3774.2
+    },
+    {
+      "num": 250,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-team/create/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 251,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-team/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.0
+    },
+    {
+      "num": 252,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/team-summary/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2547.4
+    },
+    {
+      "num": 253,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/team-analytics/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1423.7
+    },
+    {
+      "num": 254,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/team/analytics/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3864.1
+    },
+    {
+      "num": 255,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-projects/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1615.9
+    },
+    {
+      "num": 256,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-projects/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 41.1
+    },
+    {
+      "num": 257,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-projects/6ad0601cab7f4b9bdc83d073/assign-members/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.7
+    },
+    {
+      "num": 258,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-projects/6ad0601cab7f4b9bdc83d073/members/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 259,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-projects/6ad0601cab7f4b9bdc83d073/members/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 260,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-teams/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 199.4
+    },
+    {
+      "num": 261,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-teams/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 5.1
+    },
+    {
+      "num": 262,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-teams/6ad0601cab7f4b9bdc83d073/assign-members/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 263,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-channels/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4041.5
+    },
+    {
+      "num": 264,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-messages/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37307.5
+    },
+    {
+      "num": 265,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-sales/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.5
+    },
+    {
+      "num": 266,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-quotations/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1444.9
+    },
+    {
+      "num": 267,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-proposals/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1401.6
+    },
+    {
+      "num": 268,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-invoices/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 563.0
+    },
+    {
+      "num": 269,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-reports/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 36.5
+    },
+    {
+      "num": 270,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-products/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 934.3
+    },
+    {
+      "num": 271,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/global-search/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 272,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/automations/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.5
+    },
+    {
+      "num": 273,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/email/compose/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 274,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/messages/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4109.7
+    },
+    {
+      "num": 275,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/users/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 31.3
+    },
+    {
+      "num": 276,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/users/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.6
+    },
+    {
+      "num": 277,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/platform-assistant/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 278,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/platform/ai-assistant/chat/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 279,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/settings/global/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 33.2
+    },
+    {
+      "num": 280,
+      "category": "Meta Omni-Channel",
+      "method": "GET",
+      "url": "/api/webhook/whatsapp/",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 281,
+      "category": "Meta Omni-Channel",
+      "method": "GET",
+      "url": "/api/webhooks/whatsapp/",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 282,
+      "category": "Meta Omni-Channel",
+      "method": "GET",
+      "url": "/api/webhook/facebook-instagram/",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 283,
+      "category": "Meta Omni-Channel",
+      "method": "GET",
+      "url": "/api/webhooks/facebook-instagram/",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 284,
+      "category": "AI & Knowledge Base",
+      "method": "GET",
+      "url": "/api/knowledge/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 33.1
+    },
+    {
+      "num": 285,
+      "category": "AI & Knowledge Base",
+      "method": "GET",
+      "url": "/api/knowledge/query/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 286,
+      "category": "AI & Knowledge Base",
+      "method": "GET",
+      "url": "/api/knowledge/6ad0601cab7f4b9bdc83d073/recrawl/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 287,
+      "category": "AI & Knowledge Base",
+      "method": "GET",
+      "url": "/api/knowledge/6ad0601cab7f4b9bdc83d073/",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.8
+    },
+    {
+      "num": 288,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/impersonate/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 289,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/payments/create-order/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 290,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/payments/checkout/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.1
+    },
+    {
+      "num": 291,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/payments/checkout/callback/",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.3
+    },
+    {
+      "num": 292,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/payments/verify-order/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 293,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/payments/history/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.8
+    },
+    {
+      "num": 294,
+      "category": "Meta Omni-Channel",
+      "method": "GET",
+      "url": "/api/payments/webhook/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 295,
+      "category": "General",
+      "method": "POST",
+      "url": "/api/payments/apple/verify/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 296,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/payments/apple/restore/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 297,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/payments/apple/notifications/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 298,
+      "category": "Wallet & SaaS Billing",
+      "method": "GET",
+      "url": "/api/wallet/dashboard/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 388.7
+    },
+    {
+      "num": 299,
+      "category": "Wallet & SaaS Billing",
+      "method": "GET",
+      "url": "/api/wallet/recharge/create/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 300,
+      "category": "Wallet & SaaS Billing",
+      "method": "GET",
+      "url": "/api/wallet/recharge/checkout/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 301,
+      "category": "Wallet & SaaS Billing",
+      "method": "POST",
+      "url": "/api/wallet/recharge/verify/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 302,
+      "category": "Wallet & SaaS Billing",
+      "method": "GET",
+      "url": "/api/wallet/webhook/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 303,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/wallet/overview/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 134517.0
+    },
+    {
+      "num": 304,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/wallet/adjustment/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 305,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/wallet/rates/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.6
+    },
+    {
+      "num": 306,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/broadcasts/entitlement/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 243.6
+    },
+    {
+      "num": 307,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/broadcasts/validate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 7.4
+    },
+    {
+      "num": 308,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/broadcasts/consume/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.8
+    },
+    {
+      "num": 309,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/broadcasts/refund/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 310,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/onedrive/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 7.1
+    },
+    {
+      "num": 311,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/onedrive/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 312,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/onedrive/status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 313,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/onedrive/sync/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 314,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/onedrive/disconnect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 263.9
+    },
+    {
+      "num": 315,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 316,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 317,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 318,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-calendar/sync/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 319,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/events/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 320,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/create-event/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 321,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/update-event/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 322,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/delete-event/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 323,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-calendar/ai-assistant/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 324,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-calendar/disconnect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 227.5
+    },
+    {
+      "num": 325,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 326,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 327,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 328,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-sheets/sync/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 329,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/list/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3.5
+    },
+    {
+      "num": 330,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/detail/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 331,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/create-sheet/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 332,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/append-row/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 333,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/delete/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 334,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-sheets/ai-generate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 335,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-sheets/disconnect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1255.4
+    },
+    {
+      "num": 336,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3.1
+    },
+    {
+      "num": 337,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 338,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 339,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-docs/sync/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 340,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/list/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.1
+    },
+    {
+      "num": 341,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/detail/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.2
+    },
+    {
+      "num": 342,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/create-doc/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 343,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/delete/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 344,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-docs/ai-generate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 345,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-docs/disconnect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 48.3
+    },
+    {
+      "num": 346,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 347,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 348,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 349,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-slides/sync/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 350,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/list/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 351,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/detail/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 352,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/create-presentation/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 353,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/add-slide/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 354,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/delete/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 355,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-slides/ai-generate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 356,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-slides/disconnect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 304.1
+    },
+    {
+      "num": 357,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 5.0
+    },
+    {
+      "num": 358,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 0.0
+    },
+    {
+      "num": 359,
+      "category": "General",
+      "method": "POST",
+      "url": "/api/google-drive/disconnect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 47.6
+    },
+    {
+      "num": 360,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 361,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/files/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 362,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/create-folder/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 363,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/upload/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 364,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/delete/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.1
+    },
+    {
+      "num": 365,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google-drive/rename/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 366,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/google/ai-command/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 367,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/youtube/connect/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 368,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/youtube/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 369,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/youtube/status/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 370,
+      "category": "Auth & Sessions",
+      "method": "POST",
+      "url": "/api/auth/youtube/sync/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 371,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/analytics/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 3.1
+    },
+    {
+      "num": 372,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/videos/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 373,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/comments/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 374,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/ai-suggest-reply/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 375,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/settings/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 376,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/broadcast-check/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 377,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/upload/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.5
+    },
+    {
+      "num": 378,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/upload-session/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 379,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/profile/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 380,
+      "category": "YouTube Integration",
+      "method": "GET",
+      "url": "/api/youtube/delete/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.4
+    },
+    {
+      "num": 381,
+      "category": "Zoho CRM Integration",
+      "method": "GET",
+      "url": "/api/zoho/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 382,
+      "category": "Zoho CRM Integration",
+      "method": "GET",
+      "url": "/api/zoho/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 383,
+      "category": "Zoho CRM Integration",
+      "method": "POST",
+      "url": "/api/zoho/disconnect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 49.4
+    },
+    {
+      "num": 384,
+      "category": "Zoho CRM Integration",
+      "method": "POST",
+      "url": "/api/zoho/test-lead/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 385,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-news/settings/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.8
+    },
+    {
+      "num": 386,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-news/feed/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 567.7
+    },
+    {
+      "num": 387,
+      "category": "Cloud Connectors",
+      "method": "POST",
+      "url": "/api/google-news/summarize/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 388,
+      "category": "Cloud Connectors",
+      "method": "GET",
+      "url": "/api/google-news/send-alert/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 389,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/public/calendar/6ad0601cab7f4b9bdc83d073/slots/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 34.1
+    },
+    {
+      "num": 390,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/public/calendar/6ad0601cab7f4b9bdc83d073/book/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 32.0
+    },
+    {
+      "num": 391,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/connect/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 392,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 2.4
+    },
+    {
+      "num": 393,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/status/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 394,
+      "category": "Auth & Sessions",
+      "method": "POST",
+      "url": "/api/auth/outlook/sync/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 395,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/send-mail/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 396,
+      "category": "Auth & Sessions",
+      "method": "POST",
+      "url": "/api/auth/outlook/disconnect/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.6
+    },
+    {
+      "num": 397,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/calendar/events/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.7
+    },
+    {
+      "num": 398,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/teams/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 399,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/contacts/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 2.6
+    },
+    {
+      "num": 400,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/outlook/excel/",
+      "role": "ANON",
+      "status": 401,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 401,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/webrtc/config/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 402,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/webrtc/history/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.7
+    },
+    {
+      "num": 403,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/webrtc/call/initiate/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 404,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/webrtc/call/action/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 405,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/webrtc/call/signal/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 406,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/webrtc/call/active-check/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 34.7
+    },
+    {
+      "num": 407,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/calls/schedule/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2.1
+    },
+    {
+      "num": 408,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/calls/ai-summary/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 409,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/calls/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 104.2
+    },
+    {
+      "num": 410,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/connect/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 411,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/callback/",
+      "role": "ANON",
+      "status": 302,
+      "healthy": true,
+      "duration_ms": 4.3
+    },
+    {
+      "num": 412,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 37.6
+    },
+    {
+      "num": 413,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/mode/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 414,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/keys/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 4.9
+    },
+    {
+      "num": 415,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/checkout/create-order/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 5.3
+    },
+    {
+      "num": 416,
+      "category": "Client Merchant Gateway",
+      "method": "POST",
+      "url": "/api/razorpay/checkout/verify/",
+      "role": "CLIENT",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 4.1
+    },
+    {
+      "num": 417,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/product-webhook/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.7
+    },
+    {
+      "num": 418,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/sales/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 69.9
+    },
+    {
+      "num": 419,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/sales/dashboard/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 240.1
+    },
+    {
+      "num": 420,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/razorpay/refund/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.3
+    },
+    {
+      "num": 421,
+      "category": "Client Merchant Gateway",
+      "method": "GET",
+      "url": "/api/public/checkout/6ae053c7e301d22259885c0d/",
+      "role": "ANON",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 234.5
+    },
+    {
+      "num": 422,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/sales/analytics/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 392.2
+    },
+    {
+      "num": 423,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/sales-documents/test_token_123/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 40.6
+    },
+    {
+      "num": 424,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/sales-documents/test_token_123/accept/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 5.3
+    },
+    {
+      "num": 425,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/sales-documents/test_token_123/reject/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 5.0
+    },
+    {
+      "num": 426,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/sales-documents/test_token_123/pdf/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 37.9
+    },
+    {
+      "num": 427,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/quotation/test_token_123/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.3
+    },
+    {
+      "num": 428,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/quotation/test_token_123/accept/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.7
+    },
+    {
+      "num": 429,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/quotation/test_token_123/reject/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.2
+    },
+    {
+      "num": 430,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/proposal/test_token_123/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.9
+    },
+    {
+      "num": 431,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/proposal/test_token_123/accept/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.0
+    },
+    {
+      "num": 432,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/proposal/test_token_123/reject/",
+      "role": "ANON",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 433,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/invoices/test_token_123/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.9
+    },
+    {
+      "num": 434,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/invoices/test_token_123/pdf/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.0
+    },
+    {
+      "num": 435,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/invoice/test_token_123/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 35.1
+    },
+    {
+      "num": 436,
+      "category": "GST Sales & Invoicing",
+      "method": "GET",
+      "url": "/api/public/invoice/test_token_123/pdf/",
+      "role": "ANON",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 47.7
+    },
+    {
+      "num": 437,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/channel-access/global/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 3486.7
+    },
+    {
+      "num": 438,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/channel-access/global/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 1614.3
+    },
+    {
+      "num": 439,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/channel-access/matrix/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2811.2
+    },
+    {
+      "num": 440,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/channel-access/client/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 329.4
+    },
+    {
+      "num": 441,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/channel-access/bulk/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.9
+    },
+    {
+      "num": 442,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/channel-access/audit-logs/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 218.6
+    },
+    {
+      "num": 443,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/connectors/effective/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 386.5
+    },
+    {
+      "num": 444,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/connectors/global-status/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 317.2
+    },
+    {
+      "num": 445,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/all-projects/6ad0601cab7f4b9bdc83d073/assign/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.0
+    },
+    {
+      "num": 446,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/teams-channels/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 493.9
+    },
+    {
+      "num": 447,
+      "category": "White-Label Agency",
+      "method": "GET",
+      "url": "/api/agency/stats/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 448,
+      "category": "White-Label Agency",
+      "method": "GET",
+      "url": "/api/agency/sub-clients/",
+      "role": "CLIENT",
+      "status": 403,
+      "healthy": true,
+      "duration_ms": 4.2
+    },
+    {
+      "num": 449,
+      "category": "White-Label Agency",
+      "method": "GET",
+      "url": "/api/agency/sub-clients/6ad0601cab7f4b9bdc83d073/action/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 4.4
+    },
+    {
+      "num": 450,
+      "category": "White-Label Agency",
+      "method": "GET",
+      "url": "/api/agency/plans/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 5.3
+    },
+    {
+      "num": 451,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/whitelabel/revenue/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 40.8
+    },
+    {
+      "num": 452,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/user/preferences/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.7
+    },
+    {
+      "num": 453,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/app/content/version/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 613.7
+    },
+    {
+      "num": 454,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/app/content/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 535.2
+    },
+    {
+      "num": 455,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 315.0
+    },
+    {
+      "num": 456,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/draft/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.7
+    },
+    {
+      "num": 457,
+      "category": "Super Admin & Management",
+      "method": "POST",
+      "url": "/api/admin/content/publish/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 250.4
+    },
+    {
+      "num": 458,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/preview/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 4.0
+    },
+    {
+      "num": 459,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/rollback/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.2
+    },
+    {
+      "num": 460,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/versions/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4742.4
+    },
+    {
+      "num": 461,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/banners/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.5
+    },
+    {
+      "num": 462,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/banners/6ad0601cab7f4b9bdc83d073/",
+      "role": "ADMIN",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 183.6
+    },
+    {
+      "num": 463,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/maintenance/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 296.4
+    },
+    {
+      "num": 464,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/feature-flags/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.5
+    },
+    {
+      "num": 465,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/content/audit-logs/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 362.0
+    },
+    {
+      "num": 466,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/telemetry/app-install/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 3.3
+    },
+    {
+      "num": 467,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/app-analytics/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 4980.9
+    },
+    {
+      "num": 468,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/client-platform-overview/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2518.2
+    },
+    {
+      "num": 469,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/installations/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 2214.7
+    },
+    {
+      "num": 470,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/installations/6ad0601cab7f4b9bdc83d073/toggle-status/",
+      "role": "ADMIN",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.0
+    },
+    {
+      "num": 471,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/telemetry/app-uninstall/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 1.9
+    },
+    {
+      "num": 472,
+      "category": "General",
+      "method": "GET",
+      "url": "/api/client/update/",
+      "role": "CLIENT",
+      "status": 405,
+      "healthy": true,
+      "duration_ms": 2.3
+    },
+    {
+      "num": 473,
+      "category": "Auth & Sessions",
+      "method": "GET",
+      "url": "/api/auth/qr/consume/",
+      "role": "ANON",
+      "status": 400,
+      "healthy": true,
+      "duration_ms": 1.7
+    },
+    {
+      "num": 474,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/logs/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 458.9
+    },
+    {
+      "num": 475,
+      "category": "Super Admin & Management",
+      "method": "GET",
+      "url": "/api/admin/workflows/",
+      "role": "ADMIN",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 35.8
+    },
+    {
+      "num": 476,
+      "category": "Team & Operations",
+      "method": "GET",
+      "url": "/api/team/",
+      "role": "CLIENT",
+      "status": 200,
+      "healthy": true,
+      "duration_ms": 441.6
+    },
+    {
+      "num": 477,
+      "category": "General",
+      "method": "GET",
+      "url": "/media/test.jpg",
+      "role": "CLIENT",
+      "status": 404,
+      "healthy": true,
+      "duration_ms": 5.9
+    }
+  ]
+}

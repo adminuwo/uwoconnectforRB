@@ -26,7 +26,36 @@ class PlanViewSet(viewsets.ModelViewSet):
     serializer_class = PlanSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def _ensure_core_plans_seeded(self):
+        """Auto-seeds core standard plans if missing from database."""
+        if not Plan.objects.filter(status='ACTIVE').exclude(slug='free').exists():
+            for s_slug, s_cfg in DEFAULT_PLANS_CONFIG.items():
+                if s_slug != 'free':
+                    Plan.objects.get_or_create(
+                        slug=s_slug,
+                        defaults={
+                            'name': s_cfg.get('name', s_slug.capitalize()),
+                            'description': s_cfg.get('description', ''),
+                            'price': s_cfg.get('monthly_price', 0),
+                            'currency': 'INR',
+                            'billing_cycle': 'MONTHLY',
+                            'status': 'ACTIVE',
+                            'display_order': 1 if s_slug == 'starter' else (2 if s_slug == 'growth' else 3),
+                            'is_default': (s_slug == 'starter'),
+                            'badge_text': 'Most Popular' if s_slug == 'growth' else ('Power House' if s_slug == 'advanced' else ''),
+                            'metadata': s_cfg
+                        }
+                    )
+
+    def get_queryset(self):
+        self._ensure_core_plans_seeded()
+        include_internal = self.request.query_params.get('include_internal', 'false').lower() == 'true'
+        if include_internal:
+            return Plan.objects.all().order_by('display_order', 'price')
+        return Plan.objects.exclude(slug='free').exclude(name__icontains='No Active').order_by('display_order', 'price')
+
     def get_object(self):
+        self._ensure_core_plans_seeded()
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup_val = self.kwargs.get(lookup_url_kwarg)
 
@@ -46,12 +75,40 @@ class PlanViewSet(viewsets.ModelViewSet):
         if plan:
             return plan
 
-        # 4. Handle "plan-starter", "plan-pro", "plan-enterprise" prefixes
+        # 4. Handle "plan-starter", "plan-pro", "plan-enterprise", "plan-growth", "plan-advanced"
         clean_slug = str(lookup_val).replace('plan-', '').lower()
         if clean_slug == 'pro':
             clean_slug = 'growth'
+        elif clean_slug == 'enterprise':
+            clean_slug = 'advanced'
         plan = Plan.objects.filter(slug__iexact=clean_slug).first()
         if plan:
+            return plan
+
+        # 5. Fuzzy match against all existing plans
+        for p in Plan.objects.all():
+            if clean_slug in (p.slug or '').lower() or clean_slug in (p.name or '').lower():
+                return p
+
+        # 6. Fallback auto-seed/upsert from DEFAULT_PLANS_CONFIG if standard tier
+        target_slug = clean_slug if clean_slug in DEFAULT_PLANS_CONFIG else ('growth' if clean_slug == 'pro' else ('advanced' if clean_slug in ('enterprise', 'advanced') else None))
+        if target_slug and target_slug in DEFAULT_PLANS_CONFIG and target_slug != 'free':
+            cfg = DEFAULT_PLANS_CONFIG[target_slug]
+            plan, _ = Plan.objects.update_or_create(
+                slug=target_slug,
+                defaults={
+                    'name': cfg.get('name', target_slug.capitalize()),
+                    'description': cfg.get('description', ''),
+                    'price': cfg.get('monthly_price', 0),
+                    'currency': 'INR',
+                    'billing_cycle': 'MONTHLY',
+                    'status': 'ACTIVE',
+                    'display_order': 1 if target_slug == 'starter' else (2 if target_slug == 'growth' else 3),
+                    'is_default': (target_slug == 'starter'),
+                    'badge_text': 'Most Popular' if target_slug == 'growth' else ('Power House' if target_slug == 'advanced' else ''),
+                    'metadata': cfg
+                }
+            )
             return plan
 
         return super().get_object()
@@ -111,10 +168,15 @@ class PlanViewSet(viewsets.ModelViewSet):
                 })
             return Response(agency_plan_list, status=status.HTTP_200_OK)
 
-        plans = Plan.objects.filter(status='ACTIVE').order_by('display_order', 'price')
+        self._ensure_core_plans_seeded()
+        plans = Plan.objects.filter(status='ACTIVE').exclude(slug='free').exclude(name__icontains='No Active').order_by('display_order', 'price')
         if not plans.exists():
-            # Return standard seeded defaults if database has no active plans
-            return Response(list(DEFAULT_PLANS_CONFIG.values()), status=status.HTTP_200_OK)
+            # Return standard seeded defaults if database has no active plans (exclude internal 'free' / 'No Active Plan')
+            active_defaults = [
+                p for p in DEFAULT_PLANS_CONFIG.values()
+                if p.get('slug') != 'free' and p.get('name') != 'No Active Plan' and p.get('monthly_price', 0) > 0
+            ]
+            return Response(active_defaults, status=status.HTTP_200_OK)
 
         serializer = self.get_serializer(plans, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -251,10 +313,19 @@ class ClientEntitlementsView(APIView):
 
             if plan_obj:
                 client.assigned_plan = plan_obj
-                client.plan = plan_obj.name.upper()
+                target_plan_name = plan_obj.name.upper()
+            else:
+                target_plan_name = str(plan_slug or client.plan or 'STARTER').upper()
 
-            client.billing_period = billing_period
-            client.save()
+            channels = request.data.get('channels') or request.data.get('selected_channels')
+
+            from api.services.wallet_services import SubscriptionService
+            SubscriptionService.activate_or_renew_subscription(
+                client=client,
+                plan_name=target_plan_name,
+                billing_cycle=billing_period,
+                channels=channels
+            )
 
             entitlements = EntitlementService.get_full_client_entitlements(client)
             cache.delete(f"client_entitlements_{client.id}")

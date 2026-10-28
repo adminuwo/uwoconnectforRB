@@ -1,5 +1,9 @@
 import re
-from bs4 import BeautifulSoup
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 ALLOWED_TAGS = {
     'p', 'b', 'i', 'u', 'strong', 'em', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -29,6 +33,13 @@ def sanitize_html(html_content: str) -> str:
     # If pure plain text without tags, return as is
     if '<' not in html_content and '>' not in html_content:
         return html_content.strip()
+
+    if not BeautifulSoup:
+        # Resilient fallback if bs4 is not available in environment
+        cleaned = re.sub(r'<(script|iframe|object|embed|form|input|button|style|meta|link|base)[^>]*>.*?</\1>', '', html_content, flags=re.IGNORECASE | re.DOTALL)
+        cleaned = re.sub(r'<(script|iframe|object|embed|form|input|button|style|meta|link|base)[^>]*>', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'on\w+\s*=\s*["\'][^"\']*["\']', '', cleaned, flags=re.IGNORECASE)
+        return cleaned.strip()
 
     try:
         soup = BeautifulSoup(html_content, 'html.parser')

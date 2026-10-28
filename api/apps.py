@@ -6,7 +6,21 @@ class ApiConfig(AppConfig):
     name = 'api'
 
     def ready(self):
-        if 'runserver' in sys.argv:
+        mgmt_cmds = {'migrate', 'makemigrations', 'collectstatic', 'check', 'test', 'shell'}
+        if any(cmd in sys.argv for cmd in mgmt_cmds):
+            return
+
+        is_runserver = 'runserver' in sys.argv
+        is_prod_server = (
+            any('daphne' in arg for arg in sys.argv)
+            or any('gunicorn' in arg for arg in sys.argv)
+            or any('uvicorn' in arg for arg in sys.argv)
+            or 'daphne' in sys.argv[0].lower()
+            or 'gunicorn' in sys.argv[0].lower()
+            or bool(os.getenv('PORT'))
+        )
+
+        if is_runserver or is_prod_server:
             from django.db import connections
             try:
                 db_conn = connections['default']
@@ -18,7 +32,8 @@ class ApiConfig(AppConfig):
                 print(f"Check your .env URL and password. Reason: {str(e)}\n")
 
             # Start background threads safely without blocking import locks
-            is_main_process = os.environ.get('RUN_MAIN') == 'true' or '--noreload' in sys.argv
+            # In runserver, only start in child reloader; in production (Daphne/Gunicorn), start unconditionally
+            is_main_process = (os.environ.get('RUN_MAIN') == 'true' or '--noreload' in sys.argv) if is_runserver else True
             if is_main_process:
                 import threading
                 import time

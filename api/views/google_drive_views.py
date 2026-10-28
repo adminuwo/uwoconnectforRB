@@ -215,8 +215,8 @@ class GoogleDriveFilesView(APIView):
             logger.warning("Google Drive client configuration/API error: %s", e)
             return Response({"error": str(e), "files": [], "connected": False}, status=400)
         except Exception as e:
-            logger.error("Failed fetching Google Drive files: %s", e)
-            return Response({"error": str(e), "files": []}, status=500)
+            logger.warning("Failed fetching Google Drive files: %s", e)
+            return Response({"error": str(e), "files": [], "connected": False}, status=400)
 
 
 class GoogleDriveCreateFolderView(APIView):

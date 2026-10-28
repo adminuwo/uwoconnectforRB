@@ -2,7 +2,13 @@ import os
 import json
 import logging
 import requests
-from bs4 import BeautifulSoup
+import re
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
+
 from .ai_service import _get_client
 
 logger = logging.getLogger(__name__)
@@ -25,17 +31,25 @@ def fetch_website_meta(url):
         }
         res = requests.get(clean_url, headers=headers, timeout=5, verify=False)
         if res.status_code == 200:
-            soup = BeautifulSoup(res.text, 'html.parser')
-            title = soup.title.string.strip() if soup.title and soup.title.string else ""
-            
-            meta_desc = ""
-            desc_tag = soup.find('meta', attrs={'name': 'description'}) or soup.find('meta', attrs={'property': 'og:description'})
-            if desc_tag and desc_tag.get('content'):
-                meta_desc = desc_tag['content'].strip()
+            if BeautifulSoup:
+                soup = BeautifulSoup(res.text, 'html.parser')
+                title = soup.title.string.strip() if soup.title and soup.title.string else ""
                 
-            # Grab some h1 / h2 text
-            headings = [h.get_text().strip() for h in soup.find_all(['h1', 'h2'])[:5] if h.get_text().strip()]
-            headings_text = " | ".join(headings)
+                meta_desc = ""
+                desc_tag = soup.find('meta', attrs={'name': 'description'}) or soup.find('meta', attrs={'property': 'og:description'})
+                if desc_tag and desc_tag.get('content'):
+                    meta_desc = desc_tag['content'].strip()
+                    
+                # Grab some h1 / h2 text
+                headings = [h.get_text().strip() for h in soup.find_all(['h1', 'h2'])[:5] if h.get_text().strip()]
+                headings_text = " | ".join(headings)
+            else:
+                title_m = re.search(r'<title[^>]*>(.*?)</title>', res.text, re.IGNORECASE | re.DOTALL)
+                title = title_m.group(1).strip() if title_m else ""
+                desc_m = re.search(r'<meta[^>]+(?:name|property)=["\'](?:description|og:description)["\'][^>]+content=["\']([^"\']*)["\']', res.text, re.IGNORECASE)
+                meta_desc = desc_m.group(1).strip() if desc_m else ""
+                headings = re.findall(r'<h[12][^>]*>(.*?)</h[12]>', res.text, re.IGNORECASE)[:5]
+                headings_text = " | ".join([re.sub(r'<[^>]+>', '', h).strip() for h in headings if h.strip()])
             
             summary = f"Title: {title}\nDescription: {meta_desc}\nKey Headings: {headings_text}"
             return summary[:1500]
