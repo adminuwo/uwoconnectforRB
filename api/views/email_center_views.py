@@ -112,12 +112,20 @@ class EmailMessageViewSet(viewsets.ModelViewSet):
                 
         response = super().list(request, *args, **kwargs)
 
-        # Calculate real dynamic folder counts from database
+        # Calculate real dynamic folder counts from database in a single lightweight query
         folders = ['inbox', 'sent', 'drafts', 'scheduled', 'outbox', 'spam', 'trash', 'archive']
-        counts = {}
+        counts = {f: 0 for f in folders}
         if client:
-            for f in folders:
-                counts[f] = EmailMessage.objects.filter(client=client, folder=f).count()
+            try:
+                folder_values = list(EmailMessage.objects.filter(client=client).values_list('folder', flat=True))
+                for f in folder_values:
+                    f_key = str(f).lower() if f else 'inbox'
+                    if f_key in counts:
+                        counts[f_key] += 1
+                    else:
+                        counts['inbox'] += 1
+            except Exception as e:
+                logger.warning(f"Error computing folder counts: {e}")
 
         return Response({
             'messages': response.data,
@@ -227,7 +235,33 @@ class EmailAutoReplyViewSet(viewsets.ModelViewSet):
         client = getattr(self.request.user, 'client', None)
         if not client:
             return EmailAutoReplyRule.objects.none()
-        return EmailAutoReplyRule.objects.filter(client=client)
+        return EmailAutoReplyRule.objects.filter(client=client).order_by('-created_at')
+
+    def create(self, request, *args, **kwargs):
+        client = getattr(request.user, 'client', None)
+        if not client:
+            return Response({'error': 'Client not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rule_id = request.data.get('id')
+        name = request.data.get('name')
+        existing = None
+        if rule_id:
+            try:
+                existing = EmailAutoReplyRule.objects.filter(client=client, id=rule_id).first()
+            except Exception:
+                existing = None
+        if not existing and name:
+            existing = EmailAutoReplyRule.objects.filter(client=client, name=name).first()
+        if not existing:
+            existing = EmailAutoReplyRule.objects.filter(client=client).first()
+
+        if existing:
+            serializer = self.get_serializer(existing, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(client=self.request.user.client)
@@ -344,7 +378,10 @@ class EmailAutomationLogViewSet(viewsets.ReadOnlyModelViewSet):
 
         account_id = self.request.query_params.get('account_id')
         if account_id:
-            qs = qs.filter(account_id=account_id)
+            if str(account_id).lower() in ['gmail', 'outlook']:
+                qs = qs.filter(Q(provider=str(account_id).lower()) | Q(account__provider=str(account_id).lower()))
+            else:
+                qs = qs.filter(Q(account_id=account_id) | Q(provider=account_id))
 
         search = self.request.query_params.get('search')
         if search:

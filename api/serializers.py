@@ -1,7 +1,7 @@
 import re
 from rest_framework import serializers
 from django.utils import timezone
-from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, EmailAutomationSettings, EmailAutomationLog, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion, CompetitorAnalysis
+from .models import User, Client, Automation, Workflow, GlobalSetting, Contact, ContactFollowUp, Template, Campaign, SupportMessage, AuditLog, TeamInvite, KnowledgeDocument, TeamMessage, Product, Order, ProductPayment, Project, Task, TaskComment, WorkReport, WorkApproval, TeamChannel, TeamChatMessage, Attendance, LeaveRequest, Message, Conversation, ConversationAuditLog, Guide, GuideSection, GuideStep, GuideProgress, EmailAccount, EmailMessage, EmailAutoReplyRule, EmailAutomationWorkflow, EmailTeamNote, EmailAutomationSettings, EmailAutomationLog, SalesDocumentTemplate, SalesDocument, SalesDocumentItem, SalesDocumentActivity, Invoice, UserLegalConsent, LegalDocumentVersion, CompetitorAnalysis, ContactMessage, ContactMessageReply, UserFeedback, UserFeedbackReply, InAppNotification
 from .repositories.contact_repository import ContactRepository
 from .repositories.workflow_repository import WorkflowRepository
 from .repositories.automation_repository import AutomationRepository
@@ -15,6 +15,8 @@ class ObjectIdField(serializers.Field):
     and deserializes a string back to an ObjectId-compatible value.
     """
     def to_representation(self, value):
+        if value is None:
+            return None
         return str(value)
 
     def to_internal_value(self, data):
@@ -1375,7 +1377,122 @@ class CompetitorAnalysisSerializer(serializers.ModelSerializer):
         return str(obj.id)
 
 
+class ContactMessageReplySerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    contact_message = ObjectIdField(read_only=True)
+    sender = ObjectIdField(read_only=True)
+    sender_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ContactMessageReply
+        fields = ['id', 'contact_message', 'sender', 'sender_name', 'sender_role', 'message', 'created_at']
+        read_only_fields = ['id', 'contact_message', 'sender', 'sender_name', 'created_at']
+
+    def get_sender_name(self, obj):
+        if obj.sender:
+            return obj.sender.get_full_name() or obj.sender.username
+        return 'Admin' if obj.sender_role == 'ADMIN' else 'User'
 
 
+class ContactMessageSerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    user = ObjectIdField(read_only=True)
+    client = ObjectIdField(read_only=True)
+    client_name = serializers.ReadOnlyField(source='client.business_name')
+    replies = ContactMessageReplySerializer(many=True, read_only=True)
+    replies_count = serializers.SerializerMethodField()
+    last_reply_at = serializers.SerializerMethodField()
+    is_unanswered = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ContactMessage
+        fields = [
+            'id', 'user', 'client', 'client_name', 'name', 'email', 'phone',
+            'subject', 'message', 'source', 'status', 'created_at', 'updated_at',
+            'replies', 'replies_count', 'last_reply_at', 'is_unanswered'
+        ]
+        read_only_fields = ['id', 'user', 'client', 'created_at', 'updated_at']
+
+    def get_replies_count(self, obj):
+        replies = getattr(obj, 'replies', None)
+        return replies.count() if replies is not None else 0
+
+    def get_last_reply_at(self, obj):
+        replies = getattr(obj, 'replies', None)
+        last_reply = replies.last() if replies is not None else None
+        return last_reply.created_at if last_reply else None
+
+    def get_is_unanswered(self, obj):
+        if obj.status == 'RESOLVED':
+            return False
+        replies = getattr(obj, 'replies', None)
+        last_reply = replies.last() if replies is not None else None
+        if not last_reply:
+            return True
+        return last_reply.sender_role == 'USER'
 
 
+class UserFeedbackReplySerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    feedback = ObjectIdField(read_only=True)
+    sender = ObjectIdField(read_only=True)
+    sender_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserFeedbackReply
+        fields = ['id', 'feedback', 'sender', 'sender_name', 'sender_role', 'message', 'created_at']
+        read_only_fields = ['id', 'feedback', 'sender', 'sender_name', 'created_at']
+
+    def get_sender_name(self, obj):
+        if obj.sender:
+            return obj.sender.get_full_name() or obj.sender.username
+        return 'Admin' if obj.sender_role == 'ADMIN' else 'User'
+
+
+class UserFeedbackSerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    user = ObjectIdField(read_only=True)
+    client = ObjectIdField(read_only=True)
+    client_name = serializers.ReadOnlyField(source='client.business_name')
+    replies = UserFeedbackReplySerializer(many=True, read_only=True)
+    replies_count = serializers.SerializerMethodField()
+    last_reply_at = serializers.SerializerMethodField()
+    is_unanswered = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserFeedback
+        fields = [
+            'id', 'user', 'client', 'client_name', 'name', 'email',
+            'category', 'rating', 'message', 'source', 'status',
+            'created_at', 'updated_at', 'replies', 'replies_count',
+            'last_reply_at', 'is_unanswered'
+        ]
+        read_only_fields = ['id', 'user', 'client', 'created_at', 'updated_at']
+
+    def get_replies_count(self, obj):
+        replies = getattr(obj, 'replies', None)
+        return replies.count() if replies is not None else 0
+
+    def get_last_reply_at(self, obj):
+        replies = getattr(obj, 'replies', None)
+        last_reply = replies.last() if replies is not None else None
+        return last_reply.created_at if last_reply else None
+
+    def get_is_unanswered(self, obj):
+        if obj.status == 'RESOLVED':
+            return False
+        replies = getattr(obj, 'replies', None)
+        last_reply = replies.last() if replies is not None else None
+        if not last_reply:
+            return True
+        return last_reply.sender_role == 'USER'
+
+
+class InAppNotificationSerializer(serializers.ModelSerializer):
+    id = ObjectIdField(read_only=True)
+    user = ObjectIdField(read_only=True)
+
+    class Meta:
+        model = InAppNotification
+        fields = ['id', 'user', 'title', 'body', 'notification_type', 'link', 'is_read', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']

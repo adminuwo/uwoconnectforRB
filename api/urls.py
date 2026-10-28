@@ -103,6 +103,15 @@ from .views.competitor_analysis_views import CompetitorAnalysisViewSet
 from .views.apple_iap_views import (
     AppleIAPVerifyView, AppleIAPRestoreView, AppleIAPNotificationWebhookView
 )
+from .views.contact_feedback_views import (
+    ContactSubmitView, MyContactMessagesView, ContactReplyView,
+    FeedbackSubmitView, MyFeedbackListView, FeedbackReplyView,
+    AdminContactMessagesListView, AdminContactMessageDetailView,
+    AdminContactMessageReplyView, AdminContactMessageStatusView,
+    AdminUserFeedbackListView, AdminUserFeedbackDetailView,
+    AdminUserFeedbackReplyView, AdminUserFeedbackStatusView,
+    InAppNotificationListView, InAppNotificationMarkReadView,
+)
 
 router = DefaultRouter()
 router.register(r'clients', ClientViewSet, basename='client')
@@ -816,4 +825,46 @@ urlpatterns = [
     path('admin/workflows', WorkflowViewSet.as_view({'get': 'list'})),
     path('team/', TeamMemberViewSet.as_view({'get': 'list'}), name='team-list-alias'),
     path('team', TeamMemberViewSet.as_view({'get': 'list'})),
+
+    # ── Contact Us & Feedback Management (Web + Mobile App) ──
+    path('contact/submit/', ContactSubmitView.as_view(), name='contact-submit'),
+    path('contact/submit', ContactSubmitView.as_view()),
+    path('contact/my-messages/', MyContactMessagesView.as_view(), name='contact-my-messages'),
+    path('contact/my-messages', MyContactMessagesView.as_view()),
+    path('contact/<str:pk>/reply/', ContactReplyView.as_view(), name='contact-user-reply'),
+    path('contact/<str:pk>/reply', ContactReplyView.as_view()),
+
+    path('feedback/submit/', FeedbackSubmitView.as_view(), name='feedback-submit'),
+    path('feedback/submit', FeedbackSubmitView.as_view()),
+    path('feedback/my-feedback/', MyFeedbackListView.as_view(), name='feedback-my-feedback'),
+    path('feedback/my-feedback', MyFeedbackListView.as_view()),
+    path('feedback/<str:pk>/reply/', FeedbackReplyView.as_view(), name='feedback-user-reply'),
+    path('feedback/<str:pk>/reply', FeedbackReplyView.as_view()),
+
+    # Admin Contact Messages
+    path('admin/contact-messages/', AdminContactMessagesListView.as_view(), name='admin-contact-messages-list'),
+    path('admin/contact-messages', AdminContactMessagesListView.as_view()),
+    path('admin/contact-messages/<str:pk>/', AdminContactMessageDetailView.as_view(), name='admin-contact-messages-detail'),
+    path('admin/contact-messages/<str:pk>', AdminContactMessageDetailView.as_view()),
+    path('admin/contact-messages/<str:pk>/reply/', AdminContactMessageReplyView.as_view(), name='admin-contact-messages-reply'),
+    path('admin/contact-messages/<str:pk>/reply', AdminContactMessageReplyView.as_view()),
+    path('admin/contact-messages/<str:pk>/status/', AdminContactMessageStatusView.as_view(), name='admin-contact-messages-status'),
+    path('admin/contact-messages/<str:pk>/status', AdminContactMessageStatusView.as_view()),
+
+    # Admin User Feedback
+    path('admin/user-feedback/', AdminUserFeedbackListView.as_view(), name='admin-user-feedback-list'),
+    path('admin/user-feedback', AdminUserFeedbackListView.as_view()),
+    path('admin/user-feedback/<str:pk>/', AdminUserFeedbackDetailView.as_view(), name='admin-user-feedback-detail'),
+    path('admin/user-feedback/<str:pk>', AdminUserFeedbackDetailView.as_view()),
+    path('admin/user-feedback/<str:pk>/reply/', AdminUserFeedbackReplyView.as_view(), name='admin-user-feedback-reply'),
+    path('admin/user-feedback/<str:pk>/reply', AdminUserFeedbackReplyView.as_view()),
+    path('admin/user-feedback/<str:pk>/status/', AdminUserFeedbackStatusView.as_view(), name='admin-user-feedback-status'),
+    path('admin/user-feedback/<str:pk>/status', AdminUserFeedbackStatusView.as_view()),
+
+    # In-App Notifications
+    path('notifications/', InAppNotificationListView.as_view(), name='in-app-notifications-list'),
+    path('notifications', InAppNotificationListView.as_view()),
+    path('notifications/<str:pk>/mark-read/', InAppNotificationMarkReadView.as_view(), name='in-app-notification-mark-read'),
+    path('notifications/<str:pk>/mark-read', InAppNotificationMarkReadView.as_view()),
 ]
+
