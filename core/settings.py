@@ -42,9 +42,9 @@ if not firebase_admin._apps:
                 cred = credentials.Certificate(firebase_sa_path)
                 firebase_admin.initialize_app(cred)
             else:
-                firebase_admin.initialize_app()
+                firebase_admin.initialize_app(options={'projectId': os.getenv('FIREBASE_PROJECT_ID', 'uwoconnect')})
         else:
-            firebase_admin.initialize_app()
+            firebase_admin.initialize_app(options={'projectId': os.getenv('FIREBASE_PROJECT_ID', 'uwoconnect')})
     except Exception as e:
         print(f"[WARNING] Firebase Admin init warning: {e}")
 

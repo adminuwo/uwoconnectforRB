@@ -689,8 +689,10 @@ class AuthService:
             return {"error": "Firebase ID token is required", "status_code": 400}
 
         try:
-            decoded_token = firebase_auth.verify_id_token(id_token)
-        except Exception:
+            from ..integrations.firebase_integration import FirebaseIntegration
+            decoded_token = FirebaseIntegration.verify_id_token(id_token)
+        except Exception as e:
+            logger.error(f"[Firebase Auth Login] Token verification failed: {e}")
             # SECURITY: No unverified-decode fallback.
             return {"error": "Firebase token verification failed.", "status_code": 401}
 
