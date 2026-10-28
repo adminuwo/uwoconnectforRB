@@ -596,22 +596,82 @@ class ClientStatsView(APIView):
 
         from ..utils.channel_permissions import is_connector_globally_active
 
-        # --- Live Resource Counts from Database (strictly respecting Global Admin & Coming Soon status) ---
-        connector_flags = [
-            is_connector_globally_active('whatsapp') and bool(client.automation_enabled and bool(client.whatsapp_access_token)),
-            is_connector_globally_active('facebook') and bool(client.facebook_enabled),
-            is_connector_globally_active('instagram') and bool(client.instagram_enabled),
-            is_connector_globally_active('gmail') and bool(client.gmail_enabled),
-            is_connector_globally_active('outlook') and bool(client.outlook_enabled),
-            is_connector_globally_active('youtube') and bool(client.youtube_enabled),
-            is_connector_globally_active('google_news') and bool(client.google_news_enabled),
-            is_connector_globally_active('onedrive') and bool(client.onedrive_enabled),
-            is_connector_globally_active('google_calendar') and bool(client.google_calendar_enabled),
-            is_connector_globally_active('google_sheets') and bool(client.google_sheets_enabled),
-            is_connector_globally_active('google_docs') and bool(client.google_docs_enabled or client.google_slides_enabled),
-            is_connector_globally_active('zoho') and bool(client.zoho_enabled),
+        # --- Live Resource Counts from Database (strictly respecting Global Admin & Connected status) ---
+        def _is_connector_active(key, c):
+            if not is_connector_globally_active(key):
+                return False
+            cfg = getattr(c, f"{key}_config", None) or {}
+            if not isinstance(cfg, dict):
+                cfg = {}
+
+            if key == 'whatsapp':
+                has_phone = bool(c.whatsapp_phone_number_id or c.phone_number or cfg.get('phone_number_id') or cfg.get('display_phone_number'))
+                has_token = bool(c.whatsapp_access_token or cfg.get('access_token') or cfg.get('token'))
+                has_waba = bool(c.whatsapp_waba_id or cfg.get('waba_id'))
+                return bool(c.whatsapp_enabled and (has_phone or has_token or has_waba or any(cfg.values())))
+
+            elif key == 'facebook':
+                return bool(
+                    (c.facebook_enabled and (getattr(c, 'facebook_page_id', None) or getattr(c, 'facebook_access_token', None) or any(cfg.values()))) or
+                    (any(cfg.values()) and c.facebook_enabled is not False)
+                )
+
+            elif key == 'instagram':
+                return bool(
+                    c.instagram_enabled or
+                    any(cfg.values()) or
+                    bool(getattr(c, 'instagram_account_id', None))
+                )
+
+            elif key == 'gmail':
+                return bool(
+                    c.gmail_enabled or
+                    any(cfg.values()) or
+                    bool(getattr(c, 'gmail_access_token', None))
+                )
+
+            elif key == 'outlook':
+                return bool(c.outlook_enabled or any(cfg.values()))
+
+            elif key == 'youtube':
+                return bool(c.youtube_enabled or any(cfg.values()))
+
+            elif key == 'google_news':
+                return bool(c.google_news_enabled or any(cfg.values()))
+
+            elif key == 'google_calendar':
+                return bool(c.google_calendar_enabled or any(cfg.values()))
+
+            elif key == 'google_sheets':
+                return bool(c.google_sheets_enabled or any(cfg.values()))
+
+            elif key == 'google_docs':
+                gd_cfg = getattr(c, 'google_docs_config', None) or {}
+                gsl_cfg = getattr(c, 'google_slides_config', None) or {}
+                return bool(
+                    c.google_docs_enabled or
+                    c.google_slides_enabled or
+                    (isinstance(gd_cfg, dict) and any(gd_cfg.values())) or
+                    (isinstance(gsl_cfg, dict) and any(gsl_cfg.values()))
+                )
+
+            elif key == 'onedrive':
+                return bool(c.onedrive_enabled or any(cfg.values()))
+
+            elif key == 'zoho':
+                return bool(c.zoho_enabled or any(cfg.values()))
+
+            elif key == 'razorpay':
+                return bool(getattr(c, 'razorpay_enabled', False) or any(cfg.values()))
+
+            return bool(getattr(c, f"{key}_enabled", False) or any(cfg.values()))
+
+        connector_keys = [
+            'whatsapp', 'facebook', 'instagram', 'gmail', 'outlook',
+            'youtube', 'google_news', 'onedrive', 'google_calendar',
+            'google_sheets', 'google_docs', 'zoho', 'razorpay'
         ]
-        connectors_count = sum(1 for flag in connector_flags if flag)
+        connectors_count = sum(1 for k in connector_keys if _is_connector_active(k, client))
 
         from ..repositories.workflow_repository import WorkflowRepository
         projects_count = WorkflowRepository.filter_workflows(client=client).count()
