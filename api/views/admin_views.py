@@ -180,7 +180,40 @@ class AdminMessagesView(APIView):
 class AdminUsersView(APIView):
     permission_classes = [IsAdminUser]
 
-    def get(self, request):
+    def get(self, request, pk=None):
+        if pk:
+            try:
+                user = UserRepository.filter_users(id=pk, role='CLIENT').select_related('client').first()
+                if not user:
+                    return Response({"error": "User not found."}, status=404)
+                return Response({
+                    "id": str(user.id),
+                    "name": f"{user.first_name} {user.last_name}".strip() or user.username,
+                    "email": user.email,
+                    "status": user.status,
+                    "businessName": user.client.business_name if user.client else "N/A",
+                    "date_joined": user.date_joined,
+                    "registration_platform": getattr(user, 'registration_platform', 'web'),
+                    "registration_country": getattr(user, 'registration_country', 'Unknown'),
+                    "registration_country_code": getattr(user, 'registration_country_code', 'Unknown'),
+                    "registration_city": getattr(user, 'registration_city', 'Unknown'),
+                    "registered_at": user.registered_at.isoformat() if getattr(user, 'registered_at', None) else None,
+                    "registration_device_type": getattr(user, 'registration_device_type', 'unknown'),
+                    "registration_device_model": getattr(user, 'registration_device_model', 'Unknown'),
+                    "registration_os": getattr(user, 'registration_os', 'Unknown'),
+                    "registration_os_version": getattr(user, 'registration_os_version', 'Unknown'),
+                    "registration_app_version": getattr(user, 'registration_app_version', 'Unknown'),
+                    "registration_method": getattr(user, 'registration_method', 'email'),
+                    "last_login_platform": getattr(user, 'last_login_platform', 'web'),
+                    "last_login_country": getattr(user, 'last_login_country', 'Unknown'),
+                    "last_login_city": getattr(user, 'last_login_city', 'Unknown'),
+                    "last_login_device": getattr(user, 'last_login_device', 'Unknown'),
+                    "last_login_app_version": getattr(user, 'last_login_app_version', 'Unknown'),
+                    "last_login_at": user.last_login_at.isoformat() if getattr(user, 'last_login_at', None) else None,
+                })
+            except Exception:
+                return Response({"error": "User not found."}, status=404)
+
         users = UserRepository.filter_users(role='CLIENT').select_related('client').order_by('-date_joined')
         data = []
         for user in users:

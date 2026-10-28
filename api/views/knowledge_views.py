@@ -87,7 +87,10 @@ class KnowledgeBaseView(APIView):
             }
 
         if pk:
-            doc = KnowledgeRepository.filter_documents(client=client).filter(id=pk).first()
+            try:
+                doc = KnowledgeRepository.filter_documents(client=client).filter(id=pk).first()
+            except Exception:
+                doc = None
             if not doc:
                 return Response({"error": "Document not found"}, status=404)
             return Response(serialize_doc(doc))

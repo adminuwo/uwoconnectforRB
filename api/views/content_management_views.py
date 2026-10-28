@@ -534,7 +534,10 @@ class AdminBannerManagementView(APIView):
 
     def get(self, request, pk=None, *args, **kwargs):
         if pk:
-            banner = DynamicBanner.objects.filter(pk=pk).first()
+            try:
+                banner = DynamicBanner.objects.filter(pk=pk).first()
+            except Exception:
+                banner = None
             if not banner:
                 return Response({"error": "Banner not found."}, status=status.HTTP_404_NOT_FOUND)
             return Response(DynamicBannerSerializer(banner, context={'request': request}).data, status=status.HTTP_200_OK)
@@ -575,7 +578,10 @@ class AdminBannerManagementView(APIView):
 
     def put(self, request, pk=None):
         banner_id = pk or request.data.get('id')
-        banner = DynamicBanner.objects.filter(pk=banner_id).first()
+        try:
+            banner = DynamicBanner.objects.filter(pk=banner_id).first()
+        except Exception:
+            banner = None
         if not banner:
             return Response({"error": "Banner not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -614,7 +620,10 @@ class AdminBannerManagementView(APIView):
 
     def delete(self, request, pk=None):
         banner_id = pk or request.data.get('id')
-        banner = DynamicBanner.objects.filter(pk=banner_id).first()
+        try:
+            banner = DynamicBanner.objects.filter(pk=banner_id).first()
+        except Exception:
+            banner = None
         if not banner:
             return Response({"error": "Banner not found."}, status=status.HTTP_404_NOT_FOUND)
 

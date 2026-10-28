@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from django.core.cache import cache
 from django.http import HttpResponseRedirect
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -297,8 +298,8 @@ class GoogleCalendarEventsView(APIView):
             )
             return Response({"connected": True, "events": events, "count": len(events)})
         except Exception as e:
-            logger.error("Failed fetching calendar events range: %s", e)
-            return Response({"error": str(e), "events": []}, status=500)
+            logger.warning("Failed fetching calendar events range: %s", e)
+            return Response({"connected": False, "error": str(e), "events": [], "count": 0}, status=status.HTTP_200_OK if "token missing" in str(e).lower() else status.HTTP_400_BAD_REQUEST)
 
 
 class GoogleCalendarUpdateEventView(APIView):

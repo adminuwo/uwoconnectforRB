@@ -140,7 +140,7 @@ class ContactReplyView(APIView):
 
         try:
             contact_msg = ContactMessage.objects.get(pk=pk)
-        except ContactMessage.DoesNotExist:
+        except (ContactMessage.DoesNotExist, Exception):
             return Response({'error': 'Contact message not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
@@ -302,7 +302,7 @@ class FeedbackReplyView(APIView):
 
         try:
             feedback = UserFeedback.objects.get(pk=pk)
-        except UserFeedback.DoesNotExist:
+        except (UserFeedback.DoesNotExist, Exception):
             return Response({'error': 'Feedback entry not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
@@ -426,7 +426,7 @@ class AdminContactMessageDetailView(APIView):
     def get(self, request, pk):
         try:
             msg = ContactMessage.objects.prefetch_related('replies').get(pk=pk)
-        except ContactMessage.DoesNotExist:
+        except (ContactMessage.DoesNotExist, Exception):
             return Response({'error': 'Contact inquiry not found.'}, status=status.HTTP_404_NOT_FOUND)
         serializer = ContactMessageSerializer(msg)
         return Response(serializer.data)
@@ -448,7 +448,7 @@ class AdminContactMessageReplyView(APIView):
 
         try:
             contact_msg = ContactMessage.objects.get(pk=pk)
-        except ContactMessage.DoesNotExist:
+        except (ContactMessage.DoesNotExist, Exception):
             return Response({'error': 'Contact inquiry not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         reply = ContactMessageReply.objects.create(
@@ -489,18 +489,18 @@ class AdminContactMessageReplyView(APIView):
 class AdminContactMessageStatusView(APIView):
     """
     PATCH /api/admin/contact-messages/<id>/status/
-    Updates contact inquiry status (PENDING, REPLIED, RESOLVED).
+    Updates contact inquiry status (PENDING, IN_PROGRESS, REPLIED, RESOLVED, CLOSED).
     """
     permission_classes = [IsSuperAdminUser]
 
     def patch(self, request, pk):
         new_status = request.data.get('status', '').strip().upper()
-        if new_status not in ['PENDING', 'REPLIED', 'RESOLVED']:
-            return Response({'error': 'Invalid status. Choose PENDING, REPLIED, or RESOLVED.'}, status=status.HTTP_400_BAD_REQUEST)
+        if new_status not in ['PENDING', 'IN_PROGRESS', 'REPLIED', 'RESOLVED', 'CLOSED']:
+            return Response({'error': 'Invalid status. Choose PENDING, IN_PROGRESS, REPLIED, RESOLVED, or CLOSED.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             contact_msg = ContactMessage.objects.get(pk=pk)
-        except ContactMessage.DoesNotExist:
+        except (ContactMessage.DoesNotExist, Exception):
             return Response({'error': 'Contact inquiry not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         contact_msg.status = new_status
@@ -589,7 +589,7 @@ class AdminUserFeedbackDetailView(APIView):
     def get(self, request, pk):
         try:
             feedback = UserFeedback.objects.prefetch_related('replies').get(pk=pk)
-        except UserFeedback.DoesNotExist:
+        except (UserFeedback.DoesNotExist, Exception):
             return Response({'error': 'Feedback entry not found.'}, status=status.HTTP_404_NOT_FOUND)
         serializer = UserFeedbackSerializer(feedback)
         return Response(serializer.data)
@@ -611,7 +611,7 @@ class AdminUserFeedbackReplyView(APIView):
 
         try:
             feedback = UserFeedback.objects.get(pk=pk)
-        except UserFeedback.DoesNotExist:
+        except (UserFeedback.DoesNotExist, Exception):
             return Response({'error': 'Feedback entry not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         reply = UserFeedbackReply.objects.create(
@@ -663,7 +663,7 @@ class AdminUserFeedbackStatusView(APIView):
 
         try:
             feedback = UserFeedback.objects.get(pk=pk)
-        except UserFeedback.DoesNotExist:
+        except (UserFeedback.DoesNotExist, Exception):
             return Response({'error': 'Feedback entry not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         feedback.status = new_status
